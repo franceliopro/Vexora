@@ -1,31 +1,55 @@
 import express from 'express';import http from 'http';import {WebSocketServer} from 'ws';import jwt from 'jsonwebtoken';import bcrypt from 'bcryptjs';import path from 'path';import {fileURLToPath} from 'url';import {execFile} from 'child_process';
-import {q,migrate,cols} from './db.js';import {bus,setWss} from './bus.js';import {inbound,deliver,startAll,setStage,D} from './core.js';import {tickFlows} from './flows.js';import {createPayment,payWebhook} from './payments.js';import {publishPost,publishAd,adInsights} from './social.js';import {VERT,applyVertical} from './verticals.js';import {ragAdd} from './ai/engine.js';import {createAppt,cancelAppt} from './gcal.js';import {MEDIA,saveMedia} from './media.js';
-const SECRET=process.env.JWT_SECRET||'dev-secret',PUB=process.env.PUBLIC_URL||'http://localhost:3000';
+import {q,adm as dba,migrate,cols} from './db.js';import {als,sign,hookUrl,payHook,orderHook} from './ctx.js';import {createTenant} from './tenants.js';import crypto from 'crypto';import fs from 'fs';import {spawn} from 'child_process';import {bus,setWss} from './bus.js';import {inbound,deliver,startAll,setStage,D} from './core.js';import {tickFlows} from './flows.js';import {createPayment,payWebhook} from './payments.js';import {publishPost,publishAd,adInsights} from './social.js';import {VERT,applyVertical} from './verticals.js';import {ragAdd} from './ai/engine.js';import {createAppt,cancelAppt} from './gcal.js';import {MEDIA,saveMedia} from './media.js';
+const SECRET=process.env.JWT_SECRET||'dev-secret';
 const app=express();app.use(express.json({limit:'30mb'}));
 app.use('/media',express.static(MEDIA));app.use(express.static(path.join(path.dirname(fileURLToPath(import.meta.url)),'../web')));
 const ah=f=>(a,b,n)=>Promise.resolve(f(a,b,n)).catch(e=>{console.error(e);b.status(400).json({error:e.message})});
-const auth=(req,res,next)=>{try{req.u=jwt.verify((req.headers.authorization||'').slice(7),SECRET);next()}catch{res.status(401).json({error:'auth'})}};
+const act=new Map();const alive=async t=>{const c=act.get(t);if(c&&c.t>Date.now())return c.v;const v=!!(await q('select 1 from tenants where id=$1 and active',[t])).rowCount;act.set(t,{v,t:Date.now()+15000});return v};
+const auth=async(req,res,next)=>{try{req.u=jwt.verify((req.headers.authorization||'').slice(7),SECRET)}catch{return res.status(401).json({error:'auth'})}
+ if(!req.u.tid||!await alive(req.u.tid))return res.status(401).json({error:'empresa suspensa ou inválida'});als.run({tenant:req.u.tid},next)};
 const adm=(req,res,next)=>['owner','admin'].includes(req.u.role)?next():res.status(403).json({error:'sem permissão'});
-const tok=u=>jwt.sign({id:u.id,role:u.role,name:u.name},SECRET,{expiresIn:'30d'});
+const tok=u=>jwt.sign({id:u.id,role:u.role,name:u.name,tid:u.tenant_id},SECRET,{expiresIn:'30d'});
 const T=['users','teams','channels','contacts','stages','agents','docs','appointments','flows','payments','catalog','posts','ads','orders'];
 const ADM_T=['users','teams','channels','agents','stages','flows'];
 const chk=t=>{if(!T.includes(t))throw new Error('tabela inválida');return t};
-const ins=async(t,b)=>{const c=await cols(t);const k=Object.keys(b).filter(x=>c[x]&&x!=='id');const v=k.map(x=>c[x]==='jsonb'?JSON.stringify(b[x]):b[x]);return (await q(`insert into ${t}(${k.join()}) values(${k.map((_,i)=>'$'+(i+1))}) returning *`,v)).rows[0]};
-const upd=async(t,id,b)=>{const c=await cols(t);const k=Object.keys(b).filter(x=>c[x]&&x!=='id');if(!k.length)return;return (await q(`update ${t} set ${k.map((x,i)=>x+'=$'+(i+2))} where id=$1 returning *`,[id,...k.map(x=>c[x]==='jsonb'?JSON.stringify(b[x]):b[x])])).rows[0]};
-const clean=r=>{delete r.pass;return r};
-// ---- público
-app.get('/api/status',ah(async(_,res)=>res.json({setup:!(await q('select 1 from users limit 1')).rowCount})));
-app.post('/api/setup',ah(async(req,res)=>{if((await q('select 1 from users limit 1')).rowCount)throw new Error('já configurado');const {name,email,pass,business}=req.body;
- const u=await ins('users',{name,email,pass:await bcrypt.hash(pass,10),role:'owner'});if(business)await q("update settings set value=value||$1 where key='brand'",[JSON.stringify({name:business})]);res.json({token:tok(u)})}));
-app.post('/api/login',ah(async(req,res)=>{const u=(await q('select * from users where email=$1 and not is_ai',[req.body.email])).rows[0];if(!u||!await bcrypt.compare(req.body.pass||'',u.pass))throw new Error('credenciais inválidas');res.json({token:tok(u)})}));
-app.get('/api/brand',ah(async(_,res)=>{const s=Object.fromEntries((await q("select * from settings where key in ('brand','vertical')")).rows.map(r=>[r.key,r.value]));res.json({...s.brand,vertical:s.vertical,labels:VERT[s.vertical]||VERT.geral,verticals:Object.keys(VERT)})}));
-// ---- webhooks
-app.post('/webhook/:drv/:id',ah(async(req,res)=>{res.sendStatus(200);const ch=(await q('select * from channels where id=$1',[req.params.id])).rows[0];if(!ch||!D[req.params.drv]?.parse)return;const m=await D[req.params.drv].parse(ch,req.body);if(m)await inbound(ch.id,m)}));
-app.post('/webhook/pay/:p',ah(async(req,res)=>{res.sendStatus(200);await payWebhook(req.params.p,req.body)}));
-// pedidos externos (iFood/Keeta/99Food/loja via parceiro ou n8n): {handle,name,items:[],total,ext_id}
-app.post('/webhook/order/:source',ah(async(req,res)=>{const b=req.body,ch=(await q('select id from channels where active order by id limit 1')).rows[0];let ct=(await q('select * from contacts where handle=$1',[b.handle])).rows[0];
- if(!ct)ct=(await q('insert into contacts(name,handle,channel_id) values($1,$2,$3) returning *',[b.name||b.handle,b.handle,ch?.id])).rows[0];
- const o=await ins('orders',{source:req.params.source,contact_id:ct.id,items:b.items||[],total:b.total,ext_id:b.ext_id});bus('order',o);res.json(o)}));
+const ins=async(t,b)=>{const c=await cols(t);const k=Object.keys(b).filter(x=>c[x]&&x!=='id'&&x!=='tenant_id');const v=k.map(x=>c[x]==='jsonb'?JSON.stringify(b[x]):b[x]);return (await q(`insert into ${t}(${k.join()}) values(${k.map((_,i)=>'$'+(i+1))}) returning *`,v)).rows[0]};
+const upd=async(t,id,b)=>{const c=await cols(t);const k=Object.keys(b).filter(x=>c[x]&&x!=='id'&&x!=='tenant_id');if(!k.length)return;return (await q(`update ${t} set ${k.map((x,i)=>x+'=$'+(i+2))} where id=$1 returning *`,[id,...k.map(x=>c[x]==='jsonb'?JSON.stringify(b[x]):b[x])])).rows[0]};
+const clean=r=>{delete r.pass;delete r.emb;return r};
+// ---- público (empresa identificada por token, domínio ou ?t=slug)
+const hits=new Map();const limit=(req,res,next)=>{const n=Date.now(),h=hits.get(req.ip);if(!h||h.r<n){hits.set(req.ip,{n:1,r:n+6e4});return next()}h.n++>15?res.status(429).json({error:'muitas tentativas, aguarde 1 min'}):next()};
+const slugOf=req=>String(req.headers['x-tenant']||req.query.t||'').toLowerCase().replace(/[^a-z0-9-]/g,'');
+const tidOf=async req=>{try{return jwt.verify((req.headers.authorization||'').slice(7),SECRET).tid}catch{}
+ const host=String(req.headers['x-forwarded-host']||req.headers.host||'').split(':')[0];return (await q('select resolve_tenant($1,$2) id',[host,slugOf(req)])).rows[0].id};
+const pub=ah(async(req,res,next)=>{const t=await tidOf(req);als.run({tenant:t},next)});
+app.get('/api/status',pub,ah(async(req,res)=>{const t=als.getStore().tenant;res.json({tenant:!!t,setup:!!t&&!(await q('select 1 from users limit 1')).rowCount})}));
+app.post('/api/setup',limit,pub,ah(async(req,res)=>{if(!als.getStore().tenant)throw new Error('empresa não identificada');if((await q('select 1 from users limit 1')).rowCount)throw new Error('já configurado');const {name,email,pass,business}=req.body;
+ if(!pass||pass.length<8)throw new Error('senha: mínimo 8 caracteres');const u=await ins('users',{name,email,pass:await bcrypt.hash(pass,10),role:'owner'});
+ if(business)await q("update settings set value=value||$1 where key='brand'",[JSON.stringify({name:business})]);res.json({token:tok(u)})}));
+app.post('/api/login',limit,ah(async(req,res)=>{const u=(await q('select * from login_lookup($1)',[req.body.email])).rows[0];if(!u||!await bcrypt.compare(req.body.pass||'',u.pass))throw new Error('credenciais inválidas');res.json({token:tok(u)})}));
+app.get('/api/brand',pub,ah(async(req,res)=>{const s=Object.fromEntries((await q("select * from settings where key in ('brand','vertical')")).rows.map(r=>[r.key,r.value]));const v=s.vertical||'geral';
+ res.json({name:'Nexora',color:'#2563eb',font:'Inter',logo:'',...s.brand,vertical:v,labels:VERT[v]||VERT.geral,verticals:Object.keys(VERT)})}));
+// ---- webhooks: URL assinada (HMAC) ⇒ ninguém forja mensagem em canal alheio; a empresa vem do canal/assinatura
+const inT=(t,f)=>als.run({tenant:+t},f);
+app.post('/webhook/pay/:p/:tid/:sig',ah(async(req,res)=>{if(req.params.sig!==sign('pay:'+req.params.tid))return res.sendStatus(403);res.sendStatus(200);await inT(req.params.tid,()=>payWebhook(req.params.p,req.body))}));
+// pedidos externos (iFood/Keeta/99Food via parceiro ou n8n): {handle,name,items:[],total,ext_id}
+app.post('/webhook/order/:source/:tid/:sig',ah(async(req,res)=>{if(req.params.sig!==sign('order:'+req.params.tid))return res.sendStatus(403);
+ res.json(await inT(req.params.tid,async()=>{const b=req.body,ch=(await q('select id from channels where active order by id limit 1')).rows[0];let ct=(await q('select * from contacts where handle=$1',[b.handle])).rows[0];
+  if(!ct)ct=(await q('insert into contacts(name,handle,channel_id) values($1,$2,$3) returning *',[b.name||b.handle,b.handle,ch?.id])).rows[0];
+  const o=await ins('orders',{source:req.params.source,contact_id:ct.id,items:b.items||[],total:b.total,ext_id:b.ext_id});bus('order',o);return o}))}));
+app.post('/webhook/:drv/:id/:sig',ah(async(req,res)=>{const {drv,id,sig}=req.params;if(!D[drv]?.parse||sig!==sign(drv+':'+id))return res.sendStatus(403);res.sendStatus(200);
+ const t=(await q('select channel_tenant($1) t',[id])).rows[0]?.t;if(!t)return;
+ await inT(t,async()=>{const ch=(await q('select * from channels where id=$1',[id])).rows[0];const m=await D[drv].parse(ch,req.body);if(m)await inbound(ch.id,m)})}));
+// ---- painel da plataforma (dono do SaaS): chave PLATFORM_KEY. Usa o superusuário, só aqui.
+const pk=(req,res,next)=>{const k=process.env.PLATFORM_KEY||'',g=String(req.headers['x-platform-key']||'');k.length>=12&&g.length===k.length&&crypto.timingSafeEqual(Buffer.from(g),Buffer.from(k))?next():res.status(403).json({error:'chave inválida (defina PLATFORM_KEY com 12+ caracteres)'})};
+app.get('/platform/tenants',limit,pk,ah(async(_,res)=>res.json((await dba('select t.*,(select count(*)::int from users u where u.tenant_id=t.id) users,(select count(*)::int from conversations c where c.tenant_id=t.id) conversations,(select count(*)::int from messages m where m.tenant_id=t.id) messages from tenants t order by id')).rows)));
+app.post('/platform/tenants',limit,pk,ah(async(req,res)=>res.json(await createTenant(req.body))));
+app.patch('/platform/tenants/:id',pk,ah(async(req,res)=>{const {active,domain}=req.body;act.clear();res.json((await dba('update tenants set active=coalesce($2,active),domain=coalesce($3,domain) where id=$1 returning *',[req.params.id,active,domain])).rows[0])}));
+app.delete('/platform/tenants/:id',pk,ah(async(req,res)=>{const t=(await dba('select slug from tenants where id=$1',[req.params.id])).rows[0];if(!t||req.query.confirm!==t.slug)throw new Error('confirme com ?confirm='+(t?.slug||'slug'));await dba('delete from tenants where id=$1',[req.params.id]);act.clear();res.json({ok:1})}));
+// backup completo (todas as empresas): pg_dump + mídia + sessões Baileys, num .tar.gz. Restaurar: scripts/restore.sh
+app.get('/platform/backup',pk,(req,res)=>{const dir=fs.mkdtempSync('/tmp/bk-'),data=path.dirname(MEDIA);fs.mkdirSync(data+'/baileys',{recursive:true});
+ execFile('pg_dump',['-Fc','-f',dir+'/db.dump',process.env.DATABASE_URL],e=>{if(e)return res.status(500).json({error:'pg_dump: '+e.message});
+  res.setHeader('content-type','application/gzip');res.setHeader('content-disposition',`attachment; filename=nexora-backup-${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.tar.gz`);
+  const t=spawn('tar',['-czf','-','-C',dir,'db.dump','-C',data,'media','baileys']);t.stdout.pipe(res);t.on('close',()=>fs.rmSync(dir,{recursive:true,force:true}))})});
 // ---- autenticado
 app.use('/api',auth);
 app.get('/api/me',(req,res)=>res.json(req.u));
@@ -45,9 +69,12 @@ app.get('/api/team_members',ah(async(_,res)=>res.json((await q('select * from te
 app.put('/api/brand',adm,ah(async(req,res)=>{await q("update settings set value=$1 where key='brand'",[JSON.stringify(req.body)]);bus('brand',{});res.json({ok:1})}));
 app.put('/api/vertical',adm,ah(async(req,res)=>{await applyVertical(req.body.name);bus('brand',{});res.json({ok:1})}));
 app.get('/api/settings/:k',adm,ah(async(req,res)=>res.json((await q('select value from settings where key=$1',[req.params.k])).rows[0]?.value||{})));
-app.put('/api/settings/:k',adm,ah(async(req,res)=>{if(['brand','vertical'].includes(req.params.k))throw new Error('use rota própria');await q('insert into settings values($1,$2) on conflict(key) do update set value=$2',[req.params.k,JSON.stringify(req.body)]);res.json({ok:1})}));
+app.put('/api/settings/:k',adm,ah(async(req,res)=>{if(['brand','vertical'].includes(req.params.k))throw new Error('use rota própria');await q('insert into settings values($1,$2) on conflict(tenant_id,key) do update set value=$2',[req.params.k,JSON.stringify(req.body)]);res.json({ok:1})}));
 // canais
-app.post('/api/channels/:id/connect',adm,ah(async(req,res)=>{const ch=(await q('select * from channels where id=$1',[req.params.id])).rows[0];await D[ch.driver].connect(ch,PUB);res.json({ok:1})}));
+app.post('/api/channels/:id/connect',adm,ah(async(req,res)=>{const ch=(await q('select * from channels where id=$1',[req.params.id])).rows[0];await D[ch.driver].connect(ch,hookUrl(ch.driver,ch.id));res.json({ok:1})}));
+app.get('/api/channels/:id/webhook',adm,ah(async(req,res)=>{const ch=(await q('select driver from channels where id=$1',[req.params.id])).rows[0];res.json({url:hookUrl(ch.driver,req.params.id)})}));
+app.get('/api/hooks',adm,(req,res)=>res.json({pagamentos:Object.fromEntries(['asaas','mercadopago','stripe'].map(p=>[p,payHook(p)])),pedidos:orderHook('ORIGEM')}));
+app.get('/api/export',adm,ah(async(req,res)=>{const out={exported_at:new Date(),tables:{}};for(const t of [...T,'team_members','participants','messages','jobs','settings'])out.tables[t]=(await q(`select * from ${t}`)).rows.map(clean);res.setHeader('content-disposition','attachment; filename=nexora-export.json');res.json(out)}));
 app.get('/api/channels/:id/qr',ah(async(req,res)=>{const ch=(await q('select * from channels where id=$1',[req.params.id])).rows[0];res.json({qr:await D[ch.driver].qr(ch)})}));
 // conversas
 app.get('/api/conversations',ah(async(req,res)=>{const {scope='mine',q:s=''}=req.query,me=req.u.id,all=scope==='all'&&['owner','admin'].includes(req.u.role);
@@ -73,6 +100,7 @@ app.get('/api/stats',ah(async(_,res)=>res.json({by_stage:(await q('select s.name
  msgs7:(await q("select to_char(at,'DD/MM') d,count(*)::int n,count(*) filter(where ai)::int ai from messages where at>now()-interval '7 days' and dir<>'int' group by 1 order by min(at)")).rows,
  paid:(await q("select coalesce(sum(amount),0)::float t from payments where status='pago'")).rows[0].t})));
 const srv=http.createServer(app),wss=new WebSocketServer({noServer:true});setWss(wss);
-srv.on('upgrade',(req,s,h)=>{try{jwt.verify(new URL(req.url,'http://x').searchParams.get('t'),SECRET);wss.handleUpgrade(req,s,h,w=>wss.emit('connection',w))}catch{s.destroy()}});
-await migrate();startAll();setInterval(()=>tickFlows().catch(e=>console.error(e.message)),30000);
+srv.on('upgrade',(req,s,h)=>{try{const u=jwt.verify(new URL(req.url,'http://x').searchParams.get('t'),SECRET);wss.handleUpgrade(req,s,h,w=>{w.tid=u.tid;wss.emit('connection',w)})}catch{s.destroy()}});
+await migrate();startAll();
+setInterval(async()=>{try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickFlows()).catch(e=>console.error('flows',t.id,e.message))}catch(e){console.error(e.message)}},30000);
 srv.listen(process.env.PORT||3000,()=>console.log('Nexora on :'+(process.env.PORT||3000)));

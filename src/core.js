@@ -1,4 +1,4 @@
-import {q} from './db.js';import {bus} from './bus.js';import {saveMedia} from './media.js';
+import {q,adm} from './db.js';import {als} from './ctx.js';import {bus} from './bus.js';import {saveMedia} from './media.js';
 import * as waha from './drivers/waha.js';import * as baileys from './drivers/baileys.js';import * as zernio from './drivers/zernio.js';
 export const D={waha,baileys,zernio};
 export async function setStage(cid,sid){await q('update conversations set stage_id=$2 where id=$1',[cid,sid]);bus('conv',{id:cid});(await import('./flows.js')).onStage(cid,sid)}
@@ -23,4 +23,4 @@ export async function deliver(cid,{kind='text',body,file,author_id,ai=false}){
  const msg=(await q('insert into messages(conversation_id,dir,kind,body,media_url,author_id,ai,ext_id) values($1,$2,$3,$4,$5,$6,$7,$8) returning *',[cid,dir,kind,body||null,file?'/media/'+file:null,author_id||null,ai,ext])).rows[0];
  if(kind!=='note')await q('update conversations set last_at=now() where id=$1',[cid]);
  bus('msg',{conversation_id:cid,message:msg});return msg}
-export async function startAll(){for(const c of (await q("select * from channels where active and driver='baileys'")).rows)baileys.start(c,inbound).catch(e=>console.error('baileys',e.message))}
+export async function startAll(){for(const c of (await adm("select * from channels where active and driver='baileys'")).rows)baileys.start(c,(id,m)=>als.run({tenant:c.tenant_id},()=>inbound(id,m))).catch(e=>console.error('baileys',e.message))}

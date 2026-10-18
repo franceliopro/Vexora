@@ -1,4 +1,4 @@
-import QR from 'qrcode';import {saveMedia,readMedia} from '../media.js';import {bus} from '../bus.js';
+import QR from 'qrcode';import {saveMedia,readMedia} from '../media.js';import {bus} from '../bus.js';import {als} from '../ctx.js';
 const socks={},qrs={};
 export async function start(ch,onMsg){const B=await import('@whiskeysockets/baileys');const mk=B.default.default||B.default;
  const {state,saveCreds}=await B.useMultiFileAuthState(`${process.env.MEDIA_DIR?.replace(/media$/,'')||'./data/'}baileys/${ch.id}`);
@@ -14,4 +14,4 @@ export async function start(ch,onMsg){const B=await import('@whiskeysockets/bail
 export async function send(ch,{to,kind,body,file}){const s=socks[ch.id];if(!s)throw new Error('Baileys desconectado');const jid=to.includes('@')?to:to+'@s.whatsapp.net';
  const r=kind==='audio'?await s.sendMessage(jid,{audio:readMedia(file),mimetype:'audio/ogg; codecs=opus',ptt:true}):kind==='image'?await s.sendMessage(jid,{image:readMedia(file),caption:body}):await s.sendMessage(jid,{text:body});return r?.key?.id}
 export const qr=async ch=>qrs[ch.id]||null;
-export const connect=async(ch)=>{if(!socks[ch.id])await start(ch,(await import('../core.js')).inbound)};
+export const connect=async(ch)=>{const t=als.getStore().tenant,inb=(await import('../core.js')).inbound;if(!socks[ch.id])await start(ch,(id,m)=>als.run({tenant:t},()=>inb(id,m)))};

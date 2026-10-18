@@ -1,17 +1,20 @@
-# Deploy direto no Dokploy / Portainer (Stack). Cada cliente = 1 stack = 1 banco próprio.
+# Nexora — 1 stack = N empresas isoladas (tenant_id + Row Level Security).
+# Serve para Dokploy, Portainer (Repository) ou `docker compose up -d --build`.
 services:
   app:
     build: .
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://nexora:${POSTGRES_PASSWORD}@db:5432/nexora
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      PLATFORM_KEY: ${PLATFORM_KEY}
       PUBLIC_URL: ${PUBLIC_URL}
       GCAL_CLIENT_ID: ${GCAL_CLIENT_ID:-}
       GCAL_CLIENT_SECRET: ${GCAL_CLIENT_SECRET:-}
       GCAL_REFRESH_TOKEN: ${GCAL_REFRESH_TOKEN:-}
       GCAL_CALENDAR_ID: ${GCAL_CALENDAR_ID:-primary}
-    ports: ["${APP_PORT:-3000}:3000"]
+    ports: ["${APP_PORT:-3100}:3000"]
     volumes: [appdata:/data]
     depends_on: [db]
   db:
@@ -19,9 +22,27 @@ services:
     restart: unless-stopped
     environment: {POSTGRES_USER: nexora, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}", POSTGRES_DB: nexora}
     volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: {test: ["CMD-SHELL","pg_isready -U nexora"], interval: 10s, retries: 10}
   waha:
     image: devlikeapro/waha:latest
     restart: unless-stopped
     environment: {WHATSAPP_API_KEY: "${WAHA_KEY}"}
     volumes: [wahadata:/app/.sessions]
-volumes: {appdata: {}, pgdata: {}, wahadata: {}}
+  pgadmin:   # interface gráfica do banco. Por padrão só acessível no próprio servidor (127.0.0.1) — veja o README.
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@nexora.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: "True"
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
+    ports: ["${PGADMIN_BIND:-127.0.0.1}:${PGADMIN_PORT:-5050}:80"]
+    volumes: ["./pgadmin/servers.json:/pgadmin4/servers.json:ro", "pgadmindata:/var/lib/pgadmin"]
+    depends_on: [db]
+  backup:    # dump automático do banco todo dia (guarda 7 diários, 4 semanais, 3 mensais) no volume "backups"
+    image: prodrigestivill/postgres-backup-local:16
+    restart: unless-stopped
+    environment: {POSTGRES_HOST: db, POSTGRES_DB: nexora, POSTGRES_USER: nexora, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}", SCHEDULE: "@daily", BACKUP_KEEP_DAYS: "7", BACKUP_KEEP_WEEKS: "4", BACKUP_KEEP_MONTHS: "3"}
+    volumes: ["backups:/backups"]
+    depends_on: [db]
+volumes: {appdata: {}, pgdata: {}, wahadata: {}, pgadmindata: {}, backups: {}}

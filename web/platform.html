@@ -1,0 +1,21 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nexora · Plataforma</title>
+<style>body{font:14px system-ui;background:#f5f7fb;color:#0f172a;margin:0}main{max-width:900px;margin:30px auto;padding:0 16px}.c{background:#fff;border:1px solid #e6eaf2;border-radius:16px;padding:20px;margin-bottom:16px}
+input,select,button{font:inherit;padding:8px 12px;border-radius:10px;border:1px solid #e6eaf2;margin:3px 0}button{background:#2563eb;color:#fff;border:0;cursor:pointer;font-weight:600}button.g{background:#fff;color:#0f172a;border:1px solid #e6eaf2}
+table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #e6eaf2;text-align:left}.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}</style></head><body><main>
+<h2>Nexora · Painel da plataforma</h2>
+<div class="c"><b>Chave da plataforma</b> (PLATFORM_KEY do .env)<br><input id="k" type="password" style="width:70%" placeholder="cole aqui"> <button onclick="go()">Entrar</button></div>
+<div id="app" hidden>
+<div class="c"><h3>Nova empresa</h3><div class="g2"><input id="n" placeholder="Nome da empresa"><input id="s" placeholder="código (ex: barbearia-joao)"><input id="d" placeholder="domínio (opcional) crm.cliente.com">
+<select id="v"></select><input id="on" placeholder="Nome do dono"><input id="oe" placeholder="Email do dono" type="email"><input id="op" placeholder="Senha inicial (8+)" type="password"></div><button onclick="add()">Criar empresa</button></div>
+<div class="c"><h3>Empresas</h3><table id="t"></table></div>
+<div class="c"><h3>Backup completo</h3><small>Banco de todas as empresas + mídia + sessões Baileys. Restaure com <code>./scripts/restore.sh arquivo</code>.</small><br><button onclick="bk()">⬇ Baixar backup</button></div></div>
+<script>
+const $=s=>document.querySelector(s);let K;const api=async(p,m='GET',b)=>{const r=await fetch('/platform'+p,{method:m,headers:{'content-type':'application/json','x-platform-key':K},body:b?JSON.stringify(b):undefined});const j=await r.json().catch(()=>({}));if(!r.ok){alert(j.error);throw 0}return j};
+$('#v').innerHTML=['geral','barbearia','clinica','advocacia','delivery','escola','musica','loja','beleza'].map(x=>`<option>${x}</option>`).join('');
+async function go(){K=$('#k').value;await ld();$('#app').hidden=false}
+async function ld(){const r=await api('/tenants');$('#t').innerHTML='<tr><th>Código</th><th>Empresa</th><th>Domínio</th><th>Usuários</th><th>Conversas</th><th></th></tr>'+r.map(t=>`<tr><td>${t.slug}</td><td>${t.name}${t.active?'':' <b>(suspensa)</b>'}</td><td>${t.domain||''}</td><td>${t.users}</td><td>${t.conversations}</td><td><button class=g onclick="tg(${t.id},${!t.active})">${t.active?'Suspender':'Reativar'}</button> <button class=g onclick="del(${t.id},'${t.slug}')">Excluir</button></td></tr>`).join('')}
+async function add(){await api('/tenants','POST',{name:$('#n').value,slug:$('#s').value,domain:$('#d').value,vertical:$('#v').value,owner:{name:$('#on').value,email:$('#oe').value,pass:$('#op').value}});ld()}
+async function tg(id,a){await api('/tenants/'+id,'PATCH',{active:a});ld()}
+async function del(id,s){if(prompt('Isto APAGA todos os dados da empresa. Digite o código para confirmar: '+s)===s){await api(`/tenants/${id}?confirm=${s}`,'DELETE');ld()}}
+async function bk(){const r=await fetch('/platform/backup',{headers:{'x-platform-key':K}});if(!r.ok)return alert((await r.json()).error);const a=document.createElement('a');a.href=URL.createObjectURL(await r.blob());a.download=/filename=(.+)/.exec(r.headers.get('content-disposition'))[1];a.click()}
+</script></main></body></html>

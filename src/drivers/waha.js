@@ -10,5 +10,5 @@ export async function send(c,{to,kind,body,file}){const chatId=to.includes('@')?
 export async function parse(c,b){if(b.event!=='message'||b.payload.fromMe||String(b.payload.from).includes('@g.us'))return null;const p=b.payload;let kind='text',file=null;
  if(p.hasMedia&&p.media?.url){const r=await fetch(B(c)+new URL(p.media.url).pathname,{headers:H(c)});if(r.ok){const mt=p.media.mimetype||'';kind=mt.startsWith('audio')?'audio':mt.startsWith('image')?'image':'text';file=saveMedia(Buffer.from(await r.arrayBuffer()),kind==='audio'?'ogg':(mt.split('/')[1]||'bin').split(';')[0])}}
  return {handle:p.from.replace(/@.*/,''),name:p._data?.notifyName,kind,body:p.body||null,file,ext_id:p.id}}
-export const connect=async(c,pub)=>post(c,'/api/sessions',{name:S(c),start:true,config:{webhooks:[{url:`${pub}/webhook/waha/${c.id}`,events:['message']}]}}).catch(e=>String(e.message).includes('422')?0:Promise.reject(e));
+export const connect=async(c,url)=>post(c,'/api/sessions',{name:S(c),start:true,config:{webhooks:[{url,events:['message']}]}}).catch(e=>String(e.message).includes('422')?0:Promise.reject(e));
 export async function qr(c){const r=await fetch(B(c)+`/api/${S(c)}/auth/qr`,{headers:{...H(c),accept:'image/png'}});return r.ok?'data:image/png;base64,'+Buffer.from(await r.arrayBuffer()).toString('base64'):null}

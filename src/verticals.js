@@ -15,4 +15,4 @@ const st=v.stages.map(s=>s.split(':'));const ex=(await q('select id from stages 
 for(let i=0;i<st.length;i++){const [n,k]=st[i];if(ex[i])await q('update stages set name=$1,pos=$2,kind=$3 where id=$4',[n,i,k||'open',ex[i].id]);else await q('insert into stages(name,pos,kind) values($1,$2,$3)',[n,i,k||'open'])}
 const fb=ex.length>st.length?ex[0].id:null;
 for(const e of ex.slice(st.length)){await q('update conversations set stage_id=$1 where stage_id=$2',[ex[0].id,e.id]);await q('delete from stages where id=$1',[e.id])}
-await q("insert into settings values('vertical',$1) on conflict(key) do update set value=$1",[JSON.stringify(name)])}
+await q("insert into settings(key,value) values('vertical',$1) on conflict(tenant_id,key) do update set value=$1",[JSON.stringify(name)])}
