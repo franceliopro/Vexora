@@ -29,8 +29,10 @@ dialog{border:0;border-radius:18px;padding:22px;width:min(560px,92vw);box-shadow
 .chips{display:flex;gap:8px;flex-wrap:wrap}.chip{border:1px solid var(--ln);border-radius:99px;padding:6px 12px;cursor:pointer;display:flex;gap:6px;align-items:center;background:#fff}.chip.on{border-color:var(--ac);background:var(--ac-s)}.chip i{width:14px;height:14px;border-radius:50%}
 .login{margin:12vh auto;width:min(380px,92vw)}.row{display:flex;gap:10px;align-items:center}.row>*{flex:1}.bar{height:8px;background:var(--ac);border-radius:4px;transition:.5s}
 @media(max-width:900px){nav{width:64px}nav span,.sub,.brand b{display:none}.inbox{grid-template-columns:1fr}.det{display:none}}
-</style></head><body><div id="app"></div>
+</style></head><body><div id="app" style="padding:24px;font:14px system-ui;color:#64748b">Carregando…</div>
+<script>addEventListener('error',e=>{document.body.insertAdjacentHTML('beforeend','<pre style="position:fixed;inset:auto 0 0 0;background:#fee2e2;color:#7f1d1d;padding:12px;margin:0;font:12px monospace;white-space:pre-wrap;z-index:9">Erro na interface: '+String(e.message).replace(/</g,'&lt;')+'</pre>')});addEventListener('unhandledrejection',e=>console.error(e.reason))</script>
 <script>
+const _rc=Element.prototype.replaceChildren;Element.prototype.replaceChildren=function(...c){_rc.call(this,...c.flat(9).filter(x=>x!=null&&x!==false))};
 const $=(s,e=document)=>e.querySelector(s),h=(t,a={},...c)=>{const e=document.createElement(t);for(const k in a)k.startsWith('on')?e[k]=a[k]:k==='class'?e.className=a[k]:a[k]!==false&&e.setAttribute(k,a[k]);e.append(...c.flat(9).filter(x=>x!=null&&x!==false));return e};
 let T=localStorage.nx,ME,BR,ws,ST=[],US=[],AG=[],evt=()=>{};const A=$('#app');
 const api=async(p,m='GET',b)=>{const r=await fetch('/api'+p,{method:m,headers:{'content-type':'application/json',authorization:'Bearer '+T},body:b?JSON.stringify(b):undefined});if(r.status===401&&T){localStorage.removeItem('nx');location.reload()}const j=await r.json();if(!r.ok){alert(j.error);throw new Error(j.error)}return j};
@@ -53,11 +55,11 @@ function shell(){const nv=h('nav',{},h('div',{class:'brand'},logo(),h('b',{},BR.
  A.replaceChildren(nv,h('main',{id:'m'}));route()}
 addEventListener('hashchange',()=>ME&&route());
 function route(){const k=location.hash.slice(1)||'inbox';document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.dataset.k===k));evt=()=>{};const m=$('#m');m.replaceChildren();m.style.animation='none';m.offsetHeight;m.style.animation='';V[k]?.(m)}
-const top=(t,...r)=>h('div',{class:'top'},h('h2',{},t),h('div',{class:'row'},...r));
+const hdr=(t,...r)=>h('div',{class:'top'},h('h2',{},t),h('div',{class:'row'},...r));
 // ---------- CRUD genérico
-function crud(m,{title,t,fields,cols,after}){const box=h('div',{class:'pad'});m.append(top(title,h('button',{class:'btn',onclick:()=>form()},'+ Novo')),box);let rows=[];
+function crud(m,{title,t,fields,cols,after}){const box=h('div',{class:'pad'});m.append(hdr(title,h('button',{class:'btn',onclick:()=>form()},'+ Novo')),box);let rows=[];
  const get=(o,k)=>k.split('.').reduce((a,c)=>a?.[c],o);const set=(o,k,v)=>{const p=k.split('.');p.slice(0,-1).forEach(c=>o=o[c]??={});o[p.at(-1)]=v};
- async function load(){rows=await api('/t/'+t);const cell=(c,r)=>String((c[2]?c[2](r):get(r,c[0]))??'');box.replaceChildren(h('div',{class:'card'},h('table',{},h('tr',{},cols.map(c=>h('th',{},c[1]))),rows.map(r=>h('tr',{class:'r',onclick:()=>form(r)},cols.map(c=>h('td',{},cell(c,r))))))),...[after?.(box,rows)])}
+ async function load(){rows=await api('/t/'+t);const cell=(c,r)=>String((c[2]?c[2](r):get(r,c[0]))??'');box.replaceChildren(h('div',{class:'card'},h('table',{},h('tr',{},cols.map(c=>h('th',{},c[1]))),rows.map(r=>h('tr',{class:'r',onclick:()=>form(r)},cols.map(c=>h('td',{},cell(c,r))))))));after?.(box,rows)}
  function form(r){const d=h('dialog'),o=r?JSON.parse(JSON.stringify(r)):{},ins={};
   d.append(h('h3',{},r?'Editar':'Novo'),fields.map(f=>{const v=get(o,f.k),i=f.opts?h('select',{},h('option',{value:''},'—'),(typeof f.opts==='function'?f.opts():f.opts).map(x=>h('option',{value:x.v??x,...( String(v)===String(x.v??x)&&{selected:true})},x.l??x))):f.area?h('textarea',{rows:f.rows||3}):h('input',{type:f.type||'text'});
    if(!f.opts&&v!=null)i.value=f.json?JSON.stringify(v,null,1):f.type==='datetime-local'?String(v).slice(0,16):v;ins[f.k]=[i,f];return h('div',{},h('label',{},f.l),i,f.hint&&h('small',{},f.hint))}),
@@ -96,7 +98,7 @@ V.inbox=async m=>{const Ls=h('div',{class:'list'}),C=h('div',{class:'chat'}),D=h
  evt=(t,d)=>{if(t==='msg'){if(cur&&d.conversation_id===cur.id){const i=ms.findIndex(x=>x.id===d.message.id);i<0?ms.push(d.message):ms[i]=d.message;rd()}ld()}if(t==='conv')ld()};
  ld()};
 // ---------- Pipeline
-V.pipeline=async m=>{const w=h('div',{class:'kan'});m.style.cssText='display:flex;flex-direction:column';m.append(top('Pipeline'),w);let drag;
+V.pipeline=async m=>{const w=h('div',{class:'kan'});m.style.cssText='display:flex;flex-direction:column';m.append(hdr('Pipeline'),w);let drag;
  const ld=async()=>{const cs=await api('/conversations?scope=all');w.replaceChildren(...ST.map(s=>{const it=cs.filter(c=>c.stage_id===s.id),sum=it.reduce((a,c)=>a+(+c.amount||0),0);
   const cl=h('div',{class:'col',ondragover:e=>{e.preventDefault();cl.classList.add('ov')},ondragleave:()=>cl.classList.remove('ov'),ondrop:async e=>{cl.classList.remove('ov');if(drag)await api('/conversations/'+drag,'PATCH',{stage_id:s.id});ld()}},
    h('h4',{},s.name+(s.kind==='won'?' 🏆':s.kind==='lost'?' ✖':''),h('small',{},it.length)),it.map(c=>h('div',{class:'kc',draggable:true,ondragstart:()=>drag=c.id,onclick:()=>location.hash='inbox'},h('div',{class:'row',style:'justify-content:flex-start'},av(c.cname),h('div',{},h('b',{},c.cname),h('br'),h('small',{},c.driver+(c.ai_on?' · 🤖':'')))),c.amount&&h('small',{},'R$ '+c.amount))),h('small',{style:'margin-top:auto'},sum?'Total R$ '+sum:'Sem valores'));return cl}))};
@@ -111,7 +113,7 @@ V.flows=m=>crud(m,{title:'Automações & follow-up',t:'flows',cols:[['name','Nom
 V.social=m=>{crud(m,{title:'Posts (Zernio)',t:'posts',cols:[['body','Texto'],['status','Status'],['schedule_at','Agendado']],fields:[{k:'channel_id',l:'ID do canal Zernio',num:true},{k:'body',l:'Texto',area:true},{k:'media_url',l:'URL da mídia'},{k:'schedule_at',l:'Agendar',type:'datetime-local'}],after:async b=>{
   b.append(h('button',{class:'btn s',onclick:async()=>{const id=prompt('ID do post para publicar');if(id){await api(`/posts/${id}/publish`,'POST');alert('Publicado');location.reload()}}},'Publicar post por ID'),h('h3',{},'Anúncios Meta'),h('div',{id:'ads'}));
   const d=$('#ads'),sub=h('div');d.append(sub);crud(sub,{title:'Anúncios',t:'ads',cols:[['name','Campanha'],['status','Status']],fields:[{k:'name',l:'Nome'},{k:'data',l:'Config (JSON)',json:true,area:true,hint:'{"objective":"OUTCOME_ENGAGEMENT","daily_budget":2000}'}]})}})};
-V.stats=async m=>{const s=await api('/stats'),mx=Math.max(1,...s.by_stage.map(x=>x.n));m.append(top('Resultados'),h('div',{class:'pad'},h('div',{class:'card'},h('h3',{},'Funil'),s.by_stage.map(x=>h('div',{class:'row',style:'margin:6px 0'},h('span',{style:'flex:0 0 160px'},x.name),h('div',{style:'flex:3'},h('div',{class:'bar',style:`width:${x.n/mx*100}%;min-width:4px`})),h('b',{style:'flex:0 0 40px'},x.n)))),
+V.stats=async m=>{const s=await api('/stats'),mx=Math.max(1,...s.by_stage.map(x=>x.n));m.append(hdr('Resultados'),h('div',{class:'pad'},h('div',{class:'card'},h('h3',{},'Funil'),s.by_stage.map(x=>h('div',{class:'row',style:'margin:6px 0'},h('span',{style:'flex:0 0 160px'},x.name),h('div',{style:'flex:3'},h('div',{class:'bar',style:`width:${x.n/mx*100}%;min-width:4px`})),h('b',{style:'flex:0 0 40px'},x.n)))),
  h('div',{class:'card'},h('h3',{},'Mensagens 7 dias (IA vs total)'),s.msgs7.map(x=>h('div',{class:'row',style:'margin:6px 0'},h('span',{style:'flex:0 0 60px'},x.d),h('div',{style:'flex:3'},h('div',{class:'bar',style:`width:${x.n/Math.max(...s.msgs7.map(y=>y.n))*100}%`})),h('small',{style:'flex:0 0 90px'},`${x.n} (🤖${x.ai})`)))),h('div',{class:'card'},h('h3',{},'Recebido (pago)'),h('b',{style:'font-size:28px'},'R$ '+s.paid.toLocaleString())))) };
 // ---------- Agente IA
 V.agent=m=>{const prov=['openai','anthropic'],mk=(n,l)=>[{k:n+'.provider',l:l+' · provedor',opts:prov},{k:n+'.base_url',l:l+' · base URL (opcional, qualquer API compatível OpenAI)'},{k:n+'.key',l:l+' · API key',type:'password'},{k:n+'.model',l:l+' · modelo'}];
@@ -121,7 +123,7 @@ V.agent=m=>{const prov=['openai','anthropic'],mk=(n,l)=>[{k:n+'.provider',l:l+' 
 const exp=async()=>{const r=await fetch('/api/export',{headers:{authorization:'Bearer '+T}});const a=h('a',{href:URL.createObjectURL(await r.blob()),download:'nexora-export.json'});a.click()};
 V.set=async m=>{const b={...BR},pick=['#2563eb','#334e68','#374151','#3f7d6b','#5b4b6e'],fonts=['Inter','Poppins','DM Sans','Manrope','Space Grotesk','Playfair Display','Nunito'];
  const pv=h('div');const sync=()=>{brand({...BR,...b})};
- m.append(top('Ajustes'),h('div',{class:'pad'},
+ m.append(hdr('Ajustes'),h('div',{class:'pad'},
  h('div',{class:'card'},h('h3',{},'Marca (white-label)'),h('label',{},'Nome'),h('input',{value:b.name,oninput:e=>{b.name=e.target.value;sync()}}),h('label',{},'Cor de acento'),h('div',{class:'chips'},pick.map(c=>h('div',{class:'chip',onclick:()=>{b.color=c;sync();cp.value=c}},h('i',{style:'background:'+c}),c)),h('input',{id:'cp',type:'color',style:'width:60px;padding:2px',value:b.color,oninput:e=>{b.color=e.target.value;sync()}})),
   h('label',{},'Fonte'),h('select',{onchange:e=>{b.font=e.target.value;sync()}},fonts.map(f=>h('option',{...(f===b.font&&{selected:true})},f))),h('label',{},'Logo / ícone'),h('input',{type:'file',accept:'image/*',onchange:e=>{const f=new FileReader();f.onload=()=>{b.logo=f.result;sync()};f.readAsDataURL(e.target.files[0])}}),h('br'),
   h('button',{class:'btn',onclick:async()=>{await api('/brand','PUT',{name:b.name,color:b.color,font:b.font,logo:b.logo});location.reload()}},'Salvar marca')),

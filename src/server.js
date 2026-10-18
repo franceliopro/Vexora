@@ -15,6 +15,7 @@ const chk=t=>{if(!T.includes(t))throw new Error('tabela inválida');return t};
 const ins=async(t,b)=>{const c=await cols(t);const k=Object.keys(b).filter(x=>c[x]&&x!=='id'&&x!=='tenant_id');const v=k.map(x=>c[x]==='jsonb'?JSON.stringify(b[x]):b[x]);return (await q(`insert into ${t}(${k.join()}) values(${k.map((_,i)=>'$'+(i+1))}) returning *`,v)).rows[0]};
 const upd=async(t,id,b)=>{const c=await cols(t);const k=Object.keys(b).filter(x=>c[x]&&x!=='id'&&x!=='tenant_id');if(!k.length)return;return (await q(`update ${t} set ${k.map((x,i)=>x+'=$'+(i+2))} where id=$1 returning *`,[id,...k.map(x=>c[x]==='jsonb'?JSON.stringify(b[x]):b[x])])).rows[0]};
 const clean=r=>{delete r.pass;delete r.emb;return r};
+app.get('/healthz',(_,res)=>res.send('ok'));
 // ---- público (empresa identificada por token, domínio ou ?t=slug)
 const hits=new Map();const limit=(req,res,next)=>{const n=Date.now(),h=hits.get(req.ip);if(!h||h.r<n){hits.set(req.ip,{n:1,r:n+6e4});return next()}h.n++>15?res.status(429).json({error:'muitas tentativas, aguarde 1 min'}):next()};
 const slugOf=req=>String(req.headers['x-tenant']||req.query.t||'').toLowerCase().replace(/[^a-z0-9-]/g,'');
