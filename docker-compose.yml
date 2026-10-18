@@ -1,0 +1,27 @@
+# Deploy direto no Dokploy / Portainer (Stack). Cada cliente = 1 stack = 1 banco próprio.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://nexora:${POSTGRES_PASSWORD}@db:5432/nexora
+      JWT_SECRET: ${JWT_SECRET}
+      PUBLIC_URL: ${PUBLIC_URL}
+      GCAL_CLIENT_ID: ${GCAL_CLIENT_ID:-}
+      GCAL_CLIENT_SECRET: ${GCAL_CLIENT_SECRET:-}
+      GCAL_REFRESH_TOKEN: ${GCAL_REFRESH_TOKEN:-}
+      GCAL_CALENDAR_ID: ${GCAL_CALENDAR_ID:-primary}
+    ports: ["${APP_PORT:-3000}:3000"]
+    volumes: [appdata:/data]
+    depends_on: [db]
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment: {POSTGRES_USER: nexora, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}", POSTGRES_DB: nexora}
+    volumes: [pgdata:/var/lib/postgresql/data]
+  waha:
+    image: devlikeapro/waha:latest
+    restart: unless-stopped
+    environment: {WHATSAPP_API_KEY: "${WAHA_KEY}"}
+    volumes: [wahadata:/app/.sessions]
+volumes: {appdata: {}, pgdata: {}, wahadata: {}}
