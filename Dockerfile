@@ -8,7 +8,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev
 COPY . .
+RUN node scripts/check-imports.mjs
 ENV MEDIA_DIR=/data/media PORT=3000
 VOLUME /data
 EXPOSE 3000
 CMD ["node","src/server.js"]
+
