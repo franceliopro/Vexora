@@ -23,4 +23,7 @@ const originalPay=V.pay;V.pay=m=>{originalPay(m);m.querySelector('.top')?.append
 // Operations inside the existing inbox stay one click away.
 const originalInbox=V.inbox;V.inbox=async m=>{await originalInbox(m);const list=m.querySelector('.list'),bar=h('div',{class:'inbox-links'},ME.role!=='restricted'&&linkButton('Contatos','contacts'),linkButton('Agenda','agenda'),UX.admin()&&linkButton('Equipe','governance'),UX.admin()&&linkButton('Relatórios','serviceReports'),UX.admin()&&linkButton('Canais / QR','integrations'));list?.insertAdjacentElement('afterbegin',bar)};
 const connectedIntegrations=V.integrations;V.integrations=async m=>{await connectedIntegrations(m);if(!UX.admin())return;const channels=await api('/t/channels'),box=h('div',{class:'card'},h('h3',{},'Conectar WhatsApp por QR Code'),h('p',{},'No celular, abra Dispositivos conectados → Conectar dispositivo. Use um dos canais abaixo. Instagram e Messenger usam a integração do provedor, sem QR de WhatsApp.'));m.querySelector('.pad')?.prepend(box);for(const ch of channels.filter(c=>['waha','baileys'].includes(c.driver)))box.append(UX.button('Exibir QR Code · '+ch.name,()=>qrDialog(ch),'g'));if(!channels.some(c=>['waha','baileys'].includes(c.driver)))box.append(h('p',{class:'mu'},'Cadastre um canal WAHA ou Baileys em Conexões abaixo.'));};
+V.integrations=guidedIntegrations;
+V.agent=guidedAgents;
+wrapHelpViews();
 boot();
