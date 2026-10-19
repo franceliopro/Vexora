@@ -1,0 +1,5 @@
+export const adminRole=u=>['owner','admin'].includes(u.role);
+export const OPERATIONS=['reply','transfer','invite','close','automation','charge','edit_contact','create_fields','reports','export'];
+export function allowed(u,action){if(adminRole(u))return true;if(typeof u.permissions?.[action]==='boolean')return u.permissions[action];return u.role==='agent'&&action!=='reports'&&action!=='export'}
+export function requireAction(u,action){if(!allowed(u,action)){const e=Error('Sem permissão para esta ação');e.status=403;throw e}}
+export function normalizePermissions(input={}){const p={};for(const k of [...OPERATIONS,'new','mine','others'])if(k in input){if(typeof input[k]!=='boolean')throw Error('Permissão inválida: '+k);p[k]=input[k]}for(const k of ['channel_ids','others_team_ids'])if(k in input){if(!Array.isArray(input[k])||input[k].some(x=>!Number.isSafeInteger(x)||x<1)||input[k].length>500)throw Error('Escopo inválido');p[k]=[...new Set(input[k])]}return p}

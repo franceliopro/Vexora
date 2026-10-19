@@ -6,7 +6,7 @@ const admin=new pg.Pool({connectionString:ADMIN,max:4}),app=new pg.Pool({connect
 export const adm=(t,p)=>admin.query(t,p); // superusuário: só migração, painel da plataforma e backup
 // q(): com tenant no contexto roda numa transação com app.tenant definido ⇒ RLS filtra tudo. Sem tenant ⇒ RLS não devolve nada (falha fechada).
 export const q=async(t,p)=>{const s=als.getStore();if(!s?.tenant)return app.query(t,p);const c=await app.connect();
- try{await c.query('begin');await c.query("select set_config('app.tenant',$1,true)",[String(s.tenant)]);const r=await c.query(t,p);await c.query('commit');return r}
+ try{await c.query('begin');await c.query("select set_config('app.tenant',$1,true)",[String(s.tenant)]);await c.query("select set_config('app.actor',$1,true)",[String(s.actor||'')]);const r=await c.query(t,p);await c.query('commit');return r}
  catch(e){await c.query('rollback').catch(()=>{});throw e}finally{c.release()}};
 let C={};export async function cols(t){if(C[t])return C[t];const r=await q("select column_name c,data_type d from information_schema.columns where table_schema='public' and table_name=$1",[t]);return C[t]=Object.fromEntries(r.rows.map(x=>[x.c,x.d]))}
 export async function migrate(){for(let i=0;i<40;i++){try{await adm('select 1');break}catch{await new Promise(r=>setTimeout(r,2000))}}
@@ -23,5 +23,5 @@ export async function migrate(){for(let i=0;i<40;i++){try{await adm('select 1');
 
 
 // One connection and one tenant context for an entire atomic operation.
-export async function tenantTransaction(tenant,fn){const c=await app.connect();try{await c.query('begin');await c.query("select set_config('app.tenant',$1,true)",[String(tenant)]);const result=await fn((t,p)=>c.query(t,p));await c.query('commit');return result}catch(e){await c.query('rollback');throw e}finally{c.release()}}
+export async function tenantTransaction(tenant,fn){const c=await app.connect();try{await c.query('begin');await c.query("select set_config('app.tenant',$1,true)",[String(tenant)]);await c.query("select set_config('app.actor',$1,true)",[String(als.getStore()?.actor||'')]);const result=await fn((t,p)=>c.query(t,p));await c.query('commit');return result}catch(e){await c.query('rollback');throw e}finally{c.release()}}
 export async function adminTransaction(fn){const c=await admin.connect();try{await c.query('begin');const result=await fn((t,p)=>c.query(t,p));await c.query('commit');return result}catch(e){await c.query('rollback');throw e}finally{c.release()}}
