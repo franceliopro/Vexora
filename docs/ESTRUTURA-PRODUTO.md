@@ -16,6 +16,10 @@ Decisão de 19/10/2026. Venda direta do proprietário da Néxora às empresas fi
 | 10. Pagamentos | Provedores e cobrança recorrente existentes, com validação externa ainda pendente. |
 | 11. Personalização para cada Cliente | Nome, cor, fonte, logo claro, logo escuro e favicon independentes. |
 
+## Como interpretar os 11 pontos
+
+Os 11 pontos representam a sequência de organização e evolução do produto. Não exigem uma tela independente para cada ponto. Os fluxos e as telas serão definidos a partir das explicações e referências do proprietário. A navegação mantém os acessos existentes em uma faixa única, com rolagem e controles quando faltar espaço, sem o agrupamento “Mais módulos”. Não ampliar o CRM antes de receber sua especificação. A referência visual deve preservar estrutura, proporções e comportamento solicitados, com marca, tipografia, cores e acabamento próprios da Néxora.
+
 ## Empresas e acesso master
 
 Abrir `/platform.html` na instalação e usar a chave PLATFORM_KEY existente. A chave fica na memória da página; não é gravada em localStorage. O atalho Gerenciar empresas fica no menu de conta dos administradores; o atalho não concede o acesso master.
