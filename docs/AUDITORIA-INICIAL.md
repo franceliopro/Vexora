@@ -4,7 +4,7 @@ Base inspecionada: main em 03673dbb9830bccea7df5e6bb4cfae1299028849.
 
 ## Evidência obtida
 
-O main já contém migração 003, motor/editor de bots, cobrança recorrente, escola e delivery. A conversa anterior descreve um momento anterior ao envio desses módulos. Foram lidos os 43 arquivos do repositório e executado `node test/run.mjs`: TODOS OS TESTES OK. Esse resultado cobre funções puras e simulação de bots; não prova servidor, provedores ou deploy. Não há lockfile nem workflow CI no estado inspecionado.
+O main já contém migração 003, motor/editor de bots, cobrança recorrente, escola e delivery. A conversa anterior descreve um momento anterior ao envio desses módulos. Foram obtidos os 43 arquivos e revisados os principais caminhos de servidor, banco, UI e testes e executado `node test/run.mjs`: TODOS OS TESTES OK. Esse resultado cobre funções puras e simulação de bots; não prova servidor, provedores ou deploy. Não há lockfile nem workflow CI no estado inspecionado.
 
 ## Lacunas identificadas por leitura de código
 
