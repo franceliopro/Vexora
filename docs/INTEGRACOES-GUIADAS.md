@@ -79,3 +79,17 @@ O Baileys evita abrir sockets concorrentes no mesmo processo e usa reconexão pr
 O logo da empresa no cabeçalho leva à Central de Atendimento. A assinatura do produto no rodapé é independente da marca da empresa: néxora (Poppins forte), SUITE (Space Grotesk), by EFFE. O símbolo atual permanece provisório até o recebimento do novo ícone mencionado pelo usuário.
 
 Validação adicional: `node test/baileys-runtime.mjs` usa transporte simulado para verificar estado, evento de entrada, isolamento de falhas, conteúdo encapsulado, LID, sessão única e eco ignorado. O teste PostgreSQL de integrações também cobre a lista de inboxes, última entrada, fila, segredo omitido e escopo por canal. Interface verificada em Chromium, desktop e celular, com APIs simuladas. Não houve acesso aos logs ou à sessão real do usuário nesta correção.
+
+## Identificação de várias contas e teste guiado
+
+Cada inbox agora distingue nome interno (editável), provedor, @/telefone, perfil Zernio e identificador da sessão/conta. Para Baileys, `baileys-ID` é o identificador estável do canal da Néxora; o nome amigável é o campo Nome da inbox. WAHA exibe a sessão configurada; Zernio exibe o accountId. Não confunda nome interno com nome/@ na rede.
+
+A Central mostra um diretório de inboxes e opções de filtro com essas identidades. O nome da inbox também acompanha a conversa. O @ consultado no Zernio é preservado na configuração da conta para permanecer visível após reiniciar a aplicação. Contas antigas recebem essa informação ao clicar em Atualizar estado dos provedores. Renomear a inbox não altera a conta na rede social.
+
+No rodapé, abra Inboxes → Atualizar estado dos provedores → Testar conversa na conta desejada. O teste gera um código NEXORA exclusivo, válido por dez minutos. Copie e envie de outro número/perfil para a conta escolhida. O painel consulta somente as mensagens dessa inbox e desse teste, sem enviar mensagens automaticamente. Quando confirmar entrada, abra o atendimento em outra aba, assuma e envie uma resposta humana. Vincule uma oportunidade pelo botão CRM. O teste confirma separadamente entrada, resposta persistida após aceitação do conector e vínculo CRM. Não certifica leitura/entrega remota nem toda a operação do CRM; encerramento, convites e transferência precisam de seus próprios testes operacionais.
+
+Os testes guiados pertencem ao usuário/empresa/canal que os iniciou e são temporários em memória. Reiniciar a aplicação exige iniciar outro teste. O recurso é administrativo. O código do teste não é credencial. O teste não reutiliza mensagens antigas, nem mensagens de outra inbox.
+
+O ícone recebido em image(20261019-172638).png foi aplicado no rodapé, preservando a imagem original em um contêiner SVG.
+
+Verificações: `test/integrations-postgres.mjs` cobre identidade persistida, nome editável, isolamento do teste por usuário e empresa, entrada, resposta humana e vínculo CRM com PostgreSQL/WASM. `test/inboxes-browser.mjs` cobre múltiplas contas na mesma rede, renomear, identificadores, assistente e ícone no desktop/celular, usando API simulada. Requer PLAYWRIGHT_MODULE e CHROMIUM_EXECUTABLE. Nenhum nome de instância da produção foi inferido dos dados de teste.
