@@ -65,3 +65,17 @@ Meta: acesso direto a algumas páginas retornou 429; os contratos essenciais for
 - `test/service-crm-postgres.mjs`: regressão PostgreSQL/WASM Atendimento/CRM.
 - Interface verificada em Chromium com API simulada (desktop/celular); não substitui homologação externa.
 - Chave fornecida pelo usuário validada com uma consulta real GET /accounts: autenticação aceita, zero contas conectadas no momento da consulta. Chave não incluída no repositório. Nenhuma mensagem ou publicação foi enviada.
+
+## Inboxes, sessão e teste de recebimento
+
+O dono/administrador já é um usuário válido de atendimento. Não é necessário cadastrar uma segunda conta de atendente nem criar IA ou bot para receber mensagens. Uma conversa sem responsável chega em **Novos**; **Meus** mostra apenas as assumidas ou compartilhadas. A Central passa a abrir em Novos para quem tem essa permissão, incluindo o dono. Para responder, clique em Assumir.
+
+Use o botão de inboxes no rodapé para consultar nome, provedor, conta/número quando disponível, estado, última mensagem persistida e volume aguardando (volume exclusivo de administradores). O seletor da Central permite filtrar por inbox. Baileys mostra o estado real do socket; WAHA consulta a sessão; Zernio consulta a conta ao atualizar os provedores. Meta diferencia credenciais válidas de recebimento confirmado: um token válido não comprova a assinatura do webhook. Os estados Baileys são transitórios e revalidados no reinício. A última entrada vem do PostgreSQL.
+
+Teste obrigatório: envie “Olá” **de outro número** para o WhatsApp conectado. Mensagens do próprio número conectado (`fromMe`) são ignoradas para não duplicar saídas. Abra Novos na inbox correta. O driver agora aguarda e trata erros no processamento de entrada, normaliza conteúdo encapsulado e preserva IDs WhatsApp LID para responder à mesma conversa. Erros aparecem na visão de conexão e nos logs do servidor. A leitura do QR comprova autenticação da sessão; somente a mensagem registrada comprova a entrada no atendimento.
+
+O Baileys evita abrir sockets concorrentes no mesmo processo e usa reconexão progressiva. Sessão revogada (401), recusada (403) ou substituída (440) não entra em tentativa infinita. No caso 401, clicar Conectar remove somente as credenciais já revogadas daquele canal para gerar novo QR. Use **uma réplica da aplicação** enquanto as sessões Baileys estiverem no processo/volume da Néxora; múltiplas réplicas exigem um worker exclusivo de sessão e coordenação distribuída, ainda não implementados.
+
+O logo da empresa no cabeçalho leva à Central de Atendimento. A assinatura do produto no rodapé é independente da marca da empresa: néxora (Poppins forte), SUITE (Space Grotesk), by EFFE. O símbolo atual permanece provisório até o recebimento do novo ícone mencionado pelo usuário.
+
+Validação adicional: `node test/baileys-runtime.mjs` usa transporte simulado para verificar estado, evento de entrada, isolamento de falhas, conteúdo encapsulado, LID, sessão única e eco ignorado. O teste PostgreSQL de integrações também cobre a lista de inboxes, última entrada, fila, segredo omitido e escopo por canal. Interface verificada em Chromium, desktop e celular, com APIs simuladas. Não houve acesso aos logs ou à sessão real do usuário nesta correção.
