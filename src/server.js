@@ -1,3 +1,4 @@
+import {mountIntegrations} from './integrations.js';
 import {mountOperations} from './operations.js';import {mountCRM,expireCards} from './crm.js';import {requireAction,requireParticipation,adminRole,normalizePermissions} from './governance.js';
 import {companyTimeZone,saveTimeZone} from './timezone.js';
 import {accessPredicate,conversationFor,controlPredicate} from './conversation-policy.js';import {mountConversationActions} from './conversation-actions.js';
@@ -40,7 +41,8 @@ app.post('/webhook/order/:source/:tid/:sig',ah(async(req,res)=>{if(req.params.si
  res.json(await inT(req.params.tid,async()=>{const b=req.body,ch=(await q('select id from channels where active order by id limit 1')).rows[0];let ct=(await q('select * from contacts where handle=$1',[b.handle])).rows[0];
   if(!ct)ct=(await q('insert into contacts(name,handle,channel_id) values($1,$2,$3) returning *',[b.name||b.handle,b.handle,ch?.id])).rows[0];
   return await createOrder({source:req.params.source,contact_id:ct.id,customer_name:b.name,customer_phone:b.handle,items:b.items||[],total:b.total,delivery_fee:b.delivery_fee,kind:b.kind||'entrega',address:b.address,payment_method:b.payment_method,paid:b.paid,ext_id:b.ext_id,notes:b.notes},{external:true})}))}));
-app.post('/webhook/:drv/:id/:sig',ah(async(req,res)=>{const {drv,id,sig}=req.params;if(!D[drv]?.parse||sig!==sign(drv+':'+id))return res.sendStatus(403);const t=(await q('select channel_tenant($1) t',[id])).rows[0]?.t;if(!t)return res.sendStatus(404);await inT(t,async()=>{const ch=(await q('select * from channels where id=$1',[id])).rows[0];if(drv==='zernio'&&!D.zernio.verify(ch,req.rawBody,req.headers))return res.sendStatus(403);const result=await D[drv].parse(ch,req.body);for(const m of [].concat(result||[]))await inbound(ch.id,m);res.sendStatus(200)})}));
+app.get('/webhook/meta/:id/:sig',ah(async(req,res)=>{const {id,sig}=req.params;if(sig!==sign('meta:'+id))return res.sendStatus(403);const t=(await q('select channel_tenant($1) t',[id])).rows[0]?.t;if(!t)return res.sendStatus(404);await inT(t,async()=>{const ch=(await q("select * from channels where id=$1 and driver='meta' and active",[id])).rows[0];const challenge=ch?D.meta.challenge(ch,req.query):null;challenge===null?res.sendStatus(403):res.type('text/plain').send(challenge)})}));
+app.post('/webhook/:drv/:id/:sig',ah(async(req,res)=>{const {drv,id,sig}=req.params;if(!D[drv]?.parse||sig!==sign(drv+':'+id))return res.sendStatus(403);const t=(await q('select channel_tenant($1) t',[id])).rows[0]?.t;if(!t)return res.sendStatus(404);await inT(t,async()=>{const ch=(await q('select * from channels where id=$1',[id])).rows[0];if(!ch||!ch.active||ch.driver!==drv)return res.sendStatus(404);if(D[drv].verify&&!D[drv].verify(ch,req.rawBody,req.headers))return res.sendStatus(403);const result=await D[drv].parse(ch,req.body);for(const m of [].concat(result||[]))await inbound(ch.id,m);res.sendStatus(200)})}));
 mountPublic(app,{ah,limit});
 // ---- painel da plataforma (dono do SaaS): chave PLATFORM_KEY. Usa o superusuário, só aqui.
 const pk=(req,res,next)=>{const k=process.env.PLATFORM_KEY||'',g=String(req.headers['x-platform-key']||'');k.length>=12&&g.length===k.length&&crypto.timingSafeEqual(Buffer.from(g),Buffer.from(k))?next():res.status(403).json({error:'chave inválida (defina PLATFORM_KEY com 12+ caracteres)'})};
@@ -56,6 +58,7 @@ app.get('/platform/backup',pk,(req,res)=>{const dir=fs.mkdtempSync('/tmp/bk-'),d
   const t=spawn('tar',['-czf','-','-C',dir,'db.dump','-C',data,'media','baileys']);t.stdout.pipe(res);t.on('close',()=>fs.rmSync(dir,{recursive:true,force:true}))})});
 // ---- autenticado
 app.use('/api',auth);
+mountIntegrations(app,{ah,adm,q,tenantTransaction});
 mountConversationActions(app,{ah,q,tenantTransaction,bus,deliver,createPayment});
 mountOperations(app,{ah,adm,q,tenantTransaction,bus});
 mountCRM(app,{ah,adm,q,tenantTransaction,bus,deliver});

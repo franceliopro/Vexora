@@ -1,7 +1,8 @@
 import {automationAllowed} from './conversation-policy.js';
 import {q,adm,tenantTransaction} from './db.js';import {als} from './ctx.js';import {bus} from './bus.js';import {saveMedia} from './media.js';
+import * as meta from './drivers/meta.js';
 import * as waha from './drivers/waha.js';import * as baileys from './drivers/baileys.js';import * as zernio from './drivers/zernio.js';
-export const D={waha,baileys,zernio};
+export const D={waha,baileys,zernio,meta};
 export async function setStage(cid,sid){await q('update conversations set stage_id=$2 where id=$1',[cid,sid]);bus('conv',{id:cid});(await import('./flows.js')).onStage(cid,sid)}
 export async function inbound(chId,m){
  const saved=await tenantTransaction(als.getStore()?.tenant,async query=>{
