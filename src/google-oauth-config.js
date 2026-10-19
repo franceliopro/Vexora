@@ -1,0 +1,8 @@
+import {seal,unseal} from './service-calendar.js';
+const base=()=>String(process.env.PUBLIC_URL||'http://localhost:3100').replace(/\/$/,'');
+export function createGoogleVault(dba){
+ const saved=async()=> (await dba("select value from platform_provider_settings where key='google_oauth'")).rows[0]?.value;
+ const credentials=async()=>{const v=await saved();return v?{client_id:v.client_id,client_secret:unseal(v.secret)}:{client_id:process.env.GOOGLE_CLIENT_ID||process.env.GCAL_CLIENT_ID,client_secret:process.env.GOOGLE_CLIENT_SECRET||process.env.GCAL_CLIENT_SECRET}};
+ return {credentials,async status(){const c=await credentials();return {client_id:c.client_id||'',secret_saved:!!c.client_secret,configured:!!(c.client_id&&c.client_secret&&base().startsWith('https://')),https:base().startsWith('https://'),callbacks:[base()+'/calendar/google/callback',base()+'/google/drive/callback']}},async save(body){const client_id=String(body.client_id||'').trim(),old=await credentials(),secret=String(body.client_secret||'').trim()||(old.client_id===client_id?old.client_secret:'');if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(client_id)||!secret||secret.length>1000)throw Error('Informe o Client ID e o segredo do aplicativo Web Google.');await dba("insert into platform_provider_settings(key,value) values('google_oauth',$1) on conflict(key) do update set value=excluded.value",[JSON.stringify({client_id,secret:seal(secret)})]);}};
+}
+export function mountGoogleMaster(app,{pk,ah,vault}){app.get('/platform/google-oauth',pk,ah(async(req,res)=>res.json(await vault.status())));app.put('/platform/google-oauth',pk,ah(async(req,res)=>{await vault.save(req.body);res.json(await vault.status())}));}

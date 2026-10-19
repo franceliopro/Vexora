@@ -1,3 +1,4 @@
+import {createGoogleVault,mountGoogleMaster} from './google-oauth-config.js';
 import {createSocialVault,tenantSafe} from './managed-social.js';
 import {mountAppointmentReminders,tickAppointmentReminders} from './appointment-reminders.js';
 import {mountGoogleDrive,mountDrivePublic} from './google-drive.js';
@@ -54,6 +55,7 @@ mountPublic(app,{ah,limit});
 // ---- painel da plataforma (dono do SaaS): chave PLATFORM_KEY. Usa o superusuário, só aqui.
 const pk=(req,res,next)=>{const k=process.env.PLATFORM_KEY||'',g=String(req.headers['x-platform-key']||'');k.length>=12&&g.length===k.length&&crypto.timingSafeEqual(Buffer.from(g),Buffer.from(k))?next():res.status(403).json({error:'chave inválida (defina PLATFORM_KEY com 12+ caracteres)'})};
 mountWorkspaces(app,{pk,ah,adm:dba,tenantTransaction});
+const googleVault=createGoogleVault(dba);mountGoogleMaster(app,{pk,ah,vault:googleVault});
 const socialVault=createSocialVault(dba),managedDenied=(req,res)=>res.status(403).json({error:'Conexão gerenciada pela administração da Néxora'}),masterSocial=express.Router({mergeParams:true});
 app.use('/platform/tenants/:company/provider',pk,ah(async(req,res,next)=>{const tid=Number(req.params.company);if(!Number.isSafeInteger(tid)||!(await dba('select id from tenants where id=$1',[tid])).rows.length)throw Error('Empresa não encontrada');const owner=(await dba("select id from users where tenant_id=$1 and role='owner' and active order by id limit 1",[tid])).rows[0];req.u={tid,id:owner?.id||0,role:'owner',permissions:{}};req.managedSocial=true;als.run({tenant:tid,actor:owner?.id},next)}),masterSocial);
 mountIntegrations(masterSocial,{ah,adm:(req,res,next)=>next(),managed:(req,res,next)=>next(),q,tenantTransaction,bus,managedKey:()=>socialVault.key(),saveManagedKey:key=>socialVault.save(key),reserveAccount:(id,tenant)=>socialVault.reserve(id,tenant)});
@@ -68,10 +70,10 @@ app.get('/platform/backup',pk,(req,res)=>{const dir=fs.mkdtempSync('/tmp/bk-'),d
   res.setHeader('content-type','application/gzip');res.setHeader('content-disposition',`attachment; filename=nexora-backup-${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.tar.gz`);
   const t=spawn('tar',['-czf','-','-C',dir,'db.dump','-C',data,'media','baileys']);t.stdout.pipe(res);t.on('close',()=>fs.rmSync(dir,{recursive:true,force:true}))})});
 // ---- autenticado
-mountCalendarPublic(app,{ah,tenantTransaction});mountDrivePublic(app,{ah,tenantTransaction});
+mountCalendarPublic(app,{ah,tenantTransaction,credentials:googleVault.credentials});mountDrivePublic(app,{ah,tenantTransaction,credentials:googleVault.credentials});
 app.use('/api',auth);
-mountServiceCalendar(app,{ah,q,tenantTransaction,deliver,bus});mountAppointmentReminders(app,{ah,q,tenantTransaction});
-mountAttendanceManagement(app,{ah,q,tenantTransaction,bus});mountGoogleDrive(app,{ah,q,deliver,saveMedia});
+mountServiceCalendar(app,{ah,q,tenantTransaction,deliver,bus,credentials:googleVault.credentials});mountAppointmentReminders(app,{ah,q,tenantTransaction});
+mountAttendanceManagement(app,{ah,q,tenantTransaction,bus});mountGoogleDrive(app,{ah,q,deliver,saveMedia,credentials:googleVault.credentials});
 mountIntegrations(app,{ah,adm,q,tenantTransaction,bus,managed:managedDenied,managedKey:()=>socialVault.key()});
 mountConversationActions(app,{ah,q,tenantTransaction,bus,deliver,createPayment});
 mountFinancial(app,{ah,adm,q,tenantTransaction,deliver,asaasDebts,asaasPay});mountServiceWorkflow(app,{ah,q,deliver});
