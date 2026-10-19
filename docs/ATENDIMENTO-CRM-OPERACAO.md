@@ -35,3 +35,13 @@ Configure o webhook indicado pelo painel. A cobrança pode ser criada e o link e
 ## Validação
 
 Testes locais com PostgreSQL/WASM e navegador cobrem isolamento, rotação, carga, carteira, transbordo, filtros, contadores, confirmação idempotente, mensagens não lidas e navegação do atendimento. Testes dos provedores usam transportes simulados. A validação de entrega real e de recebimento financeiro requer as contas e credenciais de Sandbox do operador.
+
+## Protocolo e conexões
+
+Novos atendimentos recebem um protocolo imutável `NX-ANO-EMPRESA-NÚMERO`, sem telefone ou CPF. O recebimento inicial envia esse protocolo ao cliente antes da triagem. O estado de envio é salvo: falhas ou resultado incerto exigem conferência antes do reenvio. Conversas existentes recebem protocolo na migração, mas não disparam mensagens em massa: o atendente pode usar Informar protocolo.
+
+A tela abre em Meus. O filtro é um popover junto à busca, sem modal ou escurecimento. A ficha oferece seleção direta do painel e botões de etapas intermediárias para vincular ou mover o cliente.
+
+O Asaas diferencia chave cadastrada, última validação da API e último webhook recebido. Testar conexão agora consulta a API usando a chave já salva. A API responder não comprova entrega de mensagem nem recebimento de pagamento. Ao trocar conta ou ambiente, o token do webhook muda; atualize-o também no Asaas.
+
+No master, Empresa → Redes sociais gerenciadas mostra a validação da chave central, o vínculo da inbox e a última DM recebida. É necessário vincular o perfil à empresa, ativar o webhook e testar com uma nova mensagem de outro perfil. Histórico antigo no provedor não é importado por essa ativação.
