@@ -107,7 +107,7 @@ Painel de pedidos por etapa (novo → preparando → pronto → saiu → entregu
 ## Status honesto (v0.3)
 - **Testado de verdade**: regras puras e o motor de bots em simulação de conversa (`node test/run.mjs`); migrações, RLS e consultas SQL num Postgres 16 real; todas as telas e o editor de bots num navegador (Chromium) com API simulada.
 - **Nunca rodei o servidor Node completo** nem o build do Docker neste ambiente (sem acesso ao npm). O seu deploy no Dokploy é o primeiro teste real: se algo falhar, me envie o log do serviço `app`.
-- **Asaas**: endpoints de consulta (`/customers?cpfCnpj`, `/payments`, `identificationField`, `pixQrCode`) escritos de memória — valide no **sandbox** antes de usar em produção.
+- **Asaas**: contratos de consulta e confirmação revisados na documentação oficial; valide com as credenciais da sua conta no **sandbox** antes de usar em produção. A criação da cobrança não confirma o pagamento; isso depende do webhook autenticado.
 - **Zernio**: endpoints/webhook presumidos (`src/drivers/zernio.js`); confira na documentação.
 - iFood/Keeta/99Food: só o webhook genérico (integrações oficiais exigem credenciais de parceiro). Mercado Pago: confirmação automática ainda precisa ser mapeada; Stripe: valide a assinatura do webhook.
 - Impressão térmica: formato ESC/POS padrão, **não testado em impressora real** (acentos são convertidos para ASCII). Bloco "Chamar API externa" bloqueia endereços internos, mas não protege contra DNS rebinding.

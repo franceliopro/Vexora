@@ -33,7 +33,7 @@ try{
  const moved=await call('/crm/cards/'+card.id,'PATCH',{stage_id:middle.id,version:card.version});assert.equal(moved.status,200);card=moved.data;
  assert.equal((await call('/crm/cards/'+card.id,'PATCH',{title:'Conflito',version:1})).status,409);
  const win=await call('/crm/cards/'+card.id,'PATCH',{status:'won',stage_id:final.id,version:card.version});assert.equal(win.status,200);assert.equal(win.data.previous_stage_id,middle.id);assert.equal((await call('/crm/boards/'+bid+'/cards')).data.length,0);
- assert.equal((await call('/crm/boards/'+bid+'/cards?status=won,lost,open,archived')).data.length,1);
+ assert.equal((await call('/crm/boards/'+bid+'/cards?status=won,lost,open,archived')).data.length,1);await q('update conversations set unread=3 where id=1');const unread=await call('/crm/boards/'+bid+'/cards?status=won');assert.equal(unread.data[0].unread_count,3);
  const reopened=await call('/crm/cards/'+card.id,'PATCH',{status:'open',version:win.data.version});assert.equal(reopened.data.stage_id,middle.id);card=reopened.data;
  assert.equal((await call('/crm/cards/'+card.id,'PATCH',{status:'lost'})).status,400);
  const reason=board.data.reasons.find(r=>r.name==='Preço / condições');const lost=await call('/crm/cards/'+card.id,'PATCH',{status:'lost',reason_id:reason.id});assert.equal(lost.data.loss_reason,reason.name);

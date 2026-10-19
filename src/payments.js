@@ -1,8 +1,9 @@
+import {settlePayment} from './payment-status.js';import {tenantTransaction} from './db.js';import {als} from './ctx.js';import {bus} from './bus.js';
 import {digits,validDoc} from './lib.js';
-import {q} from './db.js';import {payHook} from './ctx.js';import {setStage} from './core.js';
+import {q} from './db.js';import {payHook} from './ctx.js';
 const cfg=async()=>(await q("select value from settings where key='pay'")).rows[0]?.value||{};
 const J=async(u,h,b,form)=>{const r=await fetch(u,{method:'POST',headers:form?h:{'content-type':'application/json',...h},body:form?new URLSearchParams(b):JSON.stringify(b)});const j=await r.json();if(!r.ok)throw new Error(u+' '+JSON.stringify(j));return j};
-export async function createPayment({contact_id,provider,amount,desc='Pagamento',dueDate,doc,platform,expectedEnvironment}){amount=Number(amount);if(!Number.isFinite(amount)||amount<=0||amount>1000000||Math.abs(amount*100-Math.round(amount*100))>0.00001)throw new Error('Valor inválido');if(dueDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)||new Date(dueDate+'T00:00:00Z').toISOString().slice(0,10)!==dueDate))throw new Error('Vencimento inválido');const c=await cfg(),k=c[provider]||{};let ext,link,environment;
+export async function createPayment({contact_id,provider,amount,desc='Pagamento',dueDate,doc,platform,expectedEnvironment,conversation_id}){amount=Number(amount);if(!Number.isFinite(amount)||amount<=0||amount>1000000||Math.abs(amount*100-Math.round(amount*100))>0.00001)throw new Error('Valor inválido');if(dueDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)||new Date(dueDate+'T00:00:00Z').toISOString().slice(0,10)!==dueDate))throw new Error('Vencimento inválido');const c=await cfg(),k=c[provider]||{};let ext,link,environment;
  if(provider==='asaas'){const ak=asaasConfig(c,platform),ct=(await q('select * from contacts where id=$1',[contact_id])).rows[0];if(!ct)throw new Error('Contato não encontrado');const document=digits(doc||ct.data?.cpf||ct.data?.cnpj||'');if(!validDoc(document))throw new Error('Informe CPF/CNPJ válido');environment=ak.sandbox?'sandbox':'production';if(expectedEnvironment&&expectedEnvironment!==environment)throw Error('Ambiente alterado. Confira a configuração antes de criar a cobrança.');const H={access_token:ak.key,'user-agent':'Nexora'},base=aBase(ak);
   const found=(await aGet(ak,'/customers?cpfCnpj='+encodeURIComponent(document)+'&limit=100')).data||[];let customer=found.find(x=>digits(x.cpfCnpj)===document)?.id;
   if(!customer)customer=(await J(base+'/customers',H,{name:ct.name||'Cliente',cpfCnpj:document,mobilePhone:digits(ct.handle)})).id;
@@ -10,14 +11,8 @@ export async function createPayment({contact_id,provider,amount,desc='Pagamento'
  else if(provider==='mercadopago'){const p=await J('https://api.mercadopago.com/checkout/preferences',{authorization:'Bearer '+k.token},{items:[{title:desc,quantity:1,unit_price:+amount,currency_id:k.currency||'BRL'}],notification_url:payHook('mercadopago')});ext=p.id;link=p.init_point}
  else if(provider==='stripe'){environment=k.test!==false?'test':'live';if(!new RegExp('^[sr]k_'+environment+'_').test(k.key||''))throw Error('Chave e ambiente Stripe incompatíveis');const p=await J('https://api.stripe.com/v1/checkout/sessions',{authorization:'Bearer '+k.key},{mode:'payment','line_items[0][quantity]':'1','line_items[0][price_data][currency]':k.currency||'brl','line_items[0][price_data][unit_amount]':String(Math.round(amount*100)),'line_items[0][price_data][product_data][name]':desc,success_url:process.env.PUBLIC_URL||'https://example.com'},true);ext=p.id;link=p.url}
  else throw new Error('provedor não suportado (asaas|mercadopago|stripe)');
- return (await q('insert into payments(contact_id,provider,ext_id,amount,link,environment) values($1,$2,$3,$4,$5,$6) returning *',[contact_id,provider,ext,amount,link,environment||null])).rows[0]}
-export async function payWebhook(provider,b,environment){let ext,ok=false;
- if(provider==='asaas'){ext=b.payment?.id;ok=['PAYMENT_RECEIVED','PAYMENT_CONFIRMED'].includes(b.event)}
- else if(provider==='stripe'){ext=b.data?.object?.id;ok=['checkout.session.completed','checkout.session.async_payment_succeeded'].includes(b.type)&&b.data?.object?.payment_status==='paid'}
- else if(provider==='mercadopago'){ext=b.data?.id;ok=false} // MP: confirme consultando /v1/payments/{id}; mapeie preference→payment conforme sua conta
- if(!ext||!ok)return;const p=(await q("update payments set status='pago' where ext_id=$1 and provider=$2 and status<>'pago' and ($3::text is null or environment=$3) returning *",[ext,provider,environment||null])).rows[0];if(!p)return;await q("update charges set status='pago',paid_at=now() where ext_id=$1 and status<>'pago'",[ext]);
- const cv=(await q('select id from conversations where contact_id=$1 order by id desc limit 1',[p.contact_id])).rows[0],st=(await q("select id from stages where kind='won' order by pos limit 1")).rows[0];
- if(cv&&st)await setStage(cv.id,st.id)}
+ return (await q('insert into payments(contact_id,provider,ext_id,amount,link,environment,conversation_id) values($1,$2,$3,$4,$5,$6,$7) returning *',[contact_id,provider,ext,amount,link,environment||null,conversation_id||null])).rows[0]}
+export async function payWebhook(provider,b,environment){const result=await tenantTransaction(als.getStore()?.tenant,query=>settlePayment(query,provider,b,environment));if(result?.message)bus('msg',{conversation_id:result.payment.conversation_id,message:result.message});if(result?.payment.conversation_id)bus('conv',{id:result.payment.conversation_id});return result}
 
 // Asaas v3: official API contracts reviewed; sandbox credentials still required for live validation.
 export const aBase=k=>k.sandbox?'https://api-sandbox.asaas.com/v3':'https://api.asaas.com/v3';

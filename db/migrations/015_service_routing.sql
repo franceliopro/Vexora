@@ -1,0 +1,13 @@
+alter table teams add column routing jsonb not null default '{}';
+alter table teams add column routing_sequence bigint not null default 0;
+alter table team_members add column last_assigned_at timestamptz;
+alter table team_members add column assignment_sequence bigint not null default 0;
+alter table contacts add column portfolio_user_id int references users;
+create trigger portfolio_guard before insert or update on contacts for each row execute function fk_guard('users','portfolio_user_id');
+alter table conversations add column routing_managed bool not null default false;
+alter table conversations add column routing_assigned_at timestamptz;
+alter table conversations add column routing_attempts int[] not null default '{}';
+alter table payments add column conversation_id int references conversations;
+create trigger payment_conversation_guard before insert or update on payments for each row execute function fk_guard('conversations','conversation_id');
+update payments p set conversation_id=r.conversation_id from conversation_payment_requests r where r.payment_id=p.id and p.tenant_id=r.tenant_id;
+create index on payments(tenant_id,conversation_id);
