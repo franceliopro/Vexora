@@ -36,3 +36,16 @@ export function ticketLines(o,st={},cols=48){const L=[],P=(s,x={})=>L.push({s:as
  P('Pagto: '+(o.payment_method||'-')+(o.paid?' (PAGO)':''));if(o.notes)P('Obs: '+o.notes);hr();P(st.footer||'Obrigado!',{a:'c'});return L}
 export const renderText=(L,cols=48)=>L.map(x=>x.a==='c'?x.s.padStart(Math.floor((cols+x.s.length)/2)):x.s).join('\n');
 export function renderEsc(L){let b='\x1b@';for(const x of L)b+=`\x1ba${x.a==='c'?1:0}\x1bE${x.b?1:0}\x1d!${x.big?'\x11':'\x00'}${x.s}\n`;return Buffer.from(b+'\x1ba\x00\x1bE\x00\x1d!\x00\n\n\n\x1dVB\x00','latin1').toString('base64')}
+export function validDoc(x){const d=digits(x);if(/^(\d)\1+$/.test(d))return false;
+ if(d.length===11){for(const n of [9,10]){let s=0;for(let i=0;i<n;i++)s+=+d[i]*(n+1-i);if((s*10)%11%10!==+d[n])return false}return true}
+ if(d.length===14){const f=n=>{let s=0,p=n-7;for(let i=0;i<n;i++){s+=+d[i]*p--;if(p<2)p=9}const r=s%11;return r<2?0:11-r};return f(12)===+d[12]&&f(13)===+d[13]}return false}
+// ---- cobrança recorrente (puro): decide quais cobranças criar e quais lembretes enviar hoje
+export function planCharges(subs,have,today,defRules=DEFAULT_RULES){const [y,m]=today.split('-').map(Number),out=[];
+ for(const s of subs){const rules=s.rules?.length?s.rules:defRules,lead=Math.max(10,...rules.map(r=>-r.offset));
+  for(const k of [0,1]){const due=dueDate(y,m-1+k,s.due_day);if(due<String(s.start_date||'0000').slice(0,10))continue;if(s.end_date&&due>String(s.end_date).slice(0,10))continue;
+   const d=daysBetween(today,due);if(d>lead||d<-30||have.has(s.id+'|'+due))continue;out.push({sub:s,due})}}return out}
+export function planReminders(charges,today,defRules=DEFAULT_RULES){const out=[];
+ for(const c of charges){const rules=c.rules?.length?c.rules:defRules,diff=daysBetween(String(c.due_date).slice(0,10),today);
+  for(const r of rules)if(diff>=r.offset&&diff<=r.offset+1&&!(c.sent||[]).includes(r.offset))out.push({charge:c,rule:r})}return out}
+export const textToRules=t=>String(t||'').split('\n').map(l=>l.match(/^\s*(-?\d+)\s*[|:]\s*(.+)$/)).filter(Boolean).map(m=>({offset:+m[1],text:m[2].replace(/\\n/g,'\n')}));
+export const rulesToText=r=>(r||[]).map(x=>`${x.offset} | ${String(x.text).replace(/\n/g,'\\n')}`).join('\n');

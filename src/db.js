@@ -1,4 +1,5 @@
 import pg from 'pg';import fs from 'fs';import {als} from './ctx.js';
+pg.types.setTypeParser(1082,x=>x); // DATE vem como 'YYYY-MM-DD' (sem fuso)
 const ADMIN=process.env.DATABASE_URL,au=new URL(ADMIN);const APPPW=process.env.APP_DB_PASSWORD||'troque-app';
 au.username='nexora_app';au.password=APPPW;
 const admin=new pg.Pool({connectionString:ADMIN,max:4}),app=new pg.Pool({connectionString:au.toString(),max:20});

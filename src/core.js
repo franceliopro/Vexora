@@ -14,7 +14,9 @@ export async function inbound(chId,m){ // m:{handle,name,kind,body,file,ext_id}
  cv=(await q('update conversations set unread=unread+1,last_at=now(),last_in_at=now() where id=$1 returning *',[cv.id])).rows[0];
  bus('msg',{conversation_id:cv.id,message:msg});
  if(fresh){fl.onNew(cv.id);if(cv.stage_id)fl.onStage(cv.id,cv.stage_id)}
- (await import('./ai/engine.js')).onInbound(cv,msg).catch(e=>console.error('ai',e.message))}
+ let used=false;try{used=await (await import('./bots/runtime.js')).handle(cv,msg,fresh)}catch(e){console.error('bot',e.message)}
+ if(!used)(await import('./ai/engine.js')).onInbound(cv,msg).catch(e=>console.error('ai',e.message))}
+export async function convFor(contactId){const cv=(await q('select * from conversations where contact_id=$1 order by id desc limit 1',[contactId])).rows[0];if(cv)return cv;const ct=(await q('select * from contacts where id=$1',[contactId])).rows[0];if(!ct?.channel_id)throw new Error('contato sem canal');const st=(await q('select id from stages order by pos limit 1')).rows[0];return (await q('insert into conversations(contact_id,channel_id,stage_id,ai_on) values($1,$2,$3,false) returning *',[ct.id,ct.channel_id,st?.id])).rows[0]}
 export async function deliver(cid,{kind='text',body,file,author_id,ai=false}){
  const cv=(await q('select c.*,ct.handle,ch.driver,ch.config,ch.id chid from conversations c join contacts ct on ct.id=c.contact_id join channels ch on ch.id=c.channel_id where c.id=$1',[cid])).rows[0];
  let ext=null,dir='out';

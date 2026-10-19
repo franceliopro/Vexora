@@ -48,6 +48,26 @@ Você precisa de: **um servidor** (VPS Linux, Ubuntu 22/24, 2 GB de RAM ou mais)
 4. **Agente IA**: crie o agente, ligue ao ID do canal, configure LLM/STT/TTS e adicione conhecimento.
 
 ---
+## Módulos por segmento (v0.3)
+Em **Ajustes → Segmento** você escolhe o negócio; o menu e os módulos mudam sozinhos (cliente vira paciente/aluno etc.). Módulos podem ser ligados/desligados em **Ajustes → Módulos ativos**.
+
+### Bots (fluxos visuais, tipo Typebot) — menu **Bots (fluxos)**
+Editor de blocos: arraste o ponto → de um bloco até a entrada de outro; duplo clique na linha remove. Blocos: mensagem, pedir para escolher (menu numerado), perguntar e guardar (valida CPF/CNPJ, e-mail, número), condição, variável, mover no funil, transferir (fila, atendente, time ou agente de IA), chamar API externa, **consultar cobranças (Asaas)**, **pedido no WhatsApp** e fim. Há modelos prontos (menu por setor, cobrança Asaas, pizzaria). O bot responde antes da IA; ao terminar ou transferir, a IA/atendente assume. Fluxo parado há 12 h é encerrado.
+- **Asaas por CPF/CNPJ**: valida o documento (dígitos verificadores), lista débitos com vencimento e situação, mostra **nome e documento mascarados** e o tipo (Pessoa Física/Jurídica), e envia **boleto (link/PDF), linha digitável, Pix copia e cola** ou link de pagamento. Configure a chave em *Ajustes → Integrações* (`pay`: `{"asaas":{"key":"$aact_...","sandbox":true}}`). Limite de 3 consultas por conversa. ⚠ Qualquer pessoa que souber um CPF/CNPJ consegue ver os débitos mascarados e pagar; por isso os dados são mascarados e há limite de consultas.
+- A WhatsApp não aceita listas/botões nativos nos drivers WAHA/Baileys deste projeto: os menus são numerados ("1. Financeiro").
+
+### Cobrança recorrente — menu **Cobrança**
+Cadastre assinaturas (cliente, valor, dia do vencimento, provedor). Todo dia, no horário configurado (padrão 9h, fuso America/Sao_Paulo), o sistema cria a cobrança do mês (10 dias antes do vencimento), gera o link no provedor e envia os lembretes da **régua**: padrão 10 e 5 dias antes, no dia e 3 dias depois — editável por assinatura ou para toda a empresa (uma linha por regra: `-10 | mensagem`; variáveis `{{nome}} {{valor}} {{vencimento}} {{descricao}} {{link}}`). Pagamento confirmado pelo webhook marca como pago e para os lembretes. O contato precisa ter **canal** definido.
+
+### Escola / música — menu **Escola**
+Cursos (com imagem e valor), alunos (pacote de aulas e professor), **gerar aulas semanais** (ex.: toda terça 18h por 12 semanas, pulando conflito de professor), chamada (presente / falta / justificada / cancelada) e **resumo**: ministradas, restantes, faltas, frequência e próxima aula. Ministradas = presenças + faltas; falta justificada e aula cancelada não consomem do pacote.
+
+### Delivery / pizzaria — menu **Delivery**
+Painel de pedidos por etapa (novo → preparando → pronto → saiu → entregue), **novo pedido de balcão/mesa/retirada/entrega**, cardápio com categorias, fotos, tamanhos e adicionais, regiões com taxa e pedido mínimo, e **pedido pelo WhatsApp** (bloco "Pedido no WhatsApp"). Preços são sempre recalculados no servidor. O cliente é avisado a cada mudança de status.
+- **Impressora térmica (ESC/POS)**: no PC da loja rode `printer-agent/agent.js` (Node 18+, sem dependências) com os dados de *Delivery → Impressora & config* (rede `PRINTER_HOST`, USB Linux `PRINTER_FILE=/dev/usb/lp0` ou compartilhada no Windows). Sem agente, o botão 🖨 imprime pelo navegador.
+- Pedidos de iFood/Keeta/99Food: o webhook genérico (*Ajustes → Dados e webhooks*) aceita `items:[{name,qty,total}]`, `total`, `delivery_fee`, `address`, etc.
+
+---
 ## pgAdmin (interface gráfica do banco)
 - Endereço: `http://localhost:5050` **no próprio servidor**, ou use um túnel SSH: `ssh -L 5050:127.0.0.1:5050 usuario@IP` e abra `http://localhost:5050` no seu computador.
 - Ou pelo domínio que você criou no Dokploy (passo 8) — sempre com HTTPS.
@@ -71,11 +91,12 @@ Você precisa de: **um servidor** (VPS Linux, Ubuntu 22/24, 2 GB de RAM ou mais)
 **Exportar uma empresa só** (portabilidade/LGPD): **Ajustes → Exportar dados da empresa (JSON)**. É leitura/arquivo; não existe importação de uma empresa avulsa para outra instalação.
 
 ---
-## Status honesto (v0.2)
-- Testei: sintaxe de todo o código e as migrações + RLS + `fk_guard` + funções de login/tenant num Postgres 16 real. **Não testei** o build do Docker, o app rodando ponta a ponta, nem os provedores externos.
-- Zernio: endpoints/webhook em `src/drivers/zernio.js` são presumidos — confira na doc. Reações/DM/comentários dependem disso.
-- iFood/Keeta/99Food: só webhook genérico de pedidos (URL em Ajustes → Dados e webhooks). Integrações oficiais exigem credenciais de parceiro.
-- Mercado Pago: confirmação automática ainda precisa ser mapeada (`payments.js`). Stripe: valide a assinatura do webhook em produção.
+## Status honesto (v0.3)
+- **Testado de verdade**: regras puras e o motor de bots em simulação de conversa (`node test/run.mjs`); migrações, RLS e consultas SQL num Postgres 16 real; todas as telas e o editor de bots num navegador (Chromium) com API simulada.
+- **Nunca rodei o servidor Node completo** nem o build do Docker neste ambiente (sem acesso ao npm). O seu deploy no Dokploy é o primeiro teste real: se algo falhar, me envie o log do serviço `app`.
+- **Asaas**: endpoints de consulta (`/customers?cpfCnpj`, `/payments`, `identificationField`, `pixQrCode`) escritos de memória — valide no **sandbox** antes de usar em produção.
+- **Zernio**: endpoints/webhook presumidos (`src/drivers/zernio.js`); confira na documentação.
+- iFood/Keeta/99Food: só o webhook genérico (integrações oficiais exigem credenciais de parceiro). Mercado Pago: confirmação automática ainda precisa ser mapeada; Stripe: valide a assinatura do webhook.
+- Impressão térmica: formato ESC/POS padrão, **não testado em impressora real** (acentos são convertidos para ASCII). Bloco "Chamar API externa" bloqueia endereços internos, mas não protege contra DNS rebinding.
+- Sem lembrete automático de aula, sem página pública de cardápio, sem controle de estoque por pedido.
 - Só Postgres (pgvector). Baileys é não oficial (risco de banimento). Anúncios Meta: cria só a campanha, pausada.
-- O botão de backup depende de `pg_dump 16` no container (instalado no Dockerfile; não testei a build).
-- Excluir empresa apaga o banco dela, mas não os arquivos de mídia órfãos.
