@@ -4,8 +4,8 @@ Decisão de 19/10/2026. Venda direta do proprietário da Néxora às empresas fi
 
 | Módulo | Escopo e estado desta entrega |
 |---|---|
-| 1. Central de Atendimento | Inbox e controle por conversa existentes. Processo completo e governança de três perfis especificados em PROCESSO-ATENDIMENTO.md; implementação fina ainda pendente. |
-| 2. CRM | Kanban e dados das conversas existentes. CRM avançado permanece no backlog. |
+| 1. Central de Atendimento | Inbox e controle por conversa existentes. Processo completo e governança de três perfis especificados em PROCESSO-ATENDIMENTO.md; Governança, ciclos, ficha e relatórios agora descritos em ENTREGA-ATENDIMENTO-CRM.md. |
+| 2. CRM | Painéis e oportunidades independentes, Kanban/Lista/Agenda/Relatório, encerramento obrigatório, inatividade e auditoria. Veja ENTREGA-ATENDIMENTO-CRM.md. |
 | 3. Inteligência e Rastreamento de Leads | Acesso a contatos e indicadores existentes. Tracking/UTM/atribuição ainda não implementados. |
 | 4. Agentes de IA | Configuração existente; templates acrescentam instruções, tom, regras e proibições em rascunho. |
 | 5. Chatbots | Editor existente; criação manual ou por template, sempre desativado até configurar. |

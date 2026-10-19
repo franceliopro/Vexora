@@ -36,4 +36,4 @@ create function log_service_control() returns trigger language plpgsql as $$ beg
 create trigger log_service_control after insert or update on conversations for each row execute function log_service_control();
 
 update conversations c set created_at=coalesce((select min(at) from messages m where m.conversation_id=c.id),c.last_at,c.created_at);
-insert into service_events(conversation_id,actor_id,team_id,type,data,at) select m.conversation_id,m.author_id,c.team_id,case when m.dir='in' then 'received' when m.dir='int' then 'note' when m.ai then 'automatic_reply' else 'human_reply' end,jsonb_build_object('message_id',m.id,'kind',m.kind,'backfilled',true),m.at from messages m join conversations c on c.id=m.conversation_id;
+insert into service_events(conversation_id,actor_id,team_id,type,data,at) select m.conversation_id,u.id,c.team_id,case when m.dir='in' then 'received' when m.dir='int' then 'note' when m.ai then 'automatic_reply' else 'human_reply' end,jsonb_build_object('message_id',m.id,'kind',m.kind,'backfilled',true),m.at from messages m join conversations c on c.id=m.conversation_id left join users u on u.id=m.author_id and u.tenant_id=m.tenant_id;

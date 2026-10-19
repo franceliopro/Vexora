@@ -340,3 +340,7 @@ Migrações no boot ou job dedicado com lock global e execução única, sem cor
 | Docker, Dokploy, Swarm e ZIP GitHub | 12; base na Fase 0 e atualização a cada release |
 
 Velocidade significa entregas pequenas, reutilização do código e redução de retrabalho. Não prometer ERP completo, integrações de parceiros, aprovação de lojas ou paridade total em prazo recorde. A primeira entrega demonstrável deve mostrar: canal → fila → tomada exclusiva → conversa com IA de texto → transferência humana → card, com isolamento entre empresas e autorização por conversa testados.
+
+## Entrega Atendimento/CRM e retomada
+
+Consultar `docs/ENTREGA-ATENDIMENTO-CRM.md` para implementação, testes e limites atuais. Próximo assunto definido pelo proprietário: Agentes de IA; tracking permanece para depois.

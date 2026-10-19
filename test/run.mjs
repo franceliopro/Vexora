@@ -61,5 +61,7 @@ const G=(nodes,edges)=>({nodes:nodes.map(([id,type,data])=>({id,type,data:data||
 }
 await import('./product.mjs');
 await import('./tracking.mjs');
+await import('./realtime.mjs');
+await import('./driver-contracts.mjs');
 console.log(bad?`${bad} FALHAS`:'TODOS OS TESTES OK');process.exit(bad?1:0);
 

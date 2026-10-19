@@ -1,5 +1,7 @@
 # Néxora — processo de atendimento e governança
 
+> Atualização de implementação: consulte [ENTREGA-ATENDIMENTO-CRM.md](ENTREGA-ATENDIMENTO-CRM.md). A tabela histórica de estado abaixo descrevia o commit de especificação e foi superada pela entrega de Atendimento/CRM; os limites atuais estão no documento de entrega.
+
 Especificação consolidada em 19/10/2026 a partir da orientação do proprietário e das 12 telas anexadas. É a referência do módulo **Central de Atendimento**, antes do detalhamento de CRM. O estado implementado está separado dos requisitos abaixo. Referência visual de organização; identidade própria da Néxora.
 
 ## 1. Jornada única de atendimento

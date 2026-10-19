@@ -9,6 +9,8 @@ services:
       APP_DB_PASSWORD: ${APP_DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       PLATFORM_KEY: ${PLATFORM_KEY}
+      NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
+      NOTIFICATION_WEBHOOK_SECRET: ${NOTIFICATION_WEBHOOK_SECRET:-}
       PUBLIC_URL: ${PUBLIC_URL}
       GCAL_CLIENT_ID: ${GCAL_CLIENT_ID:-}
       GCAL_CLIENT_SECRET: ${GCAL_CLIENT_SECRET:-}
@@ -26,7 +28,7 @@ services:
   waha:
     image: devlikeapro/waha:latest
     restart: unless-stopped
-    environment: {WHATSAPP_API_KEY: "${WAHA_KEY}"}
+    environment: {WAHA_API_KEY: "${WAHA_KEY}", WHATSAPP_API_KEY: "${WAHA_KEY}"}
     volumes: [wahadata:/app/.sessions]
   pgadmin:   # interface gráfica do banco. Por padrão só acessível no próprio servidor (127.0.0.1) — veja o README.
     image: dpage/pgadmin4:latest
@@ -46,3 +48,4 @@ services:
     volumes: ["backups:/backups"]
     depends_on: [db]
 volumes: {appdata: {}, pgdata: {}, wahadata: {}, pgadmindata: {}, backups: {}}
+

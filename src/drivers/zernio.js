@@ -1,11 +1,21 @@
-// Zernio: Instagram, Facebook, TikTok, X, LinkedIn... ⚠ Endpoints/payload do webhook ajustáveis em config (não verificados contra a doc oficial).
+// Inbox adapter based on the official Zernio conversation/message contract; live credentials still require acceptance testing.
+import crypto from 'node:crypto';import {saveMedia,readMedia,mediaType} from '../media.js';
 const B=c=>(c.config.base_url||'https://zernio.com/api/v1').replace(/\/$/,'');
-const call=async(c,p,b)=>{const r=await fetch(B(c)+p,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+c.config.key},body:JSON.stringify(b)});if(!r.ok)throw new Error('Zernio '+r.status+' '+await r.text());return r.json().catch(()=>({}))};
-export async function send(c,{to,kind,body,replyTo}){
- if(replyTo?.kind==='comment')return (await call(c,`/comments/${replyTo.ext_id}/reply`,{text:body})).id||null;
- return (await call(c,'/messages',{platform:c.config.platform,accountId:c.config.account_id,to,text:body})).id||null}
-// Webhook esperado: {event:'message'|'comment', sender:{id,name}, text, id}
-export async function parse(c,b){if(!b.sender)return null;return {handle:String(b.sender.id),name:b.sender.name,kind:b.event==='comment'?'comment':'text',body:b.text,ext_id:b.id}}
+const call=async(c,p,b)=>{const r=await fetch(B(c)+p,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+c.config.key},body:JSON.stringify(b),signal:AbortSignal.timeout(20000)});if(!r.ok)throw Error('Zernio '+r.status);return r.json()};
+export function verify(c,raw,headers){const secret=c.config.webhook_secret,sig=String(headers['x-zernio-signature']||'');if(!secret||!raw||!/^[a-f0-9]{64}$/.test(sig))return false;return crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(crypto.createHmac('sha256',secret).update(raw).digest('hex')))}
+export async function send(c,{to,kind,body,file,filename,externalConversation}){
+ if(c.config.mode==='legacy'){if(file)throw Error('Ative o adaptador Inbox para anexos');return (await call(c,'/messages',{platform:c.config.platform,accountId:c.config.account_id,to,text:body})).id||null}
+ if(!externalConversation)throw Error('Conversa externa ausente. Receba uma mensagem pelo webhook Inbox antes de responder.');
+ const url=B(c)+'/inbox/conversations/'+encodeURIComponent(externalConversation)+'/messages';let payload,headers={authorization:'Bearer '+c.config.key,'Idempotency-Key':crypto.randomUUID()};
+ if(file){const form=new FormData();form.set('accountId',c.config.account_id);if(body)form.set('message',body);form.set('attachmentType',kind);form.set('file',new Blob([readMedia(file)],{type:mediaType(file)}),filename||file);payload=form}else{headers['content-type']='application/json';payload=JSON.stringify({accountId:c.config.account_id,message:body})}
+ const r=await fetch(url,{method:'POST',headers,body:payload,signal:AbortSignal.timeout(30000)});const result=await r.json();if(!r.ok||result.success===false)throw Error('Zernio recusou envio ('+r.status+'). Confira permissões, formato e janela de atendimento.');if(result.data?.partialFailure)throw Error('Envio parcialmente processado pelo Zernio; confira antes de reenviar');return result.data?.messageId||result.id||null;
+}
+async function downloadAttachment(c,a){const url=new URL(a.url),base=new URL(B(c));if(url.protocol!=='https:'||!(url.hostname===base.hostname||/\.(fbcdn\.net|cdninstagram\.com|fbsbx\.com|facebook\.com)$/.test(url.hostname)))throw Error('Origem de anexo não permitida');const r=await fetch(url,{headers:url.hostname===base.hostname?{authorization:'Bearer '+c.config.key}:{},redirect:'error',signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('Anexo indisponível');const chunks=[];let size=0;for await(const chunk of r.body){size+=chunk.length;if(size>20*1024*1024)throw Error('Anexo acima de 20 MB');chunks.push(chunk)}const mime=(r.headers.get('content-type')||'').split(';')[0],kind=mime.startsWith('image/')?'image':mime.startsWith('audio/')?'audio':mime.startsWith('video/')?'video':'file',ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','audio/ogg':'ogg','audio/mpeg':'mp3','audio/mp4':'m4a','audio/webm':'webm','video/mp4':'mp4','application/pdf':'pdf'}[mime]||'bin';return {kind,file:saveMedia(Buffer.concat(chunks),ext),filename:a.name||a.filename||null}}
+export async function parse(c,b){
+ if(c.config.mode==='legacy'){if(!b.sender)return null;return {handle:String(b.sender.id),name:b.sender.name,kind:b.event==='comment'?'comment':'text',body:b.text,ext_id:b.id}}
+ if(b.test||b.event!=='message.received'||b.account?.accountId!==c.config.account_id)return null;const m=b.message||{},sender=m.sender||b.sender,conversation=m.conversationId||b.conversation?.id;if(!sender?.id||!conversation)return null;const attachments=m.attachments||[],base={handle:String(sender.phoneNumber||sender.id),name:sender.name||sender.username,externalConversation:conversation};if(!attachments.length)return {...base,kind:'text',body:m.text||'',ext_id:m.platformMessageId||m.id||b.id};const out=[];for(const [i,a]of attachments.entries()){let file;try{file=await downloadAttachment(c,a)}catch{file={kind:'text',body:'[Anexo recebido, mas indisponível para download seguro. Solicite reenvio.]'}}out.push({...base,...file,body:(i===0?m.text:null)||file.body||null,ext_id:(m.platformMessageId||m.id||b.id)+':'+i})}return out;
+}
 export const react=(c,id,emoji)=>call(c,'/reactions',{id,emoji});
 export const publish=(c,p)=>call(c,'/posts',p);
 export const connect=async()=>{};export const qr=async()=>null;
+

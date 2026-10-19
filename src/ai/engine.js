@@ -1,6 +1,7 @@
+import {moveCRMFromConversation} from '../crm.js';
 import {companyTimeZone} from '../timezone.js';
 import {automationAllowed} from '../conversation-policy.js';import {localGreeting} from '../tracking-template.js';import {routeTracking} from '../tracking-routing.js';
-import fs from 'fs';import {q} from '../db.js';import {deliver,setStage} from '../core.js';import {saveMedia,MEDIA,readMedia} from '../media.js';import {createAppt} from '../gcal.js';
+import fs from 'fs';import {q,tenantTransaction} from '../db.js';import {deliver,setStage} from '../core.js';import {saveMedia,MEDIA,readMedia} from '../media.js';import {createAppt} from '../gcal.js';
 const post=async(u,h,b)=>{const r=await fetch(u,{method:'POST',headers:{'content-type':'application/json',...h},body:JSON.stringify(b)});if(!r.ok)throw new Error(u+' '+r.status+' '+(await r.text()).slice(0,200));return r};
 const chain=async(c,fn)=>{let err;for(const x of [].concat(c||[])){try{return await fn(x)}catch(e){err=e;console.error('fallback:',e.message)}}throw err||new Error('provedor não configurado')}; // vários provedores por agente: cai pro próximo
 const llm=(cfg,system,msgs)=>chain(cfg,async c=>{
@@ -38,10 +39,13 @@ ${extra}
 Responda SOMENTE JSON: {"reply":"texto curto","actions":[{"t":"move_stage","stage":"nome"},{"t":"handoff","user_id":N,"why":""},{"t":"invite","user_id":N},{"t":"book","title":"","start":"ISO","minutes":30},{"t":"set","k":"campo","v":"valor"}]}
 Para rastreamento veicular, use {"t":"tracking_triage","sector":"suporte|financeiro|comercial|administrativo","platform":"ceeb_vision|link|rastreabem","payment":true|false}. Só use depois de coletar os dados necessários. Para pagamento, o fluxo seguro solicitará documento e verificará o telefone.
 Ações permitidas: ${(ag.tools||[]).join(',')}. Só use ações quando fizer sentido. Atualize a ficha (set) quando descobrir dados do cliente.`;
- const raw=await llm(ag.llm,sys,h);let out;try{out=JSON.parse(raw.match(/\{[\s\S]*\}/)[0])}catch{out={reply:raw,actions:[]}}
+ const crm=(ag.tools||[]).includes('crm_move')?(await q("select c.id,c.title,c.board_id,s.id stage_id,s.name stage_name,s.final from crm_cards c join crm_stages s on s.board_id=c.board_id where c.conversation_id=$1 and c.status='open'",[cv.id])).rows:[];
+ const crmContext='CRM desta conversa: '+JSON.stringify(crm)+'. Se crm_move for permitido, use {t: \"crm_move\", card_id:N, stage_id:N} somente para etapas intermediárias; encerramento exige humano.';
+ const raw=await llm(ag.llm,sys+"\n"+crmContext,h);let out;try{out=JSON.parse(raw.match(/\{[\s\S]*\}/)[0])}catch{out={reply:raw,actions:[]}}
  let retry='';
  for(const a of out.actions||[]){const current=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(current)||current.automation_epoch!==cv.automation_epoch)return;if(!(ag.tools||[]).includes(a.t))continue;
   try{
+   if(a.t==='crm_move'){const bid=await tenantTransaction(cv.tenant_id,query=>moveCRMFromConversation(query,cv,a));(await import('../bus.js')).bus('crm',{board_id:bid})}
    if(a.t==='move_stage'){const s=st.rows.find(x=>x.name.toLowerCase()===String(a.stage).toLowerCase());if(s)await setStage(cv.id,s.id)}
    if(a.t==='tracking_triage'){const result=await routeTracking(q,cv,a,text=>deliver(cv.id,{body:text,ai:true,epoch:cv.automation_epoch}));if(result==='bot'){await (await import('../bots/runtime.js')).handle({...cv,automation_mode:'bot',ai_on:false},{body:'iniciar'},false)}out.reply=null;break}
    if(a.t==='handoff'){await q("update conversations set automation_mode='human',automation_paused=true,ai_on=false,assignee_id=$1 where id=$2",[a.user_id||null,cv.id]);await deliver(cv.id,{kind:'note',body:`🤖 ${ag.name} transferiu${a.user_id?'':' (fila)'}: ${a.why||''}`,ai:true})}
