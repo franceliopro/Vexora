@@ -10,7 +10,7 @@ O main já contém migração 003, motor/editor de bots, cobrança recorrente, e
 
 - src/server.js: rotas de mensagens/envio/alteração/convite não aplicam autorização individual de conversa. A listagem scope=team inclui conversas assumidas de colegas.
 - src/bus.js: eventos de mensagens são enviados a todos os sockets da mesma empresa, sem escopo individual.
-- src/server.js: admins da empresa podem mudar segmento e settings/modules; diverge da concessão exclusiva do master.
+- No estado auditado, admins podiam mudar segmento e settings/modules. Atualização de 19/10: seletor removido, troca de vertical retorna 410, escrita genérica dessas chaves bloqueada; templates não concedem módulos.
 - src/media.js e server.js: mídia estática sem autorização. Segredos de provedores em JSON sem criptografia.
 - server.js/payments.js: integrações e webhooks requerem validação contra provedores. Não confirmar segurança de pagamentos só pelo HMAC da URL.
 - docker-compose.yml usa build local; não há stack Swarm específica.

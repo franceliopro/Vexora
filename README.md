@@ -1,6 +1,6 @@
 # Nexora — CRM omnichannel com IA (multiempresa isolado)
 
-WhatsApp (**WAHA** + **Baileys**), Instagram e outras redes (**Zernio**), vários atendentes e times por número, agentes de IA (LLM/STT/TTS por agente), RAG, Google Agenda, kanban automático, follow-ups, pagamentos (Asaas / Mercado Pago / Stripe), Meta Ads, catálogo e **segmentos** (barbearia, clínica, advocacia, delivery, escola…).
+WhatsApp (**WAHA** + **Baileys**), Instagram e outras redes (**Zernio**), vários atendentes e times por número, agentes de IA (LLM/STT/TTS por agente), RAG, Google Agenda, kanban automático, follow-ups, pagamentos (Asaas / Mercado Pago / Stripe), Meta Ads, catálogo e **templates opcionais de atendimento**. Dados antigos de escola e delivery são preservados como recursos legados.
 
 ## Como funciona o isolamento (resumo)
 Uma instalação atende **várias empresas** (tenants). Cada linha de cada tabela tem `tenant_id`, e o Postgres aplica **Row Level Security (RLS)**:
@@ -43,13 +43,26 @@ Você precisa de: **um servidor** (VPS Linux, Ubuntu 22/24, 2 GB de RAM ou mais)
 
 ### Primeiro acesso
 1. Abra `PUBLIC_URL`. Na primeira vez, crie a conta do dono da empresa "Principal".
-2. **Várias empresas**: abra `PUBLIC_URL/platform.html`, informe o `PLATFORM_KEY`, clique em **Criar empresa** (nome, código, dono, segmento). Cada empresa pode ter **domínio próprio** (campo domínio, apontando para o mesmo servidor) ou acessar por `PUBLIC_URL/?t=codigo` uma vez. O login é só e-mail e senha.
-3. **Ajustes → Canais**: crie o canal (`waha`: `{"url":"http://waha:3000","key":"<WAHA_KEY>","session":"default"}`; `baileys`: `{}`; `zernio`: `{"key":"…","platform":"instagram"}`), anote o ID, **Conectar / QR**.
-4. **Agente IA**: crie o agente, ligue ao ID do canal, configure LLM/STT/TTS e adicione conhecimento.
+2. **Várias empresas**: abra `PUBLIC_URL/platform.html`, informe o `PLATFORM_KEY`, clique em **Criar empresa** (nome, código, responsável, template opcional). Cada empresa pode ter **domínio próprio** (campo domínio, apontando para o mesmo servidor) ou acessar por `PUBLIC_URL/?t=codigo` uma vez. O login é só e-mail e senha.
+3. **Integração e API → Canais**: crie o canal (`waha`: `{"url":"http://waha:3000","key":"<WAHA_KEY>","session":"default"}`; `baileys`: `{}`; `zernio`: `{"key":"…","platform":"instagram"}`), anote o ID, **Conectar / QR**.
+4. **Agentes de IA**: crie o agente, ligue ao ID do canal, configure LLM/STT/TTS e adicione conhecimento.
 
 ---
-## Módulos por segmento (v0.3)
-Em **Ajustes → Segmento** você escolhe o negócio; o menu e os módulos mudam sozinhos (cliente vira paciente/aluno etc.). Módulos podem ser ligados/desligados em **Ajustes → Módulos ativos**.
+## Organização atual: 11 módulos funcionais
+
+Central de Atendimento · CRM · Inteligência e Rastreamento de Leads · Agentes de IA · Chatbots · Campanhas · Sequências · Mensagens Agendadas · Integração e API · Pagamentos · Personalização para cada Cliente.
+
+Veja [estado de implementação de cada área](docs/ESTRUTURA-PRODUTO.md). Campanhas, tracking e mensagens agendadas têm áreas dedicadas, mas não estão implementados integralmente. Sequências usa as automações anteriores, ainda sem construtor guiado de cadências.
+
+**Gerenciar empresas:** abra `/platform.html` e autentique com a `PLATFORM_KEY`. Cadastre a empresa e seu responsável; depois use **Gerenciar** para atendentes, IA/regras, bots em rascunho, templates e marca. O cliente final não recebe acesso master nem funções de revenda.
+
+**Marca:** logotipo claro, logotipo escuro e favicon são independentes, no painel master ou em Personalização. O favicon não reutiliza automaticamente o logotipo.
+
+**Templates:** substituem a seleção de segmentos. Cria um agente com prompt/tom/regras/proibições e um chatbot inicial, ambos desativados e sem canal. Aplicar não renomeia funil/clientes nem sobrescreve configurações. Revise o modelo e configure LLM/canal antes de ativar.
+
+## Dados legados e funcionalidades anteriores
+
+As funcionalidades abaixo já existiam. A reorganização não apaga seus dados. Os acessos de escola/delivery são preservados em Integração e API quando houver dados. A cobrança recorrente fica em Pagamentos. Elas não são apresentadas como ERPs por segmento.
 
 ### Bots (fluxos visuais, tipo Typebot) — menu **Bots (fluxos)**
 Editor de blocos: arraste o ponto → de um bloco até a entrada de outro; duplo clique na linha remove. Blocos: mensagem, pedir para escolher (menu numerado), perguntar e guardar (valida CPF/CNPJ, e-mail, número), condição, variável, mover no funil, transferir (fila, atendente, time ou agente de IA), chamar API externa, **consultar cobranças (Asaas)**, **pedido no WhatsApp** e fim. Há modelos prontos (menu por setor, cobrança Asaas, pizzaria). O bot responde antes da IA; ao terminar ou transferir, a IA/atendente assume. Fluxo parado há 12 h é encerrado.
@@ -100,3 +113,4 @@ Painel de pedidos por etapa (novo → preparando → pronto → saiu → entregu
 - Impressão térmica: formato ESC/POS padrão, **não testado em impressora real** (acentos são convertidos para ASCII). Bloco "Chamar API externa" bloqueia endereços internos, mas não protege contra DNS rebinding.
 - Sem lembrete automático de aula, sem página pública de cardápio, sem controle de estoque por pedido.
 - Só Postgres (pgvector). Baileys é não oficial (risco de banimento). Anúncios Meta: cria só a campanha, pausada.
+

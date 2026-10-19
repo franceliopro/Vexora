@@ -1,4 +1,5 @@
-# Néxora Suite — Prompt mestre consolidado (v4)
+# Néxora Suite — Prompt mestre consolidado (v5)
+> Decisão vigente de 19/10/2026: o produto é organizado nos 11 módulos de `docs/ESTRUTURA-PRODUTO.md`. Segmentos que apenas trocam rótulos/funil foram removidos. Templates opcionais criam IA e bot em rascunho, sem conceder módulos, mudar etapas ou sobrescrever configurações. Esta decisão substitui o planejamento anterior de ERP por segmento. Venda direta às empresas finais, sem revenda.
 
 Modelo comercial corrigido em 19/10/2026: venda direta do proprietário da Néxora às empresas finais, sem revenda.
 
@@ -10,7 +11,7 @@ Consolidado em 19/10/2026 a partir do v2 e dos requisitos originais do propriet�
 
 ## 1. Papel e objetivo
 
-Você é engenheiro(a) sênior full-stack. Sua missão é evoluir o **Nexora** (repositório `franceliopro/Nexora`) para uma plataforma **omnichannel de atendimento + CRM + IA**, **multiempresa**, **com marca personalizada por empresa**, **modular por segmento** e **auto-hospedada** (Dokploy/Portainer), cobrindo as capacidades dos CRMs de WhatsApp com agentes de IA (referência de mercado: HelenaCRM) **somadas** aos diferenciais do Nexora.
+Você é engenheiro(a) sênior full-stack. Sua missão é evoluir o **Nexora** (repositório `franceliopro/Nexora`) para uma plataforma **omnichannel de atendimento + CRM + IA**, **multiempresa**, **com marca personalizada por empresa**, **organizada por módulos funcionais** e **auto-hospedada** (Dokploy/Portainer), cobrindo as capacidades dos CRMs de WhatsApp com agentes de IA (referência de mercado: HelenaCRM) **somadas** aos diferenciais do Nexora.
 
 A interface deve ser limpa, rápida e totalmente personalizável (marca, cor, fonte, ícone, domínio). Inspire-se em padrões comuns de CRMs de conversa (caixa de entrada, funil kanban, construtor de fluxos), **sem copiar** marca, textos, ícones ou identidade visual de nenhum concorrente.
 
@@ -38,7 +39,7 @@ Os itens abaixo são relatos do documento anterior, não resultados de auditoria
 5. **Segredos:** nunca em texto puro no banco nem em log. Criptografia em repouso (AES-256-GCM, chave em env), mascarados na UI.
 6. **Entrada externa é hostil:** validar tudo no servidor; preços e totais sempre recalculados no servidor; bloquear SSRF; limitar tamanho e tipo de upload; limitar taxa por IP e por empresa.
 7. **UI:** nada de `[object …]`/`undefined`/`null` em tela; erro de JS visível; funcionar em celular; acessível (teclado, contraste); pt-BR por padrão com base de i18n (en, es).
-8. **Entregas pequenas e revisáveis:** commits claros, uma fase por branch, README e `docs/` atualizados, dados de demonstração por segmento (seed) para testar visualmente.
+8. **Entregas pequenas e revisáveis:** commits claros, uma fase por branch, README e `docs/` atualizados, dados de demonstração por cenário (seed) para testar visualmente.
 9. **Sem alegações falsas:** integrações que não puderam ser verificadas contra a documentação oficial ou sandbox são marcadas como "não verificadas" no código e no README.
 
 ## 4. Decisões de arquitetura
@@ -48,7 +49,7 @@ Os itens abaixo são relatos do documento anterior, não resultados de auditoria
 - **Tempo real:** WebSocket com escopo por empresa; para mais de uma instância, `LISTEN/NOTIFY` do Postgres (Redis opcional).
 - **Mídia:** armazenamento local por padrão e S3 compatível (MinIO/S3) opcional; **URLs assinadas e com expiração**.
 - **Front:** manter sem build por enquanto, mas **dividir em módulos ES por tela**, com biblioteca de componentes e tokens de design (cores, tipografia, espaçamento) que a marca do cliente sobrescreve. Reavaliar Vite/Preact se o editor de fluxos ou a bandeja pedirem.
-- **Extensibilidade:** verticais viram **plugins** (seção 5.13), não código solto no núcleo.
+- **Extensibilidade:** templates reutilizáveis configuram IA/bots (seção 5.13); extensões técnicas futuras são isoladas do núcleo.
 - **Dois modos de implantação:** multiempresa em uma stack com isolamento lógico por RLS (padrão) e ilha por cliente com stack, banco Postgres, credenciais e armazenamento próprios. O segundo modo atende ao pedido de banco próprio por cliente; não confundir RLS com banco fisicamente separado. Verificar se há script existente antes de reutilizá-lo. Ambos os modos devem ter guia operacional e teste de isolamento.
 
 ## 5. Módulos — requisitos e critérios de aceite
@@ -93,7 +94,7 @@ Os itens abaixo são relatos do documento anterior, não resultados de auditoria
 
 ### 5.5 Bots e fluxos (estilo Typebot)
 - Manter o editor atual e acrescentar: gatilhos (primeira mensagem, palavra-chave, etiqueta, evento, API), **menus interativos nativos** quando o canal permitir (botões/listas da API oficial), envio de mídia, atraso, horário comercial, **pesquisa**, formulário multi-etapas, bloco de agendamento, bloco de pagamento (link com escolha de Pix, boleto ou cartão e confirmação na conversa), bloco de IA/agente, bloco de habilidade (tag, campo, card, encerrar), variáveis globais e por contato.
-- **Teste dentro do editor** (simulador), **versionamento/publicação** de fluxos, duplicação e modelos por segmento, métricas por bloco (entradas, saídas, abandono).
+- **Teste dentro do editor** (simulador), **versionamento/publicação** de fluxos, duplicação e templates por cenário, métricas por bloco (entradas, saídas, abandono).
 - **Aceite:** cada bloco com teste no simulador; fluxo antigo continua funcionando.
 
 ### 5.6 Automações, cadências e disparos
@@ -131,7 +132,7 @@ Os itens abaixo são relatos do documento anterior, não resultados de auditoria
 - **Planos e limites** por empresa: usuários por canal, canais, mensagens, créditos de IA, armazenamento; trial; suspensão e reativação automáticas.
 - **Venda direta:** o proprietário da Néxora vende planos às empresas finais. Cobrança das empresas (Asaas/Stripe), faturas e inadimplência. Não implementar revendedores, subrevendedores, comissões ou painel de parceiros. Marca própria do cliente não lhe concede direito técnico de revender ou criar outras empresas.
 - **Domínio próprio por empresa** com certificado automático (integração com o proxy do Dokploy/Traefik ou Caddy), **e-mails e mensagens com a marca**, tela de login personalizada, modo escuro/claro.
-- **Onboarding guiado** (assistente de 5 passos: segmento autorizado, marca, canal, agente, primeira conversa ou bot quando habilitado) e **modelos prontos por segmento** (bots, agentes, automações, funil).
+- **Onboarding guiado** (assistente de 5 passos: empresa, marca, canal, agente, primeira conversa ou template opcional) e **templates opcionais de atendimento** (IA e bots em rascunho).
 - **Aceite:** criar uma empresa completa pela API administrativa da plataforma sem tocar no servidor.
 
 ### 5.12 Segurança, LGPD e operação
@@ -142,12 +143,13 @@ Os itens abaixo são relatos do documento anterior, não resultados de auditoria
 - **Observabilidade:** logs estruturados com `tenant_id`/`request_id`, `/healthz` e `/readyz`, métricas Prometheus, painel de fila de jobs, alerta de canal caído.
 - **Backup:** manter o atual; adicionar teste automático de restauração e, opcional, PITR.
 
-### 5.13 Verticais como plugins (SDK)
-- **Manifesto de plugin:** tabelas (com RLS gerada automaticamente), páginas de UI, blocos de bot, habilidades de IA, rótulos, funil padrão, configurações, permissões. Ligar/desligar por empresa exclusivamente pelo master ou superadmin da plataforma com permissão explícita. Admins de empresa configuram apenas módulos já concedidos; não podem habilitar segmentos, voz, bots, webchat ou outros adicionais.
-- **Migrar** escola/música, delivery e cobrança recorrente para o formato de plugin sem perder dados.
-- **Catálogo de verticais (ordem de execução definida no backlog, sem prometer todos na primeira entrega):** barbearia/beleza (agenda por profissional e serviço, comissão, pacotes, fidelidade, confirmação e lembrete), clínica (agenda por profissional/convênio, confirmação, retorno, documentos, cuidados de LGPD para dados de saúde), advocacia (processos, prazos, documentos, honorários), imobiliária (imóveis, visitas, captação), loja (catálogo, variações, estoque, carrinho no WhatsApp, frete, checkout), escola (lembrete automático de aula, reposição, boletim), delivery (KDS de cozinha, mesas por QR, entregadores e rotas, **integrações oficiais iFood/Keeta/99Food conforme credenciais de parceiro**, cardápio público web).
-- **Verticais adicionais obrigatórias do escopo:** cursos (turmas, matrículas e agenda), proteção veicular (associados, veículos, contratos, contribuições e ocorrências) e rastreamento veicular (veículos, dispositivos, posições, cercas e alertas, por APIs autorizadas de fornecedores). Imobiliária permanece como expansão do v2. Cada vertical deve ter um backlog explícito; não chamar um módulo de ERP completo apenas por trocar rótulos.
-- **Aceite:** um plugin de exemplo documentado e validado por outro desenvolvedor; medir o tempo de criação sem prometer prazo antes dessa validação.
+### 5.13 Templates opcionais de IA e chatbots
+- Modelos iniciais: comercial, recepção de clínica, recepção jurídica, educação, delivery e suporte.
+- Cada modelo define instruções, tom, regras, proibições e grafo inicial do chatbot.
+- Criar agente e bot desativados, sem credenciais e sem canal, em transação por empresa. Mostrar prévia antes de aplicar. Não modificar registros existentes; repetir a aplicação retorna os registros criados anteriormente.
+- Seleção não altera rótulos, etapas, marca, planos ou módulos. Não há segmentação de menus nem transformação em ERP.
+- Preservar dados antigos de escola, delivery e cobrança. Rotas existentes são compatibilidade; não oferecer como módulos completos por segmento.
+- Novos templates podem ser adicionados por situação de atendimento. APIs de parceiros como iFood/Keeta/99Food não são presumidas por um template.
 
 ### 5.14 Apps — módulo à parte (`apps/`)
 Decisão: **sim, como módulo separado**, com ciclo de lançamento próprio (revisão das lojas, assinatura, certificados), mas em duas etapas.
@@ -175,7 +177,7 @@ Decisão: **sim, como módulo separado**, com ciclo de lançamento próprio (rev
 | **5 — CRM avançado** | Várias esteiras; cards separados; empresas; tarefas; metas; formulários, links/QR/UTM; relatórios e painéis | 1 |
 | **6 — SaaS e venda direta** | Planos e limites; cobrança das empresas; venda direta aos clientes finais; domínio automático; onboarding; API administrativa da plataforma | 3 |
 | **7 — Apps nativos** | Capacitor iOS/Android; pipeline de marca personalizada; push nativo | 3, 6 |
-| **8 — Plugins e verticais** | SDK; migração dos módulos existentes; clínica, advocacia, delivery, cursos, música, beleza/barbearia, loja, proteção veicular e rastreamento; imobiliária como expansão | 3 |
+| **8 — Templates e extensões** | Biblioteca de modelos de IA/bots, versionamento de templates e extensões técnicas; preservação de dados legados | 3 |
 | **9 — Social e anúncios** | Publicação e interações permitidas; adaptador Zernio validado; Meta Ads, insights e vínculo com leads | 4, 5, 6 |
 
 A autorização, a tomada exclusiva de conversa e o controle de módulos entram na Fase 0; a Fase 2 amplia a distribuição e a supervisão. Voz, bots, webchat, plugins e apps continuam independentes, mesmo quando entregues na mesma fase. Não esperar a Fase 6 para aplicar isolamento e concessões. Pagamentos Asaas/Stripe e Google Agenda entram na Fase 3, com bases de IA na Fase 1; os relatórios financeiros entram na Fase 5. A API administrativa da plataforma da Fase 6 depende da API pública da Fase 3.
@@ -215,7 +217,7 @@ O produto inicial é multiatendimento com IA de texto, multiusuário por número
 | Voz de IA | Módulo separado: STT, TTS, vozes e consumo |
 | Bots | Módulo separado: editor visual, motor e simulador |
 | Webchat | Módulo separado: widget de site e integração WordPress |
-| Verticais | Cada segmento tem concessão própria por empresa |
+| Templates | Modelos opcionais de configuração de IA e bots; não são segmentos nem concedem recursos comerciais |
 | Outros adicionais | Automações avançadas, campanhas, social, anúncios e apps podem ser empacotados por plano |
 
 Criar um registro de módulos e concessões desde a fundação, antes do SDK de verticais. Apenas o master e superadmins explicitamente autorizados concedem, suspendem ou revogam módulos. Plano define o máximo contratável; concessão define o que está efetivamente habilitado. O admin da empresa não concede a si próprio novos módulos. Bloquear também APIs, WebSockets, jobs e ferramentas de IA quando o módulo estiver desabilitado. Não basta esconder o menu. Suspender preserva dados e interrompe novas execuções; cancelamento e exclusão seguem política explícita.
@@ -283,13 +285,11 @@ Implementar identidade original da Néxora, temas claro/escuro, cantos arredonda
 
 Na inbox, diferenciar **origem do canal** (WhatsApp, Instagram, Messenger, webchat etc.) e **executor atual** (humano, bot, IA): IA não é rede de origem. WordPress recebe widget/plugin leve do módulo webchat, sem uma segunda base de atendimento. Notificações na tela bloqueada devem respeitar privacidade.
 
-### 11.3 ERP e e-commerce por segmento
+### 11.3 Dados legados e tracking
 
-Ativar um segmento muda menus, rótulos (cliente/paciente/aluno/associado), campos, fluxos, permissões e funcionalidades; não apenas aparência. A empresa acessa somente verticais concedidas. PC, celular, loja pública e integrações usam APIs e o mesmo conjunto autorizado de dados; nunca expor conexão direta ao banco no navegador.
+Não criar ERPs por segmento como parte da organização atual. Manter dados antigos de escola, música e delivery, sem renomear clientes ou etapas automaticamente. Cobrança recorrente continua ligada ao módulo Pagamentos.
 
-Cada vertical terá critérios próprios de agenda, contratos, pedidos, estoque, financeiro e documentos. Para delivery, prever cardápio, pedidos, cozinha, impressão, entrega e integrações conforme credenciais; para loja de roupas, variações/tamanhos/cores, estoque e catálogo web sincronizado. Para música, professores, instrumentos, salas, horários, presenças e reposições. Proteção/rastreamento incluem acesso restrito a localização e auditoria. Definir o MVP de cada vertical antes de implementá-la.
-
-Tracking de navegação e origem de leads é módulo/configuração explícita, com consentimento quando aplicável, retenção e identificação permitida; não rastrear silenciosamente visitantes nem presumir vínculo entre cookie e contato.
+Tracking de navegação e origem de leads tem escopo explícito no módulo Inteligência e Rastreamento de Leads, com consentimento quando aplicável, retenção e identificação permitida. Não presumir vínculo entre cookie e contato nem anunciar tracking enquanto não implementado.
 
 ## 12. Entregáveis de implantação e pacote GitHub
 
@@ -332,7 +332,7 @@ Migrações no boot ou job dedicado com lock global e execução única, sem cor
 | WhatsApp, redes e Zernio com capacidade verificada | 5.1, 5.9; Fases 0, 4 e 9 |
 | Webchat e WordPress como módulo | 5.1, 10.1, 11.2; Fase 4 |
 | CRM, carteiras, relatórios e origem/tracking | 5.7, 11.3; Fases 2 e 5 |
-| Segmentos, incluindo proteção/rastreamento | 5.13, 11.3; Fase 8 |
+| Templates de atendimento em vez de segmentos | 5.13, 11.3; biblioteca opcional |
 | Master, concessões e plano por empresa | 10.1–10.2; base na Fase 0 e comercial na Fase 6 |
 | Brand, domínio, arquivos e celular | 5.11, 5.15, 11; base na Fase 0, domínio automático na Fase 6 |
 | Banco próprio por cliente | 4, 12; modo ilha, sem remover o multiempresa padrão |
