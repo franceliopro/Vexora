@@ -11,3 +11,10 @@ for(let method=1;method<=4;method++){const s=scenario();for(const input of [null
 const failed=scenario(true);for(const input of [null,'2','3','1','52998224725'])await failed.step(input);assert.deepEqual(failed.transfers,[teams.financeiro_rastreabem]);assert.ok(!failed.sent.some(t=>t.includes('Pessoa Teste')));
 assert.equal(automationAllowed({automation_paused:true}),false);assert.equal(canBotRun({automation_mode:'human'}),false);assert.equal(canBotRun({assignee_id:1,automation_mode:'hybrid'}),true);assert.equal(canBotRun({automation_mode:'ai'}),false);
 console.log('OK: 8 filas, 4 saudações, 4 meios com fatura, falha financeira e modos humano/híbrido (motor puro).');
+const {normalizeTimeZone,companyTimeZone,saveTimeZone}=await import('../src/timezone.js');
+assert.equal(normalizeTimeZone('America/Cuiaba'),'America/Cuiaba');assert.throws(()=>normalizeTimeZone('invalid/zone'));assert.throws(()=>normalizeTimeZone(null));
+const instant=new Date('2026-10-19T09:30:00Z');assert.equal(localGreeting(instant,'America/Cuiaba').saudacao,'Boa madrugada');assert.equal(localGreeting(instant,'America/Sao_Paulo').saudacao,'Bom dia');
+assert.equal(await companyTimeZone(async()=>({rows:[]})),'America/Sao_Paulo');let stored;
+assert.deepEqual(await saveTimeZone(async(sql,params)=>{stored=JSON.parse(params[0]);return {rows:[]}},'America/Cuiaba'),{time_zone:'America/Cuiaba'});assert.equal(stored.time_zone,'America/Cuiaba');
+assert.equal(await companyTimeZone(async()=>({rows:[{value:{time_zone:'America/Cuiaba'}}]})),'America/Cuiaba');
+console.log('OK: escolha/validação de fuso e saudações diferentes no mesmo instante em Cuiabá/São Paulo.');

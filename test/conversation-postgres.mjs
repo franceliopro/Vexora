@@ -1,3 +1,4 @@
+import {companyTimeZone,saveTimeZone} from '../src/timezone.js';
 // Disposable PostgreSQL/WASM check. Requires PGLITE_MODULE and PGLITE_VECTOR_MODULE; no production database is used.
 import assert from 'node:assert/strict';import fs from 'node:fs';import express from 'express';
 import {mountConversationActions} from '../src/conversation-actions.js';import {conversationFor} from '../src/conversation-policy.js';import {installTemplate} from '../src/product.js';
@@ -9,6 +10,7 @@ await tx(1,async query=>{await query("insert into users(id,name,role) values(1,'
 await tx(2,async query=>{await query("insert into users(id,name,role) values(20,'Outro','agent')");await query("insert into teams(id,name) values(20,'Outra')")});
 assert.equal((await q('select * from teams')).rows.length,8);assert.equal((await q('select * from users where id=20')).rows.length,0);
 await assert.rejects(()=>q('insert into conversation_team_participants(conversation_id,team_id) values(1,20)'),/referência inválida/);
+await tx(1,query=>saveTimeZone(query,'America/Cuiaba'));await tx(2,query=>saveTimeZone(query,'America/Sao_Paulo'));assert.equal(await tx(1,companyTimeZone),'America/Cuiaba');assert.equal(await tx(2,companyTimeZone),'America/Sao_Paulo');
 const app=express();app.use(express.json());app.use((req,res,next)=>{req.u={tid:1,id:Number(req.headers['x-test-user']||1),name:'Teste'};next()});const ah=fn=>(req,res)=>Promise.resolve(fn(req,res)).catch(e=>res.status(e.status||400).json({error:e.message}));mountConversationActions(app,{ah,q,tenantTransaction:tx,bus:()=>{},deliver:async()=>{},createPayment:async()=>{throw Error('Não utilizado')}});
 const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port;
 const request=async(path,body={},user=1)=>{const r=await fetch(base+'/api/conversations/1/'+path,{method:'POST',headers:{'content-type':'application/json','x-test-user':String(user)},body:JSON.stringify(body)});return {status:r.status,data:await r.json()}};

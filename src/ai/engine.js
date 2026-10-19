@@ -1,3 +1,4 @@
+import {companyTimeZone} from '../timezone.js';
 import {automationAllowed} from '../conversation-policy.js';import {localGreeting} from '../tracking-template.js';import {routeTracking} from '../tracking-routing.js';
 import fs from 'fs';import {q} from '../db.js';import {deliver,setStage} from '../core.js';import {saveMedia,MEDIA,readMedia} from '../media.js';import {createAppt} from '../gcal.js';
 const post=async(u,h,b)=>{const r=await fetch(u,{method:'POST',headers:{'content-type':'application/json',...h},body:JSON.stringify(b)});if(!r.ok)throw new Error(u+' '+r.status+' '+(await r.text()).slice(0,200));return r};
@@ -17,7 +18,7 @@ async function rag(aid,text){const e=await emb(text).catch(()=>null);
  const w=text.split(/\s+/).filter(x=>x.length>3).slice(0,4);if(!w.length)return [];
  return (await q('select content from docs where (agent_id=$1 or agent_id is null) and content ilike any($2) limit 4',[aid,w.map(x=>'%'+x+'%')])).rows.map(r=>r.content)}
 export async function respond(cv,ag,extra='',wantAudio=false,depth=0){const fresh=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(fresh)||fresh.automation_epoch!==cv.automation_epoch)return;
- const teams=(await q('select id,name from teams order by id')).rows,clock=localGreeting();
+ const teams=(await q('select id,name from teams order by id')).rows,clock=localGreeting(new Date(),await companyTimeZone(q));
  let h=(await q("select dir,body from messages where conversation_id=$1 and kind<>'note' and dir<>'int' and body is not null order by at desc limit 20",[cv.id])).rows.reverse().map(m=>({role:m.dir==='in'?'user':'assistant',content:m.body}));
  h=h.reduce((a,m)=>{const l=a[a.length-1];l&&l.role===m.role?l.content+='\n'+m.content:a.push({...m});return a},[]);while(h[0]&&h[0].role!=='user')h.shift();if(!h.length)h=[{role:'user',content:'(início)'}];
  const lastU=[...h].reverse().find(m=>m.role==='user').content;

@@ -1,3 +1,4 @@
+import {companyTimeZone} from '../timezone.js';
 import {canBotRun} from '../conversation-policy.js';
 import {localGreeting} from '../tracking-template.js';
 import dns from 'dns/promises';import {q} from '../db.js';import {als} from '../ctx.js';import {advance} from './engine.js';import {deliver,setStage,convFor} from '../core.js';import {asaasDebts,asaasPay} from '../payments.js';import {menuFor,createOrder} from '../delivery.js';import {norm,tpl,isPrivateIp} from '../lib.js';
@@ -10,8 +11,8 @@ async function safeFetch(d,ctx){let u;try{u=new URL(tpl(d.url,ctx))}catch{return
 const mkDeps=cv=>({
  send:t=>deliver(cv.id,{body:String(t),ai:true,epoch:cv.automation_epoch}),
  setStage:id=>setStage(cv.id,+id),
- builtins:async()=>{const ct=(await q('select name,handle,data from contacts where id=$1',[cv.contact_id])).rows[0]||{};const n=new Date();
-  return {...localGreeting(n),nome:String(ct.name||'').split(' ')[0],nome_completo:ct.name||'',telefone:ct.handle||'',dia_semana:n.getDay(),...(ct.data||{}),...localGreeting(n)}},
+ builtins:async()=>{const ct=(await q('select name,handle,data from contacts where id=$1',[cv.contact_id])).rows[0]||{};const n=new Date(),zone=await companyTimeZone(q),clock=localGreeting(n,zone);
+  return {...clock,nome:String(ct.name||'').split(' ')[0],nome_completo:ct.name||'',telefone:ct.handle||'',dia_semana:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'short'}).format(n)),...(ct.data||{}),...clock}},
  transfer:async d=>{const current=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!canBotRun(current)||current.automation_epoch!==cv.automation_epoch)throw Error('Automação pausada');const t=d.target||'queue';
   await q('delete from participants where conversation_id=$1',[cv.id]);await q('delete from conversation_team_participants where conversation_id=$1',[cv.id]);
   if(t==='ai'){const ag=d.agent_id?(await q('select id from agents where id=$1 and active',[d.agent_id])).rows[0]:(await q('select id from agents where active limit 1')).rows[0];await q("update conversations set automation_mode='ai',automation_paused=false,ai_on=true,agent_id=$2,assignee_id=null where id=$1",[cv.id,ag?.id||null])}

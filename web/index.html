@@ -38,7 +38,8 @@ const $=(s,e=document)=>e.querySelector(s),h=(t,a={},...c)=>{const e=document.cr
 let T=localStorage.nx,ME,BR,ws,ST=[],US=[],AG=[],evt=()=>{};const A=$('#app');
 const api=async(p,m='GET',b)=>{const r=await fetch('/api'+p,{method:m,headers:{'content-type':'application/json',authorization:'Bearer '+T},body:b?JSON.stringify(b):undefined});if(r.status===401&&T){localStorage.removeItem('nx');location.reload()}const j=await r.json();if(!r.ok){alert(j.error);throw new Error(j.error)}return j};
 const L=()=>BR.labels,col=s=>'hsl('+([...String(s)].reduce((a,c)=>a*31+c.charCodeAt(0),7)%360)+',55%,48%)',ini=s=>String(s||'?').split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();
-const av=n=>h('div',{class:'av',style:'background:'+col(n)},ini(n)),hm=d=>d?new Date(d).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'';
+let COMPANY_TIME_ZONE='America/Sao_Paulo';
+const av=n=>h('div',{class:'av',style:'background:'+col(n)},ini(n)),hm=d=>d?new Date(d).toLocaleTimeString('pt-BR', {timeZone:COMPANY_TIME_ZONE,hour:'2-digit',minute:'2-digit'}):'';
 function brand(b){BR=b;const r=document.documentElement.style,c=b.color||'#2563eb',n=parseInt(c.slice(1),16),lum=((n>>16)*299+((n>>8)&255)*587+(n&255)*114)/1000;
  r.setProperty('--ac',c);r.setProperty('--on',lum>150?'#0f172a':'#fff');r.setProperty('--font',`'${b.font}',system-ui,sans-serif`);document.title=b.name;
  $('#gf').href=`https://fonts.googleapis.com/css2?family=${b.font.replace(/ /g,'+')}:wght@400;600;800&display=swap`;
@@ -46,6 +47,7 @@ function brand(b){BR=b;const r=document.documentElement.style,c=b.color||'#2563e
 const logo=()=>{const src=document.documentElement.dataset.theme==='dark'?(BR.logo_dark||BR.logo):BR.logo;return src?h('img',{src,'data-brand-logo':'true',alt:BR.name}):h('i',{},(BR.name||'N')[0])};
 const GB=()=>fetch('/api/brand',{headers:{authorization:'Bearer '+T,'x-tenant':localStorage.tenant||''}}).then(r=>r.json());
 async function boot(){const tq=new URLSearchParams(location.search).get('t');if(tq)localStorage.tenant=tq;brand(await GB());if(!T)return gate();try{ME=await api('/me')}catch{return gate()}
+ COMPANY_TIME_ZONE=(await api('/operation')).time_zone||'America/Sao_Paulo';
  [ST,US,AG]=await Promise.all([api('/t/stages'),api('/t/users'),api('/t/agents')]);ST.sort((a,b)=>a.pos-b.pos);
  ws=new WebSocket((location.protocol==='https:'?'wss':'ws')+'://'+location.host+'/?t='+T);ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.t==='brand')GB().then(brand);evt(m.t,m.d)};ws.onclose=()=>setTimeout(()=>location.reload(),4000);shell()}
 async function gate(){const s=await(await fetch('/api/status',{headers:{'x-tenant':localStorage.tenant||''}})).json();const f=h('div',{class:'card login'},h('h2',{},BR.name),h('small',{},s.setup?'Crie a conta do dono':'Entrar'),
@@ -138,5 +140,5 @@ for(const k of['pay','meta','embed'])api('/settings/'+k).then(v=>$('#s_'+k).valu
  const tw=h('div');$('#tm').append(tw);crud(tw,{title:'',t:'users',cols:[['name','Nome'],['email','Email'],['role','Papel']],fields:[{k:'name',l:'Nome'},{k:'email',l:'Email'},{k:'pass',l:'Senha (deixe vazio p/ manter)',type:'password'},{k:'role',l:'Papel',opts:['owner','admin','agent']}]});
  const tt=h('div');$('#tm').append(h('h4',{},'Times'),tt);crud(tt,{title:'',t:'teams',cols:[['name','Time']],fields:[{k:'name',l:'Nome'}],after:b=>b.append(h('small',{},'Membros: PUT /api/teams/:id/members {user_ids}'))})};
 </script>
-<script src="conversation-controls.js"></script><script src="modules.js"></script><script src="organization.js"></script></body></html>
+<script src="timezones.js"></script><script src="conversation-controls.js"></script><script src="modules.js"></script><script src="organization.js"></script></body></html>
 

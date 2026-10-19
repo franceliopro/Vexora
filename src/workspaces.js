@@ -1,13 +1,15 @@
+import {companyTimeZone,saveTimeZone} from './timezone.js';
 import bcrypt from 'bcryptjs';
 import {normalizeBrand,positiveId,text,TEMPLATES,installTemplate} from './product.js';
 export function mountWorkspaces(app,{pk,ah,adm,tenantTransaction}){
  const company=async id=>{const tid=positiveId(id),t=(await adm('select id,name,slug,domain,active from tenants where id=$1',[tid])).rows[0];if(!t)throw new Error('Empresa não encontrada');return t};
  app.get('/platform/templates',pk,(_,res)=>res.json(TEMPLATES));
- app.get('/platform/tenants/:id/workspace',pk,ah(async(req,res)=>{const t=await company(req.params.id);res.json(await tenantTransaction(t.id,async query=>({tenant:t,
+ app.get('/platform/tenants/:id/workspace',pk,ah(async(req,res)=>{const t=await company(req.params.id);res.json(await tenantTransaction(t.id,async query=>({tenant:t,operation:{time_zone:await companyTimeZone(query)},
  brand:(await query("select value from settings where key='brand'")).rows[0]?.value||{},
  users:(await query('select id,name,email,role from users order by id')).rows,
  agents:(await query('select id,name,prompt,tone,rules,forbidden,active,channel_ids from agents order by id')).rows,
  bots:(await query('select id,name,active from bots order by id')).rows,teams:(await query("select t.id,t.name,coalesce(array_agg(tm.user_id) filter(where tm.user_id is not null),'{}') user_ids from teams t left join team_members tm on tm.team_id=t.id group by t.id order by t.id")).rows}))) }));
+ app.put('/platform/tenants/:id/operation',pk,ah(async(req,res)=>{const t=await company(req.params.id);res.json(await tenantTransaction(t.id,query=>saveTimeZone(query,req.body.time_zone)))}));
  app.put('/platform/tenants/:id/brand',pk,ah(async(req,res)=>{const t=await company(req.params.id),b=normalizeBrand(req.body);await tenantTransaction(t.id,query=>query("update settings set value=value||$1::jsonb where key='brand'",[JSON.stringify(b)]));res.json({ok:true})}));
  app.post('/platform/tenants/:id/templates/:template/apply',pk,ah(async(req,res)=>{const t=await company(req.params.id);res.json(await tenantTransaction(t.id,query=>installTemplate(query,req.params.template)))}));
  app.put('/platform/tenants/:id/teams/:team/members',pk,ah(async(req,res)=>{const t=await company(req.params.id),team=positiveId(req.params.team);if(!Array.isArray(req.body.user_ids)||req.body.user_ids.length>500)throw Error('Membros inválidos');const users=[...new Set(req.body.user_ids.map(positiveId))];await tenantTransaction(t.id,async query=>{if(!(await query('select id from teams where id=$1',[team])).rows[0])throw Error('Equipe não encontrada nesta empresa');for(const id of users)if(!(await query('select id from users where id=$1',[id])).rows[0])throw Error('Atendente não encontrado nesta empresa');await query('delete from team_members where team_id=$1',[team]);for(const id of users)await query('insert into team_members(team_id,user_id) values($1,$2)',[team,id])});res.json({ok:true})}));

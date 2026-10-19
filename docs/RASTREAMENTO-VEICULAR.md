@@ -22,7 +22,7 @@ Comercial e Administrativo são compartilhados: oito equipes ao todo. O template
 ## Ativação
 
 1. Em **Integração e API**, configure/conecte WhatsApp. Use Administrativo como equipe padrão para conversas sem triagem concluída.
-2. Em **Chatbots**, edite o fluxo do template, confira destinos, informe o ID do canal e ative. A saudação usa `America/Sao_Paulo`: madrugada 00–05h, manhã 06–11h, tarde 12–17h, noite 18–23h.
+2. Em **Chatbots**, edite o fluxo do template, confira destinos, informe o ID do canal e ative. Selecione **Cuiabá (`America/Cuiaba`)** no cadastro/gestão master ou em **Personalização → Horário da empresa**. A saudação usa esse fuso: madrugada 00–05h, manhã 06–11h, tarde 12–17h, noite 18–23h.
 3. Em **Integração e API → Pagamentos**, configure o JSON `pay`. Comece com sandbox e valide com dados de teste antes de produção:
 
 ```json

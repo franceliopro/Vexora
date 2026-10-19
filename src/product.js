@@ -1,3 +1,4 @@
+import {companyTimeZone} from './timezone.js';
 import {TRACKING_TEMPLATE,trackingGraph,ensureTrackingTeams} from './tracking-template.js';
 // Product definitions and validation shared by company provisioning and templates.
 export const PRODUCT_MODULES = [
@@ -41,4 +42,4 @@ export async function installTemplate(query,id){const t=templateSpec(id);await q
  const agent=(await query('insert into agents(name,prompt,tone,rules,forbidden,active,channel_ids) values($1,$2,$3,$4,$5,false,$6) returning id',[t.name,t.prompt,t.tone,t.rules,t.forbidden,[]])).rows[0];
  const bot=(await query('insert into bots(name,graph,trigger,active,channel_ids) values($1,$2,$3,false,$4) returning id',[t.name,JSON.stringify(teams?trackingGraph(teams):templateGraph(t,agent.id)),JSON.stringify({type:'first'}),[]])).rows[0];
  if(teams)await query("update agents set tools=$2 where id=$1",[agent.id,['handoff','move_stage','tracking_triage']]);
- const value={template:id,agent_id:agent.id,bot_id:bot.id,...(teams?{teams,time_zone:'America/Sao_Paulo'}:{})};await query('insert into settings(key,value) values($1,$2)',[key,JSON.stringify(value)]);return {...value,existing:false}}
+ const value={template:id,agent_id:agent.id,bot_id:bot.id,...(teams?{teams,time_zone:await companyTimeZone(query)}:{})};await query('insert into settings(key,value) values($1,$2)',[key,JSON.stringify(value)]);return {...value,existing:false}}

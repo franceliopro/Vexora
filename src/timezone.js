@@ -1,0 +1,4 @@
+export const DEFAULT_TIME_ZONE='America/Sao_Paulo';
+export function normalizeTimeZone(value){if(typeof value!=='string'||value.length>100||!value.trim())throw Error('Fuso horário inválido');try{return new Intl.DateTimeFormat('pt-BR',{timeZone:value.trim()}).resolvedOptions().timeZone}catch{throw Error('Fuso horário inválido')}}
+export async function companyTimeZone(query){const value=(await query("select value from settings where key=$1",['operation'])).rows[0]?.value?.time_zone;if(!value)return DEFAULT_TIME_ZONE;return normalizeTimeZone(value)}
+export async function saveTimeZone(query,value){const time_zone=normalizeTimeZone(value);await query("insert into settings(key,value) values('operation',$1) on conflict(tenant_id,key) do update set value=settings.value||excluded.value",[JSON.stringify({time_zone})]);return {time_zone}}

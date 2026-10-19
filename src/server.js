@@ -1,3 +1,4 @@
+import {companyTimeZone,saveTimeZone} from './timezone.js';
 import {accessPredicate,conversationFor,controlPredicate} from './conversation-policy.js';import {mountConversationActions} from './conversation-actions.js';
 import express from 'express';import http from 'http';import {WebSocketServer} from 'ws';import jwt from 'jsonwebtoken';import bcrypt from 'bcryptjs';import path from 'path';import {fileURLToPath} from 'url';import {execFile} from 'child_process';
 import {q,adm as dba,migrate,cols,tenantTransaction} from './db.js';import {als,sign,hookUrl,payHook,orderHook} from './ctx.js';import {createTenant} from './tenants.js';import {mount,mountPublic} from './routes2.js';import {billingTick} from './billing.js';import {createOrder} from './delivery.js';import crypto from 'crypto';import fs from 'fs';import {spawn} from 'child_process';import {bus,setWss} from './bus.js';import {inbound,deliver,startAll,setStage,D} from './core.js';import {tickFlows} from './flows.js';import {createPayment,payWebhook} from './payments.js';import {publishPost,publishAd,adInsights} from './social.js';import {normalizeBrand,TEMPLATES,PRODUCT_MODULES,installTemplate} from './product.js';import {mountWorkspaces} from './workspaces.js';import {ragAdd} from './ai/engine.js';import {createAppt,cancelAppt} from './gcal.js';import {MEDIA,saveMedia} from './media.js';
@@ -58,6 +59,8 @@ app.get('/platform/backup',pk,(req,res)=>{const dir=fs.mkdtempSync('/tmp/bk-'),d
 app.use('/api',auth);
 mountConversationActions(app,{ah,q,tenantTransaction,bus,deliver,createPayment});
 mount(app,{ah,adm}); // rotas dos módulos (antes das genéricas /api/t/:t)
+app.get('/api/operation',ah(async(req,res)=>res.json({time_zone:await companyTimeZone(q)})));
+app.put('/api/operation',adm,ah(async(req,res)=>res.json(await saveTimeZone(q,req.body.time_zone))));
 app.get('/api/me',(req,res)=>res.json(req.u));
 app.get('/api/legacy',adm,ah(async(_,res)=>res.json((await q('select (exists(select 1 from courses) or exists(select 1 from students) or exists(select 1 from lessons)) school,(exists(select 1 from menu_items) or exists(select 1 from orders)) delivery')).rows[0])));
 
@@ -79,7 +82,7 @@ app.put('/api/vertical',adm,(_,res)=>res.status(410).json({error:'Segmentos remo
 app.get('/api/templates',adm,(_,res)=>res.json(TEMPLATES));
 app.post('/api/templates/:id/apply',adm,ah(async(req,res)=>res.json(await tenantTransaction(req.u.tid,query=>installTemplate(query,req.params.id)))));
 app.get('/api/settings/:k',adm,ah(async(req,res)=>res.json((await q('select value from settings where key=$1',[req.params.k])).rows[0]?.value||{})));
-app.put('/api/settings/:k',adm,ah(async(req,res)=>{if(['brand','vertical','modules'].includes(req.params.k))throw new Error('use rota própria');await q('insert into settings values($1,$2) on conflict(tenant_id,key) do update set value=$2',[req.params.k,JSON.stringify(req.body)]);res.json({ok:1})}));
+app.put('/api/settings/:k',adm,ah(async(req,res)=>{if(['brand','vertical','modules','operation'].includes(req.params.k))throw new Error('use rota própria');await q('insert into settings values($1,$2) on conflict(tenant_id,key) do update set value=$2',[req.params.k,JSON.stringify(req.body)]);res.json({ok:1})}));
 // canais
 app.post('/api/channels/:id/connect',adm,ah(async(req,res)=>{const ch=(await q('select * from channels where id=$1',[req.params.id])).rows[0];await D[ch.driver].connect(ch,hookUrl(ch.driver,ch.id));res.json({ok:1})}));
 app.get('/api/channels/:id/webhook',adm,ah(async(req,res)=>{const ch=(await q('select driver from channels where id=$1',[req.params.id])).rows[0];res.json({url:hookUrl(ch.driver,req.params.id)})}));
