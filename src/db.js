@@ -20,3 +20,8 @@ export async function migrate(){for(let i=0;i<40;i++){try{await adm('select 1');
   revoke insert,update,delete on tenants from nexora_app;revoke all on _migrations from nexora_app;grant usage,select on all sequences in schema public to nexora_app;
   grant execute on function resolve_tenant(text,text),login_lookup(text),channel_tenant(int) to nexora_app;`);
  if(!(await adm('select 1 from tenants limit 1')).rowCount){const {createTenant}=await import('./tenants.js');await createTenant({name:'Principal',slug:'principal'})}}
+
+
+// One connection and one tenant context for an entire atomic operation.
+export async function tenantTransaction(tenant,fn){const c=await app.connect();try{await c.query('begin');await c.query("select set_config('app.tenant',$1,true)",[String(tenant)]);const result=await fn((t,p)=>c.query(t,p));await c.query('commit');return result}catch(e){await c.query('rollback');throw e}finally{c.release()}}
+export async function adminTransaction(fn){const c=await admin.connect();try{await c.query('begin');const result=await fn((t,p)=>c.query(t,p));await c.query('commit');return result}catch(e){await c.query('rollback');throw e}finally{c.release()}}

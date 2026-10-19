@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {PRODUCT_MODULES,TEMPLATES,templateSpec,templateGraph,normalizeBrand,positiveId,installTemplate} from '../src/product.js';
+assert.equal(PRODUCT_MODULES.length,11);assert.equal(new Set(PRODUCT_MODULES.map(x=>x[0])).size,11);
+assert.deepEqual(normalizeBrand({name:'Empresa',color:'#123456',logo:'',favicon:''}),{name:'Empresa',color:'#123456',logo:'',favicon:''});
+assert.equal(normalizeBrand({logo:'https://example.com/logo.png',favicon:'https://example.com/icon.png'}).favicon,'https://example.com/icon.png');
+assert.throws(()=>normalizeBrand({logo:'javascript:alert(1)'}));assert.throws(()=>normalizeBrand({favicon:'data:image/svg+xml;base64,PHN2Zz4='}));assert.throws(()=>normalizeBrand({color:'red;display:none'}));assert.throws(()=>normalizeBrand({font:'Inter\'; url(x)'}));assert.throws(()=>positiveId('1 OR 1=1'));assert.throws(()=>templateSpec('inexistente'));
+for(const t of TEMPLATES){assert.ok(t.prompt&&t.tone&&t.rules&&t.forbidden);const g=templateGraph(t,42);assert.equal(g.nodes.find(x=>x.type==='transfer').data.agent_id,42);assert.equal(g.edges.length,2)}
+const writes=[],settings=new Map();let next=1;const query=async(sql,p)=>{writes.push([sql,p]);if(sql.startsWith('select value'))return {rows:settings.has(p[0])?[{value:settings.get(p[0])}]:[]};if(sql.startsWith('insert into settings'))settings.set(p[0],JSON.parse(p[1]));return {rows:[{id:next++}]}};
+const first=await installTemplate(query,'clinica');assert.equal(first.existing,false);const second=await installTemplate(query,'clinica');assert.equal(second.existing,true);assert.equal(second.agent_id,first.agent_id);assert.equal(writes.filter(([sql])=>sql.startsWith('insert into agents')).length,1);assert.equal(writes.filter(([sql])=>sql.startsWith('insert into bots')).length,1);assert.ok(writes.filter(([sql])=>sql.startsWith('insert into agents')||sql.startsWith('insert into bots')).every(([sql])=>sql.includes('false')));
+console.log('OK: 11 módulos, marca independente, validação e templates idempotentes em rascunho (query simulada).');
