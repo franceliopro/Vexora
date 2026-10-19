@@ -64,5 +64,6 @@ await import('./tracking.mjs');
 await import('./realtime.mjs');
 await import('./driver-contracts.mjs');
 await import('./meta-contracts.mjs');
+await import('./baileys-runtime.mjs');
 console.log(bad?`${bad} FALHAS`:'TODOS OS TESTES OK');process.exit(bad?1:0);
 

@@ -1,0 +1,3 @@
+// Keep non-phone WhatsApp IDs intact so replies reach the same remote chat.
+export function incomingIdentity(m){const remote=m.key?.remoteJid;if(!remote||m.key.fromMe||!m.message||remote==='status@broadcast'||/@(g\.us|broadcast|newsletter)$/.test(remote))return null;const jid=m.key.remoteJidAlt?.endsWith('@s.whatsapp.net')?m.key.remoteJidAlt:remote;return jid.endsWith('@s.whatsapp.net')?jid.replace(/@.*/, ''):jid;}
+export function messageContent(m){let x=m||{};for(let i=0;i<5;i++){const nested=x.ephemeralMessage?.message||x.viewOnceMessage?.message||x.viewOnceMessageV2?.message||x.documentWithCaptionMessage?.message;if(!nested)break;x=nested}return x;}
