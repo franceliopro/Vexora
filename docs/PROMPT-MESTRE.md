@@ -1,4 +1,5 @@
-# Néxora Suite — Prompt mestre consolidado (v5)
+# Néxora Suite — Prompt mestre consolidado (v6)
+> Atendimento detalhado em [PROCESSO-ATENDIMENTO.md](PROCESSO-ATENDIMENTO.md): governança de três perfis, Novos/Meus/Outros, ficha lateral, conclusão e métricas. O fuso é escolhido por empresa; para o cliente de rastreamento, Cuiabá (`America/Cuiaba`). A tabela de estado do documento distingue implementação de especificação.
 > Decisão vigente de 19/10/2026: o produto é organizado nos 11 módulos de `docs/ESTRUTURA-PRODUTO.md`. Segmentos que apenas trocam rótulos/funil foram removidos. Templates opcionais criam IA e bot em rascunho, sem conceder módulos, mudar etapas ou sobrescrever configurações. Esta decisão substitui o planejamento anterior de ERP por segmento. Venda direta às empresas finais, sem revenda.
 
 Modelo comercial corrigido em 19/10/2026: venda direta do proprietário da Néxora às empresas finais, sem revenda.

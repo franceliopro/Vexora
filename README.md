@@ -118,3 +118,5 @@ Painel de pedidos por etapa (novo → preparando → pronto → saiu → entregu
 ## Primeiro cliente: rastreamento veicular
 
 Cadastro em `/platform.html` → **Nova empresa** → template **Rastreamento Veicular · 3 plataformas**. Veja [configuração das equipes, Asaas e controles de atendimento](docs/RASTREAMENTO-VEICULAR.md).
+
+Processo de atendimento consolidado a partir das telas: [governança, filas, ficha, conclusão e relatórios](docs/PROCESSO-ATENDIMENTO.md). Fuso por empresa no cadastro/gestão master ou em **Personalização → Horário da empresa**; para este cliente, selecione **Cuiabá**.

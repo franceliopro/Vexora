@@ -4,7 +4,7 @@ Decisão de 19/10/2026. Venda direta do proprietário da Néxora às empresas fi
 
 | Módulo | Escopo e estado desta entrega |
 |---|---|
-| 1. Central de Atendimento | Inbox existente, contatos, agenda e gestão da equipe. Regras de acesso por conversa ainda exigem as correções da auditoria. |
+| 1. Central de Atendimento | Inbox e controle por conversa existentes. Processo completo e governança de três perfis especificados em PROCESSO-ATENDIMENTO.md; implementação fina ainda pendente. |
 | 2. CRM | Kanban e dados das conversas existentes. CRM avançado permanece no backlog. |
 | 3. Inteligência e Rastreamento de Leads | Acesso a contatos e indicadores existentes. Tracking/UTM/atribuição ainda não implementados. |
 | 4. Agentes de IA | Configuração existente; templates acrescentam instruções, tom, regras e proibições em rascunho. |
@@ -42,3 +42,7 @@ Logotipo claro, logotipo escuro e favicon são três campos independentes. Sem f
 - `node test/workspaces.mjs`: contrato HTTP do painel master com transação de banco simulada.
 - Chromium: navegação dos 11 módulos, remoção de segmentos, separação de assets, templates, cadastro/gestão master e viewport mobile, com API simulada.
 - Não validado: transações e migrações em Postgres real, build Docker, domínio de produção ou APIs externas. Sem migração destrutiva nesta entrega.
+
+## Atendimento e fuso (atualização)
+
+[Processo de atendimento](PROCESSO-ATENDIMENTO.md) é a referência detalhada antes de avançar ao CRM. O fuso da empresa pode ser escolhido no cadastro/gestão master e em Personalização. Bot/IA e hora das mensagens usam essa configuração; integrações de agenda/relatórios/regras legadas ainda exigem uniformização. Para o cliente de rastreamento, escolher `America/Cuiaba`.
