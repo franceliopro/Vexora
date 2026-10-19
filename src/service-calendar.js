@@ -7,8 +7,8 @@ const scope='https://www.googleapis.com/auth/calendar.events https://www.googlea
 const can=(cal,u)=>adminRole(u)||cal.owner_id===u.id||cal.scope==='shared'&&cal.member_ids.includes(u.id);
 const safe=c=>({id:c.id,name:c.name,scope:c.scope,member_ids:c.member_ids,owner_id:c.owner_id,provider:c.provider,google_calendar_id:c.google_calendar_id,connected:!!c.refresh_secret});
 const key=()=>crypto.createHash('sha256').update(process.env.JWT_SECRET||'dev-secret').digest();
-function seal(value){const iv=crypto.randomBytes(12),c=crypto.createCipheriv('aes-256-gcm',key(),iv);return Buffer.concat([iv,c.update(value),c.final(),c.getAuthTag()]).toString('base64')}
-function unseal(value){const b=Buffer.from(value,'base64'),c=crypto.createDecipheriv('aes-256-gcm',key(),b.subarray(0,12));c.setAuthTag(b.subarray(-16));return Buffer.concat([c.update(b.subarray(12,-16)),c.final()]).toString()}
+export function seal(value){const iv=crypto.randomBytes(12),c=crypto.createCipheriv('aes-256-gcm',key(),iv);return Buffer.concat([iv,c.update(value),c.final(),c.getAuthTag()]).toString('base64')}
+export function unseal(value){const b=Buffer.from(value,'base64'),c=crypto.createDecipheriv('aes-256-gcm',key(),b.subarray(0,12));c.setAuthTag(b.subarray(-16));return Buffer.concat([c.update(b.subarray(12,-16)),c.final()]).toString()}
 const pub=()=>String(process.env.PUBLIC_URL||'http://localhost:3100').replace(/\/$/,'');
 const callback=()=>pub()+'/calendar/google/callback';
 const sign=s=>crypto.createHmac('sha256',key()).update(s).digest('hex');

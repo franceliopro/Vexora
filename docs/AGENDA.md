@@ -43,3 +43,17 @@ Administradores podem abrir o relatório em Minha agenda ou nos Relatórios de a
 ## Validação
 
 `npm test` valida contratos e fluxos existentes. `test/calendar-postgres.mjs` usa PostgreSQL/WASM descartável para testar permissões, isolamento entre empresas, conflitos, repetição segura, confirmação, fuso e relatório. `test/attendance-browser.mjs` usa Chromium e APIs simuladas. A autorização real Google e entregas reais nas redes precisam de credenciais e de teste na instalação.
+
+## Guias e arquivos do Google Drive no atendimento
+
+Os guias ficam em **Integração e API → Guias de conexão** e no botão **Passo a passo** das telas de atendimento/agenda. Dentro da conversa, **Ferramentas → Google Drive** abre busca, navegação de pastas e preparo do anexo na mesma tela.
+
+Habilite Google Drive API no projeto OAuth. Cadastre também `https://seu-dominio/google/drive/callback` como retorno autorizado (copie o endereço exibido na janela). O Drive usa `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`; se ausentes, reutiliza `GCAL_CLIENT_ID` e `GCAL_CLIENT_SECRET`. Cada usuário autoriza sua própria conta. O escopo é `drive.readonly`; para publicação ampla, siga a verificação de aplicativo e de escopos exigida pelo Google. Em modo de testes, adicione as contas na lista de usuários de teste do consentimento.
+
+Não há compartilhamento público automático nem alteração de arquivos no Drive. O usuário seleciona, prepara e confirma o envio de uma cópia ao cliente. PDF, imagens, áudio, vídeo e documentos suportados respeitam o limite Néxora de 20 MB e as restrições de download do Google. Documentos/Apresentações Google são exportados em PDF; Planilhas Google, em XLSX. A autorização inicial abre uma janela Google; as buscas e os envios seguintes ficam sobre a conversa.
+
+## Filas, arquivamento e lixeira
+
+Novos, Meus e Outros mostram os totais completos, respeitando busca, inbox e acesso do usuário. Os números não são limitados aos 200 tickets exibidos por consulta. Convites individuais e por equipe também entram em Meus; as categorias podem se sobrepor por causa desses convites.
+
+Finalize a conversa antes de arquivar. No ticket concluído, clique **Arquivar/Organizar**, escolha o destino e informe o motivo. Arquivados e Lixeira têm atalhos por ícones ao lado das filas. Mover para lixeira e restaurar dela é restrito a administradores, com confirmação pelo número do ticket. Nenhuma dessas ações apaga mensagens ou oportunidades do CRM; os movimentos ficam auditados. Restaurar devolve a Concluídos; Reabrir torna o atendimento ativo novamente.

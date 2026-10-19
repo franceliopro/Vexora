@@ -159,6 +159,6 @@ for(const k of['pay','meta','embed'])api('/settings/'+k).then(v=>$('#s_'+k).valu
  const tw=h('div');$('#tm').append(tw);crud(tw,{title:'',t:'users',cols:[['name','Nome'],['email','Email'],['role','Papel']],fields:[{k:'name',l:'Nome'},{k:'email',l:'Email'},{k:'pass',l:'Senha (deixe vazio p/ manter)',type:'password'},{k:'role',l:'Papel',opts:['owner','admin','agent']}]});
  const tt=h('div');$('#tm').append(h('h4',{},'Times'),tt);crud(tt,{title:'',t:'teams',cols:[['name','Time']],fields:[{k:'name',l:'Nome'}],after:b=>b.append(h('small',{},'Membros: PUT /api/teams/:id/members {user_ids}'))})};
 </script>
-<script src="timezones.js"></script><script src="conversation-controls.js"></script><script src="modules.js"></script><script src="features.js"></script><script src="crm.js"></script><script src="help.js"></script><script src="integrations.js"></script><script src="inboxes.js"></script><script src="attendance.js"></script><script src="service-actions.js"></script><script src="calendar.js"></script><script src="organization.js"></script></body></html>
+<script src="timezones.js"></script><script src="conversation-controls.js"></script><script src="modules.js"></script><script src="features.js"></script><script src="crm.js"></script><script src="help.js"></script><script src="integrations.js"></script><script src="inboxes.js"></script><script src="attendance.js"></script><script src="service-actions.js"></script><script src="calendar.js"></script><script src="attendance-tools.js"></script><script src="organization.js"></script></body></html>
 
 

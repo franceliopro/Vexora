@@ -1,3 +1,5 @@
+import {mountAttendanceManagement,queuePredicate} from './attendance-management.js';
+import {mountGoogleDrive,mountDrivePublic} from './google-drive.js';
 import {mountServiceCalendar,mountCalendarPublic} from './service-calendar.js';
 import {mountServiceWorkflow} from './service-workflow.js';
 import {mountIntegrations} from './integrations.js';
@@ -59,9 +61,10 @@ app.get('/platform/backup',pk,(req,res)=>{const dir=fs.mkdtempSync('/tmp/bk-'),d
   res.setHeader('content-type','application/gzip');res.setHeader('content-disposition',`attachment; filename=nexora-backup-${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.tar.gz`);
   const t=spawn('tar',['-czf','-','-C',dir,'db.dump','-C',data,'media','baileys']);t.stdout.pipe(res);t.on('close',()=>fs.rmSync(dir,{recursive:true,force:true}))})});
 // ---- autenticado
-mountCalendarPublic(app,{ah,tenantTransaction});
+mountCalendarPublic(app,{ah,tenantTransaction});mountDrivePublic(app,{ah,tenantTransaction});
 app.use('/api',auth);
 mountServiceCalendar(app,{ah,q,tenantTransaction,deliver,bus});
+mountAttendanceManagement(app,{ah,q,tenantTransaction,bus});mountGoogleDrive(app,{ah,q,deliver,saveMedia});
 mountIntegrations(app,{ah,adm,q,tenantTransaction,bus});
 mountConversationActions(app,{ah,q,tenantTransaction,bus,deliver,createPayment});
 mountServiceWorkflow(app,{ah,q,deliver});
@@ -108,9 +111,7 @@ app.get('/api/conversations',ah(async(req,res)=>{const {scope='mine',q:search=''
  (select coalesce(json_agg(user_id),'[]') from participants p where p.conversation_id=c.id) parts,
  (select coalesce(json_agg(team_id),'[]') from conversation_team_participants tp where tp.conversation_id=c.id) team_parts
  from conversations c join contacts ct on ct.id=c.contact_id join channels ch on ch.id=c.channel_id where ${accessPredicate('c','$1')}
- and (($2='closed' and c.status='closed') or ($2<>'closed' and c.status='open'))
- and ($2<>'new' or c.assignee_id is null) and ($2<>'others' or (c.assignee_id is not null and c.assignee_id<>$1))
- and ($2<>'mine' or c.assignee_id=$1 or exists(select 1 from participants p where p.conversation_id=c.id and p.user_id=$1) or exists(select 1 from conversation_team_participants tp join team_members tm on tm.team_id=tp.team_id where tp.conversation_id=c.id and tm.user_id=$1))
+ and ${queuePredicate('c','$1','$2')}
  and ($4::int is null or c.channel_id=$4) and ($3='' or ct.name ilike '%'||$3||'%' or ct.handle ilike '%'||$3||'%' or c.id::text=ltrim(ltrim($3,'#'),'0')) order by c.last_at desc limit 200`,[req.u.id,scope,search,channel_id||null])).rows)}));
 app.get('/api/conversations/:id',ah(async(req,res)=>{const c=await conversationFor(q,+req.params.id,req.u.id);const result=(await q("select c.*,ct.name cname,ct.handle,ct.data,ch.name chname,ch.driver,ch.config->>'platform' platform,ch.active channel_active,(select name from users where id=c.assignee_id) assigned_name,(select name from teams where id=c.team_id) team_name,(select u.name from service_events e left join users u on u.id=e.actor_id where e.conversation_id=c.id and e.type='closed' order by e.at desc limit 1) closed_by_name,(select kind from messages where conversation_id=c.id and dir<>'int' order by at desc,id desc limit 1) last_kind from conversations c join contacts ct on ct.id=c.contact_id join channels ch on ch.id=c.channel_id where c.id=$1",[c.id])).rows[0];result.parts=(await q('select user_id from participants where conversation_id=$1',[c.id])).rows.map(x=>x.user_id);result.team_parts=(await q('select team_id from conversation_team_participants where conversation_id=$1',[c.id])).rows.map(x=>x.team_id);res.json(result)}));
 app.get('/api/conversations/:id/messages',ah(async(req,res)=>{await conversationFor(q,req.params.id,req.u.id);await q('update conversations set unread=0 where id=$1',[req.params.id]);const before=req.query.before||null;if(before&&!/^[0-9]+$/.test(before))throw Error('Cursor inválido');res.json((await q('select * from messages where conversation_id=$1 and ($2::bigint is null or id<$2) order by id desc limit 500',[req.params.id,before])).rows.reverse())}));
