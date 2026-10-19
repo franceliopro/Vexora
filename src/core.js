@@ -1,3 +1,4 @@
+import {automationAllowed} from './conversation-policy.js';
 import {q,adm} from './db.js';import {als} from './ctx.js';import {bus} from './bus.js';import {saveMedia} from './media.js';
 import * as waha from './drivers/waha.js';import * as baileys from './drivers/baileys.js';import * as zernio from './drivers/zernio.js';
 export const D={waha,baileys,zernio};
@@ -17,8 +18,9 @@ export async function inbound(chId,m){ // m:{handle,name,kind,body,file,ext_id}
  let used=false;try{used=await (await import('./bots/runtime.js')).handle(cv,msg,fresh)}catch(e){console.error('bot',e.message)}
  if(!used)(await import('./ai/engine.js')).onInbound(cv,msg).catch(e=>console.error('ai',e.message))}
 export async function convFor(contactId){const cv=(await q('select * from conversations where contact_id=$1 order by id desc limit 1',[contactId])).rows[0];if(cv)return cv;const ct=(await q('select * from contacts where id=$1',[contactId])).rows[0];if(!ct?.channel_id)throw new Error('contato sem canal');const st=(await q('select id from stages order by pos limit 1')).rows[0];return (await q('insert into conversations(contact_id,channel_id,stage_id,ai_on) values($1,$2,$3,false) returning *',[ct.id,ct.channel_id,st?.id])).rows[0]}
-export async function deliver(cid,{kind='text',body,file,author_id,ai=false}){
+export async function deliver(cid,{kind='text',body,file,author_id,ai=false,epoch}){
  const cv=(await q('select c.*,ct.handle,ch.driver,ch.config,ch.id chid from conversations c join contacts ct on ct.id=c.contact_id join channels ch on ch.id=c.channel_id where c.id=$1',[cid])).rows[0];
+ if(ai&&kind!=='note'&&(!automationAllowed(cv)||(epoch!==undefined&&cv.automation_epoch!==epoch)))return null;
  let ext=null,dir='out';
  if(kind==='note')dir='int';else{const last=(await q("select ext_id,kind from messages where conversation_id=$1 and dir='in' order by at desc limit 1",[cid])).rows[0];
   ext=await D[cv.driver].send({id:cv.chid,config:cv.config},{to:cv.handle,kind,body,file,replyTo:last})}
@@ -26,3 +28,4 @@ export async function deliver(cid,{kind='text',body,file,author_id,ai=false}){
  if(kind!=='note')await q('update conversations set last_at=now() where id=$1',[cid]);
  bus('msg',{conversation_id:cid,message:msg});return msg}
 export async function startAll(){for(const c of (await adm("select * from channels where active and driver='baileys'")).rows)baileys.start(c,(id,m)=>als.run({tenant:c.tenant_id},()=>inbound(id,m))).catch(e=>console.error('baileys',e.message))}
+

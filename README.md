@@ -114,3 +114,7 @@ Painel de pedidos por etapa (novo → preparando → pronto → saiu → entregu
 - Sem lembrete automático de aula, sem página pública de cardápio, sem controle de estoque por pedido.
 - Só Postgres (pgvector). Baileys é não oficial (risco de banimento). Anúncios Meta: cria só a campanha, pausada.
 
+
+## Primeiro cliente: rastreamento veicular
+
+Cadastro em `/platform.html` → **Nova empresa** → template **Rastreamento Veicular · 3 plataformas**. Veja [configuração das equipes, Asaas e controles de atendimento](docs/RASTREAMENTO-VEICULAR.md).

@@ -43,11 +43,11 @@ async function onInput(n,input,run,deps,ctx){const d=n.data||{},V=run.vars,t=Str
  return {}}
 
 // ---------- Cobranças Asaas: CPF/CNPJ → débitos (dados mascarados) → escolher débito → escolher forma de pagar
-const METHODS=['Boleto completo (link/PDF)','Código do boleto (linha digitável)','Pix copia e cola','Link de pagamento (cartão e outros)'];
+const METHODS=['Boleto completo (link/PDF)','Código do boleto (linha digitável)','Pix copia e cola','Fatura completa (cartão e outros, conforme cobrança)'];
 const stTxt=(x,today)=>x.status==='OVERDUE'||String(x.dueDate)<today?'⚠️ vencido':'em aberto';
 async function asaas(n,run,deps,t,enter){const d=n.data||{},V=run.vars,A=V._a??={step:'doc',tries:0};
  const today=new Date().toISOString().slice(0,10);
- const lookup=async doc=>{let r;try{r=await deps.asaasDebts(doc)}catch(e){await deps.send('Não consegui consultar agora. Tente novamente em instantes ou fale com um atendente.');return {out:'error'}}
+ const lookup=async doc=>{let r;try{r=await deps.asaasDebts(doc,{platform:d.platform||V.plataforma,verifyPhone:!!d.verifyPhone})}catch(e){await deps.send('Não consegui consultar agora. Tente novamente em instantes ou fale com um atendente.');return {out:'error'}}
   A.doc=doc;if(d.var)V[d.var]=digits(doc);
   if(!r.debts.length){await deps.send(`Não encontramos débitos em aberto para ${personType(doc)} ${maskDoc(doc)}. ✅`);return {out:'none'}}
   A.debts=r.debts;A.name=r.name;
@@ -62,12 +62,13 @@ async function asaas(n,run,deps,t,enter){const d=n.data||{},V=run.vars,A=V._a??=
   if((A.lookups=(A.lookups||0)+1)>3){await deps.send('Limite de consultas atingido. Fale com um atendente.');return {out:'error'}}return lookup(digits(t))}
  if(A.step==='pick'){const i=matchOpt(A.debts.map(x=>String(x.value)),t);if(i<0){await deps.send('Responda com o número do débito.');return {stay:1}}A.sel=i;return askMethod()}
  if(A.step==='method'){const i=matchOpt(METHODS,t);if(i<0){await deps.send(`Escolha uma opção:\n\n${lst(METHODS,x=>x)}`);return {stay:1}}
-  const deb=A.debts[A.sel];let info;try{info=await deps.asaasPay(deb.id)}catch{await deps.send('Não consegui gerar o pagamento agora. Fale com um atendente.');return {out:'error'}}
+  const deb=A.debts[A.sel];let info;try{info=await deps.asaasPay(deb.id,{platform:d.platform||V.plataforma})}catch{await deps.send('Não consegui gerar o pagamento agora. Fale com um atendente.');return {out:'error'}}
   const head=`💳 ${money(deb.value)} — venc. ${fdate(deb.dueDate)}`;
   if(i===0){await deps.send(`${head}\nBoleto: ${info.bankSlipUrl||info.invoiceUrl||'indisponível'}`)}
   else if(i===1){if(info.identificationField){await deps.send(`${head}\nLinha digitável:`);await deps.send(info.identificationField)}else await deps.send(`${head}\nCódigo indisponível. Boleto: ${info.bankSlipUrl||info.invoiceUrl||''}`)}
   else if(i===2){if(info.pixPayload){await deps.send(`${head}\nPix copia e cola (toque e segure para copiar):`);await deps.send(info.pixPayload)}else await deps.send(`${head}\nPix indisponível para esta cobrança. Link: ${info.invoiceUrl||''}`)}
   else await deps.send(`${head}\nLink de pagamento: ${info.invoiceUrl||info.bankSlipUrl||''}`);
+  if(info.invoiceUrl)await deps.send('Fatura completa: '+info.invoiceUrl);else{await deps.send('A fatura completa não foi disponibilizada pelo provedor. Vou encaminhar ao financeiro.');if(d.alwaysInvoice)return {out:'error'}}
   if(A.debts.length>1){A.step='more';await deps.send('Deseja pagar outro débito?\n1. Sim\n2. Não');return {stay:1}}
   delete V._a;return {}}
  if(A.step==='more'){const i=matchOpt(['sim','nao'],t);if(i===0){A.step='pick';await deps.send(`Qual débito?\n\n${lst(A.debts,x=>`${money(x.value)} — venc. ${fdate(x.dueDate)}`)}`);return {stay:1}}delete V._a;return {}}
@@ -109,3 +110,4 @@ async function order(run,deps,t,enter){const V=run.vars,M=await deps.menu(),cats
    V.pedido=o.number;delete V._o;await say(`🎉 Pedido *#${o.number}* confirmado! Total ${money(o.total)}.${/pix/i.test(O.pay)&&M.pix_key?`\n\nPague via Pix (chave): ${M.pix_key}`:''}\nAvisaremos quando sair. Obrigado!`);return {}}}
  return {out:'error'};
  async function payStep(){O.step='pay';await say(`Forma de pagamento?\n\n${lst(M.pay_methods,x=>x)}`);return stay}}
+

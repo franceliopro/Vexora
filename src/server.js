@@ -1,10 +1,11 @@
+import {accessPredicate,conversationFor,controlPredicate} from './conversation-policy.js';import {mountConversationActions} from './conversation-actions.js';
 import express from 'express';import http from 'http';import {WebSocketServer} from 'ws';import jwt from 'jsonwebtoken';import bcrypt from 'bcryptjs';import path from 'path';import {fileURLToPath} from 'url';import {execFile} from 'child_process';
 import {q,adm as dba,migrate,cols,tenantTransaction} from './db.js';import {als,sign,hookUrl,payHook,orderHook} from './ctx.js';import {createTenant} from './tenants.js';import {mount,mountPublic} from './routes2.js';import {billingTick} from './billing.js';import {createOrder} from './delivery.js';import crypto from 'crypto';import fs from 'fs';import {spawn} from 'child_process';import {bus,setWss} from './bus.js';import {inbound,deliver,startAll,setStage,D} from './core.js';import {tickFlows} from './flows.js';import {createPayment,payWebhook} from './payments.js';import {publishPost,publishAd,adInsights} from './social.js';import {normalizeBrand,TEMPLATES,PRODUCT_MODULES,installTemplate} from './product.js';import {mountWorkspaces} from './workspaces.js';import {ragAdd} from './ai/engine.js';import {createAppt,cancelAppt} from './gcal.js';import {MEDIA,saveMedia} from './media.js';
 const SECRET=process.env.JWT_SECRET||'dev-secret';
 const app=express();app.set('trust proxy',1); // atrás do Traefik/Dokploy: req.ip = cliente real (rate limit por IP)
 app.use(express.json({limit:'30mb'}));
 app.use('/media',express.static(MEDIA));app.use(express.static(path.join(path.dirname(fileURLToPath(import.meta.url)),'../web')));
-const ah=f=>(a,b,n)=>Promise.resolve(f(a,b,n)).catch(e=>{console.error(e);b.status(400).json({error:e.message})});
+const ah=f=>(a,b,n)=>Promise.resolve(f(a,b,n)).catch(e=>{console.error(e);b.status(e.status||400).json({error:e.message})});
 const act=new Map();const alive=async t=>{const c=act.get(t);if(c&&c.t>Date.now())return c.v;const v=!!(await q('select 1 from tenants where id=$1 and active',[t])).rowCount;act.set(t,{v,t:Date.now()+15000});return v};
 const auth=async(req,res,next)=>{try{req.u=jwt.verify((req.headers.authorization||'').slice(7),SECRET)}catch{return res.status(401).json({error:'auth'})}
  if(!req.u.tid||!await alive(req.u.tid))return res.status(401).json({error:'empresa suspensa ou inválida'});als.run({tenant:req.u.tid},next)};
@@ -15,7 +16,7 @@ const ADM_T=['users','teams','channels','agents','stages','flows','bots','menu_c
 const chk=t=>{if(!T.includes(t))throw new Error('tabela inválida');return t};
 const ins=async(t,b)=>{const c=await cols(t);const k=Object.keys(b).filter(x=>c[x]&&x!=='id'&&x!=='tenant_id');const v=k.map(x=>c[x]==='jsonb'?JSON.stringify(b[x]):b[x]);return (await q(`insert into ${t}(${k.join()}) values(${k.map((_,i)=>'$'+(i+1))}) returning *`,v)).rows[0]};
 const upd=async(t,id,b)=>{const c=await cols(t);const k=Object.keys(b).filter(x=>c[x]&&x!=='id'&&x!=='tenant_id');if(!k.length)return;return (await q(`update ${t} set ${k.map((x,i)=>x+'=$'+(i+2))} where id=$1 returning *`,[id,...k.map(x=>c[x]==='jsonb'?JSON.stringify(b[x]):b[x])])).rows[0]};
-const clean=r=>{delete r.pass;delete r.emb;return r};
+const clean=r=>{if(!r)return null;delete r.pass;delete r.emb;return r};
 app.get('/healthz',(_,res)=>res.send('ok'));
 // ---- público (empresa identificada por token, domínio ou ?t=slug)
 const hits=new Map();const limit=(req,res,next)=>{const n=Date.now(),h=hits.get(req.ip);if(!h||h.r<n){hits.set(req.ip,{n:1,r:n+6e4});return next()}h.n++>15?res.status(429).json({error:'muitas tentativas, aguarde 1 min'}):next()};
@@ -55,18 +56,19 @@ app.get('/platform/backup',pk,(req,res)=>{const dir=fs.mkdtempSync('/tmp/bk-'),d
   const t=spawn('tar',['-czf','-','-C',dir,'db.dump','-C',data,'media','baileys']);t.stdout.pipe(res);t.on('close',()=>fs.rmSync(dir,{recursive:true,force:true}))})});
 // ---- autenticado
 app.use('/api',auth);
+mountConversationActions(app,{ah,q,tenantTransaction,bus,deliver,createPayment});
 mount(app,{ah,adm}); // rotas dos módulos (antes das genéricas /api/t/:t)
 app.get('/api/me',(req,res)=>res.json(req.u));
 app.get('/api/legacy',adm,ah(async(_,res)=>res.json((await q('select (exists(select 1 from courses) or exists(select 1 from students) or exists(select 1 from lessons)) school,(exists(select 1 from menu_items) or exists(select 1 from orders)) delivery')).rows[0])));
 
 app.post('/api/upload',ah(async(req,res)=>{const {data,mime=''}=req.body;let buf=Buffer.from(data,'base64'),ext=(mime.split('/')[1]||'bin').split(';')[0];let f=saveMedia(buf,ext);
  if(mime.startsWith('audio')&&ext!=='ogg'){const o=f.replace(/\.\w+$/,'.ogg');await new Promise((ok,no)=>execFile('ffmpeg',['-y','-i',MEDIA+'/'+f,'-c:a','libopus',MEDIA+'/'+o],e=>e?no(e):ok()));f=o}res.json({file:f})}));
-app.get('/api/t/:t',ah(async(req,res)=>{const t=chk(req.params.t);res.json((await q(`select * from ${t} order by id desc limit 500`)).rows.map(clean))}));
+app.get('/api/t/:t',ah(async(req,res)=>{const t=chk(req.params.t);if(t==='payments'&&!['owner','admin'].includes(req.u.role))return res.json((await q(`select p.* from payments p where exists(select 1 from conversations c where c.contact_id=p.contact_id and ${accessPredicate('c','$1')}) order by p.id desc limit 500`,[req.u.id])).rows);if(t==='contacts'&&!['owner','admin'].includes(req.u.role))return res.json((await q(`select * from contacts where exists(select 1 from conversations c where c.contact_id=contacts.id and ${accessPredicate('c','$1')}) order by id desc limit 500`,[req.u.id])).rows);if(!['owner','admin'].includes(req.u.role)&&['agents','channels'].includes(t))return res.json((await q(t==='agents'?'select id,name,active,channel_ids from agents order by id':'select id,name,driver,active,team_id from channels order by id')).rows);res.json((await q(`select * from ${t} order by id desc limit 500`)).rows.map(clean))}));
 app.post('/api/t/:t',ah(async(req,res)=>{const t=chk(req.params.t);if(ADM_T.includes(t)&&!['owner','admin'].includes(req.u.role))throw new Error('sem permissão');
  const b=req.body;if(t==='users'&&b.pass)b.pass=await bcrypt.hash(b.pass,10);
  if(t==='docs'){await ragAdd(b.agent_id,b.title,b.content);return res.json({ok:1})}
  if(t==='appointments')return res.json(await createAppt({contact_id:b.contact_id,title:b.title,start:b.starts_at,minutes:b.minutes}));
- if(t==='payments')return res.json(await createPayment(b));
+ if(t==='payments'){if(!['owner','admin'].includes(req.u.role))throw Error('Crie cobranças dentro da conversa');return res.json(await createPayment(b))}
  res.json(clean(await ins(t,b)))}));
 app.put('/api/t/:t/:id',ah(async(req,res)=>{const t=chk(req.params.t);if(ADM_T.includes(t)&&!['owner','admin'].includes(req.u.role))throw new Error('sem permissão');const b=req.body;if(t==='users'){if(b.pass)b.pass=await bcrypt.hash(b.pass,10);else delete b.pass}res.json(clean(await upd(t,req.params.id,b)))}));
 app.delete('/api/t/:t/:id',ah(async(req,res)=>{const t=chk(req.params.t);if(t==='appointments')await cancelAppt(req.params.id);else{if(ADM_T.includes(t)&&req.u.role==='agent')throw new Error('sem permissão');await q(`delete from ${t} where id=$1`,[req.params.id])}res.json({ok:1})}));
@@ -83,32 +85,27 @@ app.post('/api/channels/:id/connect',adm,ah(async(req,res)=>{const ch=(await q('
 app.get('/api/channels/:id/webhook',adm,ah(async(req,res)=>{const ch=(await q('select driver from channels where id=$1',[req.params.id])).rows[0];res.json({url:hookUrl(ch.driver,req.params.id)})}));
 app.get('/api/hooks',adm,(req,res)=>res.json({pagamentos:Object.fromEntries(['asaas','mercadopago','stripe'].map(p=>[p,payHook(p)])),pedidos:orderHook('ORIGEM')}));
 app.get('/api/export',adm,ah(async(req,res)=>{const out={exported_at:new Date(),tables:{}};for(const t of [...T,'team_members','participants','messages','jobs','settings'])out.tables[t]=(await q(`select * from ${t}`)).rows.map(clean);res.setHeader('content-disposition','attachment; filename=nexora-export.json');res.json(out)}));
-app.get('/api/channels/:id/qr',ah(async(req,res)=>{const ch=(await q('select * from channels where id=$1',[req.params.id])).rows[0];res.json({qr:await D[ch.driver].qr(ch)})}));
+app.get('/api/channels/:id/qr',adm,ah(async(req,res)=>{const ch=(await q('select * from channels where id=$1',[req.params.id])).rows[0];res.json({qr:await D[ch.driver].qr(ch)})}));
 // conversas
-app.get('/api/conversations',ah(async(req,res)=>{const {scope='mine',q:s=''}=req.query,me=req.u.id,all=scope==='all'&&['owner','admin'].includes(req.u.role);
- res.json((await q(`select c.*,ct.name cname,ct.handle,ct.data,ch.name chname,ch.driver,
+app.get('/api/conversations',ah(async(req,res)=>{const {scope='mine',q:search=''}=req.query;res.json((await q(`select c.*,ct.name cname,ct.handle,ct.data,ch.name chname,ch.driver,
  (select body from messages m where m.conversation_id=c.id and dir<>'int' order by at desc limit 1) last,
- (select coalesce(json_agg(user_id),'[]') from participants p where p.conversation_id=c.id) parts
- from conversations c join contacts ct on ct.id=c.contact_id join channels ch on ch.id=c.channel_id
- where ($1 or c.assignee_id=$2 or exists(select 1 from participants p where p.conversation_id=c.id and p.user_id=$2) or ($3='team' and (c.assignee_id is null or c.team_id in (select team_id from team_members where user_id=$2))))
- and ($4='' or ct.name ilike '%'||$4||'%' or ct.handle ilike '%'||$4||'%') order by c.last_at desc limit 200`,[all,me,scope,s])).rows)}));
-app.get('/api/conversations/:id/messages',ah(async(req,res)=>{await q('update conversations set unread=0 where id=$1',[req.params.id]);res.json((await q('select * from messages where conversation_id=$1 order by at limit 500',[req.params.id])).rows)}));
-app.post('/api/conversations/:id/send',ah(async(req,res)=>res.json(await deliver(+req.params.id,{...req.body,author_id:req.u.id}))));
-app.patch('/api/conversations/:id',ah(async(req,res)=>{const id=+req.params.id,b=req.body;
- if('stage_id' in b){await setStage(id,b.stage_id);delete b.stage_id}
- if('assignee_id' in b){const u=(await q('select name from users where id=$1',[b.assignee_id])).rows[0];await deliver(id,{kind:'note',body:`${req.u.name} atribuiu a ${u?.name||'ninguém'}`,author_id:req.u.id});b.ai_on=false}
- if(b.ai_on&&!('agent_id' in b)){const a=(await q('select id from agents where active limit 1')).rows[0];if(a)b.agent_id=a.id;await deliver(id,{kind:'note',body:`${req.u.name} devolveu à IA`,author_id:req.u.id})}
- const r=await upd('conversations',id,b);bus('conv',{id});res.json(r)}));
-app.post('/api/conversations/:id/invite',ah(async(req,res)=>{const id=+req.params.id,u=(await q('select name from users where id=$1',[req.body.user_id])).rows[0];await q('insert into participants values($1,$2) on conflict do nothing',[id,req.body.user_id]);await deliver(id,{kind:'note',body:`${req.u.name} convidou ${u.name}`,author_id:req.u.id});bus('conv',{id});res.json({ok:1})}));
+ (select coalesce(json_agg(user_id),'[]') from participants p where p.conversation_id=c.id) parts,
+ (select coalesce(json_agg(team_id),'[]') from conversation_team_participants tp where tp.conversation_id=c.id) team_parts
+ from conversations c join contacts ct on ct.id=c.contact_id join channels ch on ch.id=c.channel_id where ${accessPredicate('c','$1')}
+ and ($2<>'mine' or c.assignee_id=$1 or exists(select 1 from participants p where p.conversation_id=c.id and p.user_id=$1) or exists(select 1 from conversation_team_participants tp join team_members tm on tm.team_id=tp.team_id where tp.conversation_id=c.id and tm.user_id=$1))
+ and ($3='' or ct.name ilike '%'||$3||'%' or ct.handle ilike '%'||$3||'%') order by c.last_at desc limit 200`,[req.u.id,scope,search])).rows)}));
+app.get('/api/conversations/:id/messages',ah(async(req,res)=>{await conversationFor(q,req.params.id,req.u.id);await q('update conversations set unread=0 where id=$1',[req.params.id]);res.json((await q('select * from messages where conversation_id=$1 order by at limit 500',[req.params.id])).rows)}));
+app.post('/api/conversations/:id/send',ah(async(req,res)=>{const c=await conversationFor(q,req.params.id,req.u.id);if(!c.assignee_id)throw Error('Assuma a conversa antes de responder');if(c.automation_mode!=='hybrid'&&req.body.kind!=='note'){await q("update conversations set ai_on=false,automation_paused=true,automation_mode='human',automation_epoch=automation_epoch+1 where id=$1",[c.id]);await q("update bot_runs set status='paused' where conversation_id=$1 and status='active'",[c.id]);await q('update jobs set done=true where conversation_id=$1 and not done',[c.id])}const {kind,body,file}=req.body;res.json(await deliver(c.id,{kind,body,file,author_id:req.u.id}));bus('conv',{id:c.id})}));
+app.patch('/api/conversations/:id',ah(async(req,res)=>{const id=+req.params.id,c=await conversationFor(q,id,req.u.id,{control:true});const b=req.body;if(Object.keys(b).some(k=>!['stage_id','amount'].includes(k)))throw Error('Use os botões Atribuir, Convidar e Automação para mudar o atendimento');if('stage_id'in b)await setStage(id,b.stage_id);if('amount'in b){const n=Number(b.amount||0);if(!Number.isFinite(n)||n<0)throw Error('Valor inválido');await q('update conversations set amount=$2 where id=$1',[id,n])}bus('conv',{id});res.json((await q('select * from conversations where id=$1',[id])).rows[0])}));
 // social
 app.post('/api/posts/:id/publish',ah(async(req,res)=>{await publishPost(req.params.id);res.json({ok:1})}));
 app.post('/api/ads/:id/publish',ah(async(req,res)=>{await publishAd(req.params.id);res.json({ok:1})}));
 app.get('/api/ads/:id/insights',ah(async(req,res)=>res.json(await adInsights(req.params.id))));
-app.get('/api/stats',ah(async(_,res)=>res.json({by_stage:(await q('select s.name,count(c.id)::int n,coalesce(sum(c.amount),0)::float total from stages s left join conversations c on c.stage_id=s.id group by s.id order by s.pos')).rows,
+app.get('/api/stats',adm,ah(async(_,res)=>res.json({by_stage:(await q('select s.name,count(c.id)::int n,coalesce(sum(c.amount),0)::float total from stages s left join conversations c on c.stage_id=s.id group by s.id order by s.pos')).rows,
  msgs7:(await q("select to_char(at,'DD/MM') d,count(*)::int n,count(*) filter(where ai)::int ai from messages where at>now()-interval '7 days' and dir<>'int' group by 1 order by min(at)")).rows,
  paid:(await q("select coalesce(sum(amount),0)::float t from payments where status='pago'")).rows[0].t})));
 const srv=http.createServer(app),wss=new WebSocketServer({noServer:true});setWss(wss);
-srv.on('upgrade',(req,s,h)=>{try{const u=jwt.verify(new URL(req.url,'http://x').searchParams.get('t'),SECRET);wss.handleUpgrade(req,s,h,w=>{w.tid=u.tid;wss.emit('connection',w)})}catch{s.destroy()}});
+srv.on('upgrade',async(req,s,h)=>{try{const u=jwt.verify(new URL(req.url,'http://x').searchParams.get('t'),SECRET);if(!u.tid||!await alive(u.tid))return s.destroy();const valid=await als.run({tenant:u.tid},async()=>!!(await q('select id from users where id=$1',[u.id])).rows[0]);if(!valid)return s.destroy();wss.handleUpgrade(req,s,h,w=>{w.tid=u.tid;w.uid=u.id;w.exp=u.exp;const expiry=setTimeout(()=>w.close(),Math.max(0,u.exp*1000-Date.now()));w.on('close',()=>clearTimeout(expiry));wss.emit('connection',w)})}catch{s.destroy()}});
 await migrate();startAll();
 setInterval(async()=>{try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},async()=>{await tickFlows();await billingTick(t.id)}).catch(e=>console.error('tick',t.id,e.message))}catch(e){console.error(e.message)}},30000);
 srv.listen(process.env.PORT||3000,()=>console.log('Nexora on :'+(process.env.PORT||3000)));

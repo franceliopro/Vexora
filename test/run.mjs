@@ -37,10 +37,10 @@ const G=(nodes,edges)=>({nodes:nodes.map(([id,type,data])=>({id,type,data:data||
  await b.say('529.982.247-25');const sum=b.out.at(-2);eq([sum.includes('Ma*** Fe****** Ló***'),sum.includes('Pessoa Física'),sum.includes('***.982.247-**'),sum.includes('vencido'),sum.includes('10/01/2020'),sum.includes('R$ 150,00')],[true,true,true,true,true,true],'débitos mascarados');
  eq(b.out.at(-1),'Qual débito deseja pagar? Responda com o número.','pergunta débito');
  await b.say('1');eq(b.out.at(-1).includes('3. Pix copia e cola'),true,'formas');
- await b.say('3');eq(b.out.slice(-3,-1),['💳 R$ 150,00 — venc. 10/01/2020\nPix copia e cola (toque e segure para copiar):','00020126PIX'],'pix');
+ await b.say('3');eq(b.out.slice(-4,-2),['💳 R$ 150,00 — venc. 10/01/2020\nPix copia e cola (toque e segure para copiar):','00020126PIX'],'pix');
  await b.say('2');eq(b.out.at(-1),'Algo mais?','segue fluxo pós-pagamento (não pagar outro)'); eq(b.run.vars._a,undefined,'limpa estado');
  // boleto/linha digitável
- const b2=mk(g);await b2.say(null);await b2.say('2');await b2.say('52998224725');await b2.say('2');await b2.say('2');eq(b2.out.slice(-3,-1),['💳 R$ 99,90 — venc. 10/01/2099\nLinha digitável:','34191.79001 01043.510047'],'linha digitável');
+ const b2=mk(g);await b2.say(null);await b2.say('2');await b2.say('52998224725');await b2.say('2');await b2.say('2');eq(b2.out.slice(-4,-2),['💳 R$ 99,90 — venc. 10/01/2099\nLinha digitável:','34191.79001 01043.510047'],'linha digitável');
  const b3=mk(g);await b3.say(null);await b3.say('1');eq(b3.st.transfer,[{target:'ai',agent_id:1}],'transfer IA');eq(b3.done,true,'fim');
  const b4=mk(g);await b4.say(null);await b4.say('xx');await b4.say('yy');eq(b4.out.at(-1).includes('Não entendi'),true,'inválido 1');
  const b5=mk(g,{asaasDebts:async()=>({name:'X',debts:[]})});await b5.say(null);await b5.say('2');await b5.say('52998224725');eq(b5.out.at(-1).includes('Não encontramos débitos'),true,'sem débitos');
@@ -60,5 +60,6 @@ const G=(nodes,edges)=>({nodes:nodes.map(([id,type,data])=>({id,type,data:data||
  const d=mk(g);await d.say(null);await d.say('2');await d.say('1');await d.say('3');eq(d.out.at(-1).includes('Subtotal: R$ 21,00'),true,'sem variantes');await d.say('2');await d.say('1');await d.say('1');eq(d.out.at(-1).includes('mínimo para Centro é R$ 30,00'),true,'pedido mínimo');
 }
 await import('./product.mjs');
+await import('./tracking.mjs');
 console.log(bad?`${bad} FALHAS`:'TODOS OS TESTES OK');process.exit(bad?1:0);
 

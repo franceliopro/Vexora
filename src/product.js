@@ -1,3 +1,4 @@
+import {TRACKING_TEMPLATE,trackingGraph,ensureTrackingTeams} from './tracking-template.js';
 // Product definitions and validation shared by company provisioning and templates.
 export const PRODUCT_MODULES = [
  ['inbox','Central de Atendimento'],['pipeline','CRM'],['leads','Inteligência e Rastreamento de Leads'],
@@ -13,6 +14,7 @@ export const TEMPLATES = [
  {id:'delivery',name:'Atendimento de delivery',description:'Informações de cardápio e encaminhamento de pedidos.',tone:'Ágil, simpático e direto.',prompt:'Você auxilia clientes com o cardápio, entrega e pedidos usando somente as informações cadastradas.',rules:'Não invente preços, ingredientes, restrições alimentares, prazos ou estoque. Não confirme pedido/pagamento sem confirmação do sistema. Encaminhe ao atendente quando necessário.',greeting:'Olá! Você quer conhecer o cardápio ou falar sobre um pedido?'},
  {id:'suporte',name:'Suporte ao cliente',description:'Entender a solicitação e encaminhar ao setor responsável.',tone:'Calmo, prestativo e objetivo.',prompt:'Você recebe solicitações de suporte, consulta a base de conhecimento e ajuda com procedimentos aprovados.',rules:'Peça contexto mínimo. Nunca solicite senha. Não execute ação destrutiva. Encaminhe ao humano quando a base não cobrir o problema.',greeting:'Olá! Conte como podemos ajudar você hoje.'}
 ].map(t=>({...t,forbidden:GUARD}));
+TEMPLATES.push(TRACKING_TEMPLATE);
 export function templateSpec(id){const t=TEMPLATES.find(t=>t.id===id);if(!t)throw new Error('Template inválido');return t}
 export function templateGraph(t,agentId){return {nodes:[
  {id:'inicio',type:'start',x:40,y:80,data:{}},
@@ -35,6 +37,8 @@ export function normalizeBrand(b={}){if(!b||typeof b!=='object'||Array.isArray(b
 // Caller must provide a tenant-scoped transaction. Existing configuration is never overwritten.
 export async function installTemplate(query,id){const t=templateSpec(id);await query("select pg_advisory_xact_lock(hashtext(current_setting('app.tenant') || ':template:' || $1))",[id]);
  const key='template:'+id;const previous=(await query('select value from settings where key=$1',[key])).rows[0];if(previous)return {...previous.value,existing:true};
+ const teams=id==='rastreamento_veicular'?await ensureTrackingTeams(query):null;
  const agent=(await query('insert into agents(name,prompt,tone,rules,forbidden,active,channel_ids) values($1,$2,$3,$4,$5,false,$6) returning id',[t.name,t.prompt,t.tone,t.rules,t.forbidden,[]])).rows[0];
- const bot=(await query('insert into bots(name,graph,trigger,active,channel_ids) values($1,$2,$3,false,$4) returning id',[t.name,JSON.stringify(templateGraph(t,agent.id)),JSON.stringify({type:'first'}),[]])).rows[0];
- const value={template:id,agent_id:agent.id,bot_id:bot.id};await query('insert into settings(key,value) values($1,$2)',[key,JSON.stringify(value)]);return {...value,existing:false}}
+ const bot=(await query('insert into bots(name,graph,trigger,active,channel_ids) values($1,$2,$3,false,$4) returning id',[t.name,JSON.stringify(teams?trackingGraph(teams):templateGraph(t,agent.id)),JSON.stringify({type:'first'}),[]])).rows[0];
+ if(teams)await query("update agents set tools=$2 where id=$1",[agent.id,['handoff','move_stage','tracking_triage']]);
+ const value={template:id,agent_id:agent.id,bot_id:bot.id,...(teams?{teams,time_zone:'America/Sao_Paulo'}:{})};await query('insert into settings(key,value) values($1,$2)',[key,JSON.stringify(value)]);return {...value,existing:false}}
