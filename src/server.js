@@ -1,3 +1,4 @@
+import {mountServiceWorkflow} from './service-workflow.js';
 import {mountIntegrations} from './integrations.js';
 import {mountOperations} from './operations.js';import {mountCRM,expireCards} from './crm.js';import {requireAction,requireParticipation,adminRole,normalizePermissions} from './governance.js';
 import {companyTimeZone,saveTimeZone} from './timezone.js';
@@ -60,6 +61,7 @@ app.get('/platform/backup',pk,(req,res)=>{const dir=fs.mkdtempSync('/tmp/bk-'),d
 app.use('/api',auth);
 mountIntegrations(app,{ah,adm,q,tenantTransaction,bus});
 mountConversationActions(app,{ah,q,tenantTransaction,bus,deliver,createPayment});
+mountServiceWorkflow(app,{ah,q,deliver});
 mountOperations(app,{ah,adm,q,tenantTransaction,bus});
 mountCRM(app,{ah,adm,q,tenantTransaction,bus,deliver});
 app.use((req,res,next)=>{if(req.path.startsWith('/api/')&&!adminRole(req.u)&&(/^\/api\/(billing|school|delivery|students|lessons|courses|posts|ads|stats|export|settings|templates)/.test(req.path)))return res.status(403).json({error:'Acesso administrativo'});next()});
