@@ -33,6 +33,7 @@ dialog{border:0;border-radius:18px;padding:22px;width:min(560px,92vw);box-shadow
 <script>addEventListener('error',e=>{document.body.insertAdjacentHTML('beforeend','<pre style="position:fixed;inset:auto 0 0 0;background:#fee2e2;color:#7f1d1d;padding:12px;margin:0;font:12px monospace;white-space:pre-wrap;z-index:9">Erro na interface: '+String(e.message).replace(/</g,'&lt;')+'</pre>')});addEventListener('unhandledrejection',e=>console.error(e.reason))</script>
 <script>
 const _rc=Element.prototype.replaceChildren;Element.prototype.replaceChildren=function(...c){_rc.call(this,...c.flat(9).filter(x=>x!=null&&x!==false))};
+const _ap=Element.prototype.append;Element.prototype.append=function(...c){_ap.call(this,...c.flat(9).filter(x=>x!=null&&x!==false))}; // arrays/null/false nunca viram texto
 const $=(s,e=document)=>e.querySelector(s),h=(t,a={},...c)=>{const e=document.createElement(t);for(const k in a)k.startsWith('on')?e[k]=a[k]:k==='class'?e.className=a[k]:a[k]!==false&&e.setAttribute(k,a[k]);e.append(...c.flat(9).filter(x=>x!=null&&x!==false));return e};
 let T=localStorage.nx,ME,BR,ws,ST=[],US=[],AG=[],evt=()=>{};const A=$('#app');
 const api=async(p,m='GET',b)=>{const r=await fetch('/api'+p,{method:m,headers:{'content-type':'application/json',authorization:'Bearer '+T},body:b?JSON.stringify(b):undefined});if(r.status===401&&T){localStorage.removeItem('nx');location.reload()}const j=await r.json();if(!r.ok){alert(j.error);throw new Error(j.error)}return j};
