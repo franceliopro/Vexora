@@ -1,10 +1,10 @@
 const HELP={
- inbox:'Receba todas as fontes na mesma central. Novos são a fila disponível; Meus são os que você assumiu; Outros dependem de permissão. Assumir pausa a automação. Convidar compartilha; atribuir transfere a responsabilidade.',
+ inbox:'Novos: conversas disponíveis ainda sem responsável. Meus: suas conversas e as compartilhadas por convite. Outros: conversas de outros responsáveis, conforme sua permissão. Todos em aberto: reúne os atendimentos abertos aos quais você tem acesso. O ícone de concluído mostra os finalizados. Arquivados e Lixeira ficam nos três pontinhos e preservam o histórico. Os filtros ao lado da busca limitam resultados e totais. Assumir pausa a automação. Convidar compartilha; atribuir transfere a responsabilidade.',
  pipeline:'Crie um painel e etapas por equipe. Arraste oportunidades, abra a conversa pelo card e finalize obrigatoriamente como ganho ou perda. Finalizados aparecem na Lista; Relatório depende de acesso administrativo.',
  leads:'Consulte contatos e indicadores. Tracking de navegação e atribuição de campanha ainda estão em preparação.',
  agent:'Configure nesta ordem: identidade e canais → modelo de texto (LLM) → instruções, tom e proibições → ações permitidas → conhecimento. STT transcreve áudio e TTS gera voz; são opcionais. Ative somente após configurar o provedor.',
  bots:'Crie um bot, escolha o gatilho e os canais, adicione blocos e ligue cada saída ao próximo bloco. Salve e ative. O início é a entrada; menus aguardam a escolha do cliente; transferência entrega ao humano ou IA.',
- integrations:'WhatsApp QR usa Baileys ou WAHA. Zernio importa as contas conectadas e cadastra os webhooks. Meta oficial usa o aplicativo da sua empresa. Após configurar, teste uma mensagem de outro número ou perfil.',
+ integrations:'WhatsApp QR usa Baileys ou WAHA. redes gerenciadas importa as contas conectadas e cadastra os webhooks. Meta oficial usa o aplicativo da sua empresa. Após configurar, teste uma mensagem de outro número ou perfil.',
  campaigns:'Campanhas segmentadas estão em preparação. Verifique o estado apresentado nesta tela antes de planejar um envio.',
  sequences:'Escolha um gatilho e suas ações. Defina o que acontece quando o evento ocorre e teste em um atendimento controlado.',
  scheduled:'O agendamento pontual está em preparação. Confira os recursos liberados antes de programar mensagens.',

@@ -67,7 +67,7 @@ async function asaas(n,run,deps,t,enter){const d=n.data||{},V=run.vars,A=V._a??=
   if(i===0){await deps.send(`${head}\nBoleto: ${info.bankSlipUrl||info.invoiceUrl||'indisponível'}`)}
   else if(i===1){if(info.identificationField){await deps.send(`${head}\nLinha digitável:`);await deps.send(info.identificationField)}else await deps.send(`${head}\nCódigo indisponível. Boleto: ${info.bankSlipUrl||info.invoiceUrl||''}`)}
   else if(i===2){if(info.pixPayload){await deps.send(`${head}\nPix copia e cola (toque e segure para copiar):`);await deps.send(info.pixPayload)}else await deps.send(`${head}\nPix indisponível para esta cobrança. Link: ${info.invoiceUrl||''}`)}
-  else await deps.send(`${head}\nLink de pagamento: ${info.invoiceUrl||info.bankSlipUrl||''}`);
+  else if(!info.invoiceUrl)await deps.send(`${head}\nFatura indisponível. Fale com o financeiro.`);
   if(info.invoiceUrl)await deps.send('Fatura completa: '+info.invoiceUrl);else{await deps.send('A fatura completa não foi disponibilizada pelo provedor. Vou encaminhar ao financeiro.');if(d.alwaysInvoice)return {out:'error'}}
   if(A.debts.length>1){A.step='more';await deps.send('Deseja pagar outro débito?\n1. Sim\n2. Não');return {stay:1}}
   delete V._a;return {}}

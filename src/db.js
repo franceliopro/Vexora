@@ -19,6 +19,7 @@ export async function migrate(){for(let i=0;i<40;i++){try{await adm('select 1');
  await adm(`grant usage on schema public to nexora_app;grant select,insert,update,delete on all tables in schema public to nexora_app;
   revoke insert,update,delete on tenants from nexora_app;revoke all on _migrations from nexora_app;grant usage,select on all sequences in schema public to nexora_app;
   grant execute on function resolve_tenant(text,text),login_lookup(text),channel_tenant(int) to nexora_app;`);
+ await adm('revoke all on platform_provider_settings,managed_social_accounts from nexora_app');
  if(!(await adm('select 1 from tenants limit 1')).rowCount){const {createTenant}=await import('./tenants.js');await createTenant({name:'Principal',slug:'principal'})}}
 
 
