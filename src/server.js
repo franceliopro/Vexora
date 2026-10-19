@@ -1,3 +1,4 @@
+import {mountServiceCalendar,mountCalendarPublic} from './service-calendar.js';
 import {mountServiceWorkflow} from './service-workflow.js';
 import {mountIntegrations} from './integrations.js';
 import {mountOperations} from './operations.js';import {mountCRM,expireCards} from './crm.js';import {requireAction,requireParticipation,adminRole,normalizePermissions} from './governance.js';
@@ -58,7 +59,9 @@ app.get('/platform/backup',pk,(req,res)=>{const dir=fs.mkdtempSync('/tmp/bk-'),d
   res.setHeader('content-type','application/gzip');res.setHeader('content-disposition',`attachment; filename=nexora-backup-${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.tar.gz`);
   const t=spawn('tar',['-czf','-','-C',dir,'db.dump','-C',data,'media','baileys']);t.stdout.pipe(res);t.on('close',()=>fs.rmSync(dir,{recursive:true,force:true}))})});
 // ---- autenticado
+mountCalendarPublic(app,{ah,tenantTransaction});
 app.use('/api',auth);
+mountServiceCalendar(app,{ah,q,tenantTransaction,deliver,bus});
 mountIntegrations(app,{ah,adm,q,tenantTransaction,bus});
 mountConversationActions(app,{ah,q,tenantTransaction,bus,deliver,createPayment});
 mountServiceWorkflow(app,{ah,q,deliver});
