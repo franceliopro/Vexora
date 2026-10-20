@@ -3,7 +3,7 @@ import {TRACKING_TEMPLATE,trackingGraph,ensureTrackingTeams} from './tracking-te
 // Product definitions and validation shared by company provisioning and templates.
 export const PRODUCT_MODULES = [
  ['inbox','Central de Atendimento'],['pipeline','CRM'],['leads','Inteligência e Rastreamento de Leads'],
- ['agent','Agentes de IA'],['bots','Chatbots'],['campaigns','Campanhas'],['sequences','Sequências'],
+ ['agent','Agentes de IA'],['bots','Workflows'],['campaigns','Campanhas'],['sequences','Sequências'],
  ['scheduled','Mensagens Agendadas'],['integrations','Integração e API'],['pay','Pagamentos'],['personalization','Personalização para cada Cliente']
 ];
 const GUARD='Não invente preços, disponibilidade, pagamentos ou ações concluídas. Não revele dados de outros contatos. Encaminhe ao humano quando não houver informação ou autorização. Não solicite senhas nem dados de cartão.';
