@@ -1,3 +1,4 @@
+import {agentHeading} from './user-identity.js';
 import {serviceEntry} from './service-entry.js';
 import {refreshContactProfile} from './contact-profile.js';
 import {financialDocumentIntake} from './financial-identity.js';
@@ -34,10 +35,11 @@ export async function inbound(chId,m){
 });
 }
 export async function convFor(contactId){const cv=(await q('select * from conversations where contact_id=$1 order by id desc limit 1',[contactId])).rows[0];if(cv)return cv;const ct=(await q('select * from contacts where id=$1',[contactId])).rows[0];if(!ct?.channel_id)throw new Error('contato sem canal');const st=(await q('select id from stages order by pos limit 1')).rows[0];return (await q('insert into conversations(contact_id,channel_id,stage_id,ai_on) values($1,$2,$3,false) returning *',[ct.id,ct.channel_id,st?.id])).rows[0]}
-export async function deliver(cid,{kind='text',body,file,filename,author_id,ai=false,epoch,system=false,executor,choices}){
+export async function deliver(cid,{kind='text',body,file,filename,author_id,ai=false,epoch,system=false,executor,choices,identify=false}){
  const cv=(await q('select c.*,ct.handle,ct.data contact_data,ch.driver,ch.config,ch.active channel_active,ch.id chid from conversations c join contacts ct on ct.id=c.contact_id join channels ch on ch.id=c.channel_id where c.id=$1',[cid])).rows[0];
  if(ai&&kind!=='note'&&(!automationAllowed(cv)||(epoch!==undefined&&cv.automation_epoch!==epoch)))return null;
  if(!cv)throw Error('Conversa não encontrada');if(kind!=='note'&&!cv.channel_active)throw Error('Inbox pausada ou removida. Habilite a inbox em Integrações para responder.');
+ if(identify&&author_id&&kind!=='note'&&kind!=='audio'){const u=(await q('select name,known_by,signature_text from users where id=$1',[author_id])).rows[0],team=(await q('select name from teams where id=$1',[cv.team_id])).rows[0];if(u)body=agentHeading(u,team?.name)+'\n\n'+(body||'')+(u.signature_text?'\n\n'+u.signature_text:'')}
  let ext=null,dir='out';
  if(kind==='note')dir='int';else{const last=(await q("select ext_id,kind from messages where conversation_id=$1 and dir='in' order by at desc limit 1",[cid])).rows[0];
   ext=await D[cv.driver].send({id:cv.chid,config:cv.config},{to:cv.handle,kind,body,file,filename,choices,externalConversation:cv.contact_data?.external_conversation_id,replyTo:last})}
