@@ -69,6 +69,7 @@ await import('./text-providers.mjs');
 await import('./ai-choices.mjs');
 await import('./service-entry.mjs');
 await import('./user-identity.mjs');
+await import('./customer-name.mjs');
 await import('./ai-setup.mjs');
 await import('./bot-initial-delay.mjs');
 await import('./tracking.mjs');

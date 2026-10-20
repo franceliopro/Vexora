@@ -1,3 +1,4 @@
+import {customerName} from '../customer-name.js';
 import {ensureAutomationProtocol} from '../service-protocol.js';
 import {beginPresence} from '../ai/presence.js';
 import {entryBot} from './entry.js';
@@ -20,7 +21,7 @@ const mkDeps=cv=>({
  close:async d=>{if(d.text)await deliver(cv.id,{body:d.text,ai:true,executor:'bot',epoch:cv.automation_epoch});const closed=await tenantTransaction(als.getStore()?.tenant,query=>closeAutomated(query,cv,{...d,executor:'bot'}));if(closed)bus('conv',{id:cv.id});return closed},
  setStage:id=>setStage(cv.id,+id),
  builtins:async()=>{const ct=(await q('select name,handle,data from contacts where id=$1',[cv.contact_id])).rows[0]||{};const n=new Date(),zone=await companyTimeZone(q),clock=localGreeting(n,zone);
-  return {...clock,protocolo:cv.protocol||'',nome:String(ct.data?.preferred_name||ct.name||'').split(' ')[0],nome_completo:ct.data?.preferred_name||ct.name||'',telefone:'',dia_semana:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'short'}).format(n)),...(ct.data||{}),telefone:financialPhone((await q('select * from channels where id=$1',[cv.channel_id])).rows[0],ct),...clock}},
+  return {...clock,protocolo:cv.protocol||'',nome:String(ct.data?.preferred_name||ct.name||'').split(' ')[0],nome_completo:ct.data?.preferred_name||ct.name||'',telefone:'',dia_semana:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'short'}).format(n)),...(ct.data||{}),novo_nome:customerName(ct),telefone:financialPhone((await q('select * from channels where id=$1',[cv.channel_id])).rows[0],ct),...clock}},
  transfer:async d=>{const current=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!canBotRun(current)||current.automation_epoch!==cv.automation_epoch)throw Error('Automação pausada');const t=d.target||'queue';
   await q('delete from participants where conversation_id=$1',[cv.id]);await q('delete from conversation_team_participants where conversation_id=$1',[cv.id]);
   if(t==='ai'){const ag=d.agent_id?(await q('select id from agents where id=$1 and active',[d.agent_id])).rows[0]:(await q('select id from agents where active limit 1')).rows[0];await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='ai',automation_paused=false,ai_on=true,agent_id=$2,assignee_id=null where id=$1",[cv.id,ag?.id||null])}
@@ -50,6 +51,7 @@ export async function handle(cv,msg,fresh){if(!canBotRun(cv))return false;let ru
  const ct=(await q('select name,handle from contacts where id=$1',[cv.contact_id])).rows[0]||{};const r={node:run.node,waiting:run.waiting,vars:run.vars||{},tries:run.tries||0};
  await ensureAutomationProtocol(q,cv,deliver,bus);const presence=await beginPresence(cv,{query:q,drivers:D}).catch(()=>({stop:async()=>{}}));let res;try{res=await advance({graph:bot.graph,run:r,text:run.waiting?(msg.body||''):null,deps:mkDeps({...cv,cname:ct.name,handle:ct.handle})})}
  catch(e){console.error('bot',e.message);await q("update bot_runs set status='erro' where id=$1 and status='active'",[run.id]);return true}finally{await presence.stop()}
+ if(typeof r.vars.novo_nome==='string'&&r.vars.novo_nome!==run.vars?.novo_nome){const {cleanPreferredName}=await import('../service-entry.js');const preferred=cleanPreferredName(r.vars.novo_nome);if(preferred)await q("update contacts set data=coalesce(data,'{}'::jsonb)||$2 where id=$1",[cv.contact_id,JSON.stringify({preferred_name:preferred,novo_nome:preferred})])}
  if(res.stopped)await deliver(cv.id,{kind:'note',body:'Bot interrompido: '+res.stopped,ai:true,executor:'bot'});
  await q("update bot_runs set node=$2,waiting=$3,vars=$4,tries=$5,status=$6,updated_at=now() where id=$1 and status='active'",[run.id,r.node,r.waiting,JSON.stringify(r.vars),r.tries,res.done?'concluido':'active']);if(res.done&&run.invoked)await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='ai',ai_on=true where id=$1 and automation_mode='bot' and not automation_paused",[cv.id]);return true}
 

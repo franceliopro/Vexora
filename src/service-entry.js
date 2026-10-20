@@ -19,5 +19,5 @@ export async function serviceEntry({q,cv,msg,fresh,channel,contact,send,knownCus
  if(state.step==='name_confirm'){if(number===1||['sim','sim, pode','pode'].includes(answer))return finish(state.candidate);if(number===2||answer==='outro nome')return ask('name_input','Claro! Como você prefere ser chamado(a)?');const name=cleanPreferredName(msg.body);if(name)return finish(name);return ask('name_confirm','Posso chamar você de '+state.candidate+'?',['Sim, pode','Outro nome'])}
  if(state.step==='name_input'){const name=cleanPreferredName(msg.body);if(name)return finish(name);return ask('name_input','Envie por texto o nome pelo qual prefere ser chamado(a).')}
  return {used:true};
- async function finish(name){await q("update contacts set data=coalesce(data,'{}'::jsonb)||$2 where id=$1",[cv.contact_id,JSON.stringify({preferred_name:name})]);await save({step:'done',preferred_name:name});return {used:false,start:true}}
+ async function finish(name){await q("update contacts set data=coalesce(data,'{}'::jsonb)||$2 where id=$1",[cv.contact_id,JSON.stringify({preferred_name:name,novo_nome:name})]);await save({step:'done',preferred_name:name});return {used:false,start:true}}
 }

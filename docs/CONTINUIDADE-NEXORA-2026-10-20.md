@@ -391,3 +391,10 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Trigger de banco cancela espera ao concluir, pausar, assumir ou mudar epoch/modo de controle. Acionamento humano explícito de bot/fluxo não usa a espera de primeira mensagem. Falha depois de iniciada não gera reenvio cego; check_required se o processamento lançar erro. Aceite real em réplicas/reinícios continua pendente.
 - Nome do agente em negrito nas mensagens WhatsApp, com setor em texto normal: *Raiane* · Suporte Rastreabem. Formatação por canal; outras redes recebem texto simples. Tamanho de fonte dos aplicativos externos não é controlado pela Néxora.
 - Testes de unidades/calendário/rajada/execução única, migrações e cancelamento por assunção em PGlite, campo padrão e salvamento de meses no navegador; suíte anterior preservada.
+
+## 34. Apresentação humana com nome escolhido do cliente
+
+- Ao assumir: identificação do agente/setor + Olá, [nome escolhido]! Assumi seu atendimento. Como posso ajudar? Usa preferred_name, alias novo_nome e depois nome cadastrado; sem nome válido, Olá!, sem usar telefone como nome.
+- Confirmação inicial persiste preferred_name e novo_nome juntos, sem alterar nome legal. Alias {{novo_nome}} disponível em bot, workflows/follow-up e respostas rápidas; seletor de respostas rápidas inclui Nome escolhido pelo cliente.
+- Quando um bloco do bot coleta ou define novo_nome, salva a preferência na ficha para que a assunção humana use o mesmo nome. Modelos existentes com {{nome}} continuam compatíveis.
+- Testes de preferência/fallback, assunção com PostgreSQL e alias em resposta rápida no Chromium. Sem envio real nesta alteração.

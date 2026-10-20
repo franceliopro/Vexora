@@ -1,0 +1,2 @@
+export function customerName(contact={}){const data=contact.data||{};for(const value of [data.preferred_name,data.novo_nome,contact.name]){const name=String(value||'').trim().replace(/[\r\n*_~]/g,' ').replace(/\s+/g,' ');if(name&&name.length<=100&&/\p{L}/u.test(name)&&!/[<>]/.test(name))return name}return ''}
+export const takeoverGreeting=contact=>{const name=customerName(contact);return (name?'Olá, '+name+'!':'Olá!')+' Assumi seu atendimento. Como posso ajudar?'};
