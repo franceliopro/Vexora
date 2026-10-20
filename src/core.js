@@ -18,7 +18,7 @@ export async function inbound(chId,m){
   let cv=(await query('select * from conversations where contact_id=$1 order by id desc limit 1',[ct.id])).rows[0],fresh=false;
   if(!cv||cv.status==='closed'){fresh=true;const st=(await query('select id from stages order by pos limit 1')).rows[0],ag=ch.config?.routing?.enabled?(ch.config.routing.agent_id?(await query('select id from agents where active and id=$1',[ch.config.routing.agent_id])).rows[0]:null):(await query('select id from agents where active and $1=any(channel_ids) limit 1',[chId])).rows[0];cv=(await query('insert into conversations(contact_id,channel_id,stage_id,team_id,agent_id,ai_on) values($1,$2,$3,$4,$5,$6) returning *',[ct.id,chId,st?.id,ch.team_id,ag?.id,!!ag&&!ch.config?.routing?.bot_id])).rows[0]}
   if(m.externalConversation)await query("update contacts set data=coalesce(data,'{}'::jsonb)||$2 where id=$1",[ct.id,JSON.stringify({external_conversation_id:m.externalConversation,...(m.username?{sender_username:m.username}:{})})]);
-  await query('update jobs set done=true where conversation_id=$1 and not done',[cv.id]);
+  await query('update jobs set done=true where conversation_id=$1 and not done and stop_on_reply',[cv.id]);
   const msg=(await query("insert into messages(conversation_id,dir,kind,body,media_url,ext_id,filename) values($1,'in',$2,$3,$4,$5,$6) returning *",[cv.id,m.kind||'text',m.body||null,m.file?'/media/'+m.file:null,m.ext_id||null,m.filename||null])).rows[0];
   const boards=fresh?await routingCard(query,cv,ch):[];cv=(await query('update conversations set unread=unread+1,last_at=now(),last_in_at=now() where id=$1 returning *',[cv.id])).rows[0];return {cv,msg,fresh,boards,ch,ct};
  });if(!saved)return;let {cv,msg,fresh}=saved;

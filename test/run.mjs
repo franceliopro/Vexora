@@ -62,6 +62,7 @@ const G=(nodes,edges)=>({nodes:nodes.map(([id,type,data])=>({id,type,data:data||
 await import('./financial-identity.mjs');
 await import('./automation-experience.mjs');
 await import('./product.mjs');
+await import('./workflow-graph.mjs');
 await import('./tracking.mjs');
 await import('./realtime.mjs');
 await import('./driver-contracts.mjs');

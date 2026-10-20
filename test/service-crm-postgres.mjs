@@ -28,6 +28,7 @@ try{
  assert.equal((await request('automation',{mode:'ai'},3)).status,400);assert.equal((await q('select automation_mode from conversations where id=1')).rows[0].automation_mode,'human');
 
  const call=async(path,method='GET',body,user=4)=>{const r=await fetch(base+'/api'+path,{method,headers:{'content-type':'application/json','x-test-user':String(user)},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()}};
+ const support=await call('/crm/boards','POST',{name:'Suporte',code:'SUP',kind:'support',stages:[{name:'Novo chamado'},{name:'Triagem'},{name:'Conclusão',final:true}]});assert.equal(support.status,200);assert.equal(support.data.kind,'support');
  const created=await call('/crm/boards','POST',{name:'Comercial',code:'COM',visibility:'individual',team_ids:[1],celebrate:true,sound:true,inactivity_days:30,stages:[{name:'Novo Lead'},{name:'Proposta enviada'},{name:'Conclusão',final:true}]});assert.equal(created.status,200,JSON.stringify(created.data));const bid=created.data.id;
  const board=await call('/crm/boards/'+bid);assert.equal(board.data.stages.length,3);const first=board.data.stages[0],middle=board.data.stages[1],final=board.data.stages[2];
  const result=await call('/crm/cards','POST',{board_id:bid,stage_id:first.id,title:'Negociação',conversation_id:1,amount:250});assert.equal(result.status,200,JSON.stringify(result.data));let card=result.data;

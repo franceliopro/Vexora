@@ -7,7 +7,7 @@ const CANCEL=t=>/^\s*cancelar\s*$/i.test(t||'');
 
 export async function advance({graph,run,text,deps}){
  const N=Object.fromEntries((graph.nodes||[]).map(n=>[n.id,n]));let input=text,guard=0;
- while(guard++<40){
+ while(guard++<200){
   const n=N[run.node];if(!n)return {done:true};
   const ctx={...(await deps.builtins()),...run.vars};
   const r=run.waiting?await onInput(n,input,run,deps,ctx):await onEnter(n,run,deps,ctx);
@@ -15,7 +15,7 @@ export async function advance({graph,run,text,deps}){
   if(r.end)return {done:true};
   run.waiting=false;run.tries=0;input=null;
   const nx=nextOf(graph,n.id,r.out||'next');if(!nx)return {done:true};run.node=nx}
- return {done:true}}
+ return {done:true,stopped:'Limite de passos do ciclo atingido'}}
 
 async function onEnter(n,run,deps,ctx){const d=n.data||{},V=run.vars;
  switch(n.type){
@@ -24,7 +24,10 @@ async function onEnter(n,run,deps,ctx){const d=n.data||{},V=run.vars;
   case 'choice':{const o=d.options||[];await deps.send(`${tpl(d.text,ctx)}\n\n${lst(o,x=>x)}`);return {stay:1}}
   case 'input':await deps.send(tpl(d.text,ctx));return {stay:1};
   case 'condition':return {out:evalRules(d.rules,d.mode,ctx)?'yes':'no'};
-  case 'set':V[d.k]=tpl(d.v,ctx);return {};
+  case 'set':if(!/^[a-zA-Z]\w{0,60}$/.test(d.k||''))throw Error('Variável inválida');V[d.k]=tpl(d.v,ctx);return {};
+  case 'tag':case 'contact':await deps.contactAction(n.type,{...d,value:tpl(d.value,ctx)});return {};
+  case 'note':await deps.note(tpl(d.text,ctx));return {};
+  case 'cycle':{const key='_cycle_'+n.id,count=Number(V[key]||0),limit=Math.max(1,Math.min(20,Number(d.limit)||1));if(count<limit){V[key]=count+1;return {out:'repeat'}}return {out:'done'}};
   case 'stage':if(d.stage)await deps.setStage(d.stage);return {};
   case 'transfer':if(d.text)await deps.send(tpl(d.text,ctx));await deps.transfer(d);return {};
   case 'http':{const r=await deps.http(d,ctx);if(d.var)V[d.var]=r.ok?r.data:null;return {out:r.ok?'ok':'error'}}
