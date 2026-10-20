@@ -20,7 +20,7 @@ const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listeni
 const request=async(path,body={},user=1)=>{const r=await fetch(base+'/api/conversations/1/'+path,{method:'POST',headers:{'content-type':'application/json','x-test-user':String(user)},body:JSON.stringify(body)});return {status:r.status,data:await r.json()}};
 try{
  await conversationFor(q,1,1);await conversationFor(q,1,2);await assert.rejects(()=>conversationFor(q,1,3));
- assert.equal((await request('claim')).status,200);assert.equal((await q('select automation_paused from conversations where id=1')).rows[0].automation_paused,true);await assert.rejects(()=>conversationFor(q,1,2));assert.notEqual((await request('claim',{},2)).status,200);
+ await q("update conversations set bot_entry_status='pending',bot_entry_epoch=automation_epoch where id=1");assert.equal((await request('claim')).status,200);assert.equal((await q('select bot_entry_status from conversations where id=1')).rows[0].bot_entry_status,'cancelled');assert.equal((await q('select automation_paused from conversations where id=1')).rows[0].automation_paused,true);await assert.rejects(()=>conversationFor(q,1,2));assert.notEqual((await request('claim',{},2)).status,200);
  assert.equal((await request('invite',{team_id:2})).status,200);await conversationFor(q,1,3);assert.equal((await q('select assignee_id from conversations where id=1')).rows[0].assignee_id,1);
  assert.equal((await request('invite',{user_id:2})).status,200);await conversationFor(q,1,2);
  assert.equal((await request('assign',{type:'team',id:2})).status,200);await assert.rejects(()=>conversationFor(q,1,1));await assert.rejects(()=>conversationFor(q,1,2));await conversationFor(q,1,3);

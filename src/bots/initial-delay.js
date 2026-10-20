@@ -1,0 +1,16 @@
+import {entryBot} from './entry.js';import {canBotRun} from '../conversation-policy.js';
+export function initialDue(trigger={},now=new Date()){
+ trigger=trigger||{};const v=Number(trigger.initialDelay?.amount??5),unit=trigger.initialDelay?.unit||'seconds',units={seconds:1000,minutes:60000,hours:3600000,days:86400000};if(!Number.isInteger(v)||v<0||v>315360000||!['seconds','minutes','hours','days','months'].includes(unit))throw Error('Espera inicial inválida. Use quantidade inteira e uma unidade válida.');
+ const date=new Date(now);if(unit==='months'){if(v>120)throw Error('Use até 120 meses');const day=date.getUTCDate();date.setUTCDate(1);date.setUTCMonth(date.getUTCMonth()+v);const last=new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth()+1,0)).getUTCDate();date.setUTCDate(Math.min(day,last))}else{if(v*units[unit]>315360000000)throw Error('Espera inicial: máximo de 10 anos');date.setTime(date.getTime()+v*units[unit])}return date;
+}
+// Called under the same cross-worker conversation lock as message processing.
+export async function deferBotEntry({q,cv,msg,fresh,channel,scheduled=false,now=new Date()}){
+ if(scheduled){if(cv.bot_entry_status!=='pending')return true;const bot=(await q('select * from bots where id=$1 and active',[cv.bot_entry_bot_id])).rows[0],routing=channel.config?.routing;
+ if(!canBotRun(cv)||cv.bot_entry_epoch!==cv.automation_epoch||!bot||!entryBot([bot],routing,cv.channel_id,msg,true)){await q("update conversations set bot_entry_status='cancelled' where id=$1 and bot_entry_status='pending'",[cv.id]);return true}
+ if(new Date(cv.bot_entry_due_at)>now)return true;const claimed=await q("update conversations set bot_entry_status='started' where id=$1 and bot_entry_status='pending' returning id",[cv.id]);return !claimed.rows.length;
+ }
+ if(cv.bot_entry_status==='pending')return true;if(cv.bot_entry_status||cv.entry_state?.step||!canBotRun(cv))return false;
+ const prior=(await q('select id from bot_runs where conversation_id=$1 limit 1',[cv.id])).rows.length;if(prior)return false;const bot=entryBot((await q('select * from bots where active order by id')).rows,channel.config?.routing,cv.channel_id,msg,fresh||!prior);if(!bot)return false;const due=initialDue(bot.trigger,msg.at?new Date(msg.at):now);if(due<=now)return false;
+ await q("update conversations set bot_entry_status='pending',bot_entry_due_at=$2,bot_entry_bot_id=$3,bot_entry_message_id=$4,bot_entry_epoch=automation_epoch where id=$1 and bot_entry_status is null",[cv.id,due,bot.id,msg.id]);return true;
+}
+export async function tickBotStarts({q,process}){const rows=(await q("select * from conversations where bot_entry_status='pending' and bot_entry_due_at<=now() order by bot_entry_due_at limit 25")).rows;for(const cv of rows){const ch=(await q('select * from channels where id=$1',[cv.channel_id])).rows[0],ct=(await q('select * from contacts where id=$1',[cv.contact_id])).rows[0],msg=(await q('select * from messages where id=$1',[cv.bot_entry_message_id])).rows[0];if(!ch?.active||!ct||!msg){await q("update conversations set bot_entry_status='cancelled' where id=$1 and bot_entry_status='pending'",[cv.id]);continue}try{await process({cv,ch,ct,msg,fresh:true,boards:[]},{scheduled:true})}catch{await q("update conversations set bot_entry_status='check_required' where id=$1 and bot_entry_status='started'",[cv.id])}}}

@@ -1,2 +1,4 @@
-import assert from 'node:assert/strict';import {userProfile,agentHeading} from '../src/user-identity.js';
+import assert from 'node:assert/strict';import {userProfile,agentHeading,clientAgentHeading} from '../src/user-identity.js';
 assert.equal(agentHeading({name:'Paulo Silva',known_by:'Paulão'},'Financeiro Ceeb Vision'),'Paulão — Financeiro Ceeb Vision');assert.equal(agentHeading({name:'Paulo Silva'},''),'Paulo Silva');assert.equal(userProfile({known_by:'  Paulão  '}).known_by,'Paulão');assert.throws(()=>userProfile({avatar_image:'https://untrusted.example/image.svg'}),/Imagem/);assert.throws(()=>userProfile({signature_text:'x'.repeat(501)}),/Texto/);assert.equal(userProfile({}, {known_by:'Ana'}).known_by,'Ana');console.log('OK: identidade de atendimento, nome conhecido, limites de assinatura e imagens locais validados.');
+
+assert.equal(clientAgentHeading({name:'Raiane'},'Suporte Rastreabem',{driver:'baileys'}),'*Raiane* · Suporte Rastreabem');assert.equal(clientAgentHeading({name:'Raiane'},'Suporte',{driver:'meta',config:{platform:'instagram'}}),'Raiane · Suporte');

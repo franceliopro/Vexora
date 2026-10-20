@@ -70,6 +70,7 @@ await import('./ai-choices.mjs');
 await import('./service-entry.mjs');
 await import('./user-identity.mjs');
 await import('./ai-setup.mjs');
+await import('./bot-initial-delay.mjs');
 await import('./tracking.mjs');
 await import('./realtime.mjs');
 await import('./driver-contracts.mjs');
