@@ -64,6 +64,7 @@ await import('./automation-experience.mjs');
 await import('./product.mjs');
 await import('./workflow-graph.mjs');
 await import('./agent-knowledge.mjs');
+await import('./text-providers.mjs');
 await import('./tracking.mjs');
 await import('./realtime.mjs');
 await import('./driver-contracts.mjs');

@@ -1,3 +1,4 @@
+import {textModel} from './providers.js';
 import {financialChunks} from '../debt-presentation.js';
 import {extraAgentAction} from './actions.js';
 import {closeAutomated} from '../automation-close.js';
@@ -9,9 +10,7 @@ import {automationAllowed} from '../conversation-policy.js';import {localGreetin
 import fs from 'fs';import {q,tenantTransaction} from '../db.js';import {deliver,setStage} from '../core.js';import {saveMedia,MEDIA,readMedia} from '../media.js';import {createAppt} from '../gcal.js';
 const post=async(u,h,b)=>{const r=await fetch(u,{method:'POST',headers:{'content-type':'application/json',...h},body:JSON.stringify(b)});if(!r.ok)throw new Error(u+' '+r.status+' '+(await r.text()).slice(0,200));return r};
 const chain=async(c,fn)=>{let err;for(const x of [].concat(c||[])){try{return await fn(x)}catch(e){err=e;console.error('fallback:',e.message)}}throw err||new Error('provedor não configurado')}; // vários provedores por agente: cai pro próximo
-const llm=(cfg,system,msgs)=>chain(cfg,async c=>{
- if(c.provider==='anthropic'){const j=await(await post((c.base_url||'https://api.anthropic.com')+'/v1/messages',{'x-api-key':c.key,'anthropic-version':'2023-06-01'},{model:c.model,max_tokens:1024,system,messages:msgs})).json();return j.content.map(x=>x.text||'').join('')}
- const j=await(await post((c.base_url||'https://api.openai.com/v1')+'/chat/completions',{authorization:'Bearer '+c.key},{model:c.model,messages:[{role:'system',content:system},...msgs]})).json();return j.choices[0].message.content});
+const llm=(cfg,system,msgs)=>chain(cfg,c=>textModel(c,system,msgs));
 const stt=(cfg,file)=>chain(cfg,async c=>{const fd=new FormData();fd.append('file',new Blob([readMedia(file)]),file);fd.append('model',c.model||'whisper-1');
  const r=await fetch((c.base_url||'https://api.openai.com/v1')+'/audio/transcriptions',{method:'POST',headers:{authorization:'Bearer '+c.key},body:fd});if(!r.ok)throw new Error('stt '+r.status);return (await r.json()).text});
 const tts=(cfg,text)=>chain(cfg,async c=>{const r=await post((c.base_url||'https://api.openai.com/v1')+'/audio/speech',{authorization:'Bearer '+c.key},{model:c.model||'tts-1',voice:c.voice||'alloy',input:text,response_format:'opus'});return saveMedia(Buffer.from(await r.arrayBuffer()),'ogg')});

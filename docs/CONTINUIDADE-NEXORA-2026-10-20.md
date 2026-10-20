@@ -265,3 +265,11 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Busca de URLs usa DNS validado e endereço fixado por conexão, bloqueio de IPs privados e validação em cada redirecionamento, limite de tamanho/tempo. Não executa JavaScript da página.
 - RAG mantém fallback textual sem embeddings. Chunking agora também preserva documentos longos sem quebras de linha. OCR, transcrição de vídeos e crawl automático do site não estão implementados.
 - Testes: npm test; migrações e governança PostgreSQL/WASM, importação/exclusão com extrator de persistência simulado, RLS, menções sem acesso bloqueadas e leitura por destinatário; extração real PDF/DOCX com ferramentas locais; navegador com APIs simuladas para múltiplos arquivos/URLs, ações, menções, emojis e variáveis. Sem envio real a clientes/provedores.
+
+
+## 21. Provedores de texto dos agentes
+- Seleção explícita de OpenAI (GPT), Google Gemini, Anthropic (Claude) e API compatível com OpenAI. Credenciais e modelos permanecem por agente/empresa; fallback entre modelos preservado.
+- Gemini usa endpoint oficial de compatibilidade OpenAI (`generativelanguage.googleapis.com/v1beta/openai/chat/completions`), com chave da Gemini API. URL padrão preenchida pelo servidor; nome do modelo informado conforme disponibilidade da conta, sem hardcode de modelos.
+- Painel orienta geração de chave e separação entre assinatura de chat e cobrança/cotas de API. Não há login por assinatura do ChatGPT ou Gemini, importação de sessão/cookies ou reaproveitamento de cota do aplicativo. Créditos elegíveis Google dependem da conta/faturamento do provedor.
+- STT/TTS continuam com provedores OpenAI/compatíveis; a nova opção Gemini é para texto. Modelos compatíveis precisam oferecer chat/completions.
+- Referências oficiais consultadas: https://help.openai.com/en/articles/9039756-managing-billing-for-chatgpt-and-the-api-platform ; https://ai.google.dev/gemini-api/docs/google-ai-plans ; https://ai.google.dev/gemini-api/docs/openai .
