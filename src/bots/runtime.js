@@ -20,7 +20,7 @@ const mkDeps=cv=>({
  close:async d=>{if(d.text)await deliver(cv.id,{body:d.text,ai:true,executor:'bot',epoch:cv.automation_epoch});const closed=await tenantTransaction(als.getStore()?.tenant,query=>closeAutomated(query,cv,{...d,executor:'bot'}));if(closed)bus('conv',{id:cv.id});return closed},
  setStage:id=>setStage(cv.id,+id),
  builtins:async()=>{const ct=(await q('select name,handle,data from contacts where id=$1',[cv.contact_id])).rows[0]||{};const n=new Date(),zone=await companyTimeZone(q),clock=localGreeting(n,zone);
-  return {...clock,protocolo:cv.protocol||'',nome:String(ct.name||'').split(' ')[0],nome_completo:ct.name||'',telefone:'',dia_semana:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'short'}).format(n)),...(ct.data||{}),telefone:financialPhone((await q('select * from channels where id=$1',[cv.channel_id])).rows[0],ct),...clock}},
+  return {...clock,protocolo:cv.protocol||'',nome:String(ct.data?.preferred_name||ct.name||'').split(' ')[0],nome_completo:ct.data?.preferred_name||ct.name||'',telefone:'',dia_semana:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'short'}).format(n)),...(ct.data||{}),telefone:financialPhone((await q('select * from channels where id=$1',[cv.channel_id])).rows[0],ct),...clock}},
  transfer:async d=>{const current=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!canBotRun(current)||current.automation_epoch!==cv.automation_epoch)throw Error('Automação pausada');const t=d.target||'queue';
   await q('delete from participants where conversation_id=$1',[cv.id]);await q('delete from conversation_team_participants where conversation_id=$1',[cv.id]);
   if(t==='ai'){const ag=d.agent_id?(await q('select id from agents where id=$1 and active',[d.agent_id])).rows[0]:(await q('select id from agents where active limit 1')).rows[0];await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='ai',automation_paused=false,ai_on=true,agent_id=$2,assignee_id=null where id=$1",[cv.id,ag?.id||null])}
@@ -33,10 +33,11 @@ const mkDeps=cv=>({
 // Retorna true se um bot "consumiu" a mensagem (a IA não deve responder).
 export async function handle(cv,msg,fresh){if(!canBotRun(cv))return false;let run=(await q("select * from bot_runs where conversation_id=$1 and status='active'",[cv.id])).rows[0],bot;
  if(run&&Date.now()-new Date(run.updated_at)>12*36e5){await q("update bot_runs set status='expirado' where id=$1",[run.id]);run=null}
+ if(run&&run.waiting&&msg.at&&new Date(msg.at)<=new Date(run.updated_at))return true;
  if(run){bot=(await q('select * from bots where id=$1',[run.bot_id])).rows[0];if(!bot||!bot.active&&!run.invoked){await q("update bot_runs set status='encerrado' where id=$1",[run.id]);run=null}}
  if(!run){if(!msg.body&&msg.kind!=='audio')return false;
   const routing=(await q('select config from channels where id=$1',[cv.channel_id])).rows[0]?.config?.routing;const prior=(await q('select id from bot_runs where conversation_id=$1 limit 1',[cv.id])).rows[0];bot=entryBot((await q('select * from bots where active order by id')).rows,routing,cv.channel_id,msg,fresh||!prior);if(!bot)return false;
-  if(Number(bot.trigger?.cooldownHours)>0){const last=(await q('select max(br.updated_at) at from bot_runs br join conversations c on c.id=br.conversation_id where br.bot_id=$1 and c.contact_id=$2',[bot.id,cv.contact_id])).rows[0]?.at;if(last&&Date.now()-new Date(last)<Math.min(8760,Number(bot.trigger.cooldownHours))*36e5)return false}
+  if(!fresh&&Number(bot.trigger?.cooldownHours)>0){const last=(await q('select max(br.updated_at) at from bot_runs br join conversations c on c.id=br.conversation_id where br.bot_id=$1 and c.contact_id=$2',[bot.id,cv.contact_id])).rows[0]?.at;if(last&&Date.now()-new Date(last)<Math.min(8760,Number(bot.trigger.cooldownHours))*36e5)return false}
   const st=(bot.graph.nodes||[]).find(n=>n.type==='start');if(!st)return false;
   run=(await q("insert into bot_runs(bot_id,conversation_id,node) values($1,$2,$3) returning *",[bot.id,cv.id,st.id])).rows[0];await q('update bots set runs=runs+1 where id=$1',[bot.id])}
  const waitingNode=(bot.graph.nodes||[]).find(n=>n.id===run.node);

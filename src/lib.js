@@ -8,7 +8,7 @@ export const personType=d=>digits(d).length===14?'Pessoa Jurídica':'Pessoa Fís
 export const maskName=n=>String(n||'').trim().split(/\s+/).map(w=>w.length<=2?w:w.slice(0,2)+'*'.repeat(w.length-2)).join(' ');
 export const maskDoc=x=>{const d=digits(x);return d.length===14?`**.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-**`:`***.${d.slice(3,6)}.${d.slice(6,9)}-**`};
 // escolha por número ("2") ou texto ("financeiro"); devolve índice ou -1
-export const matchOpt=(opts,text)=>{const t=norm(text);if(!t)return -1;if(/^\d{1,2}$/.test(t)){const i=+t-1;return i>=0&&i<opts.length?i:-1}
+export const matchOpt=(opts,text)=>{const t=norm(String(text||'').replace('🔟','10').replace(/\uFE0F|\u20E3/g,''));if(!t)return -1;if(/^\d{1,2}$/.test(t)){const i=+t-1;return i>=0&&i<opts.length?i:-1}
  let i=opts.findIndex(o=>norm(o)===t);if(i<0&&t.length>=3)i=opts.findIndex(o=>norm(o).includes(t));return i};
 // regras de condição, uma por linha: "variavel = valor" | != | ~ (contém) | > | < | vazio | preenchido
 export const parseRules=s=>String(s||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const m=l.match(/^(\S+)\s+(=|!=|~|>|<|vazio|preenchido)\s*(.*)$/i);return m?{k:m[1],op:m[2].toLowerCase(),v:m[3].trim()}:null}).filter(Boolean);
@@ -49,3 +49,4 @@ export function planReminders(charges,today,defRules=DEFAULT_RULES){const out=[]
   for(const r of rules)if(diff>=r.offset&&diff<=r.offset+1&&!(c.sent||[]).includes(r.offset))out.push({charge:c,rule:r})}return out}
 export const textToRules=t=>String(t||'').split('\n').map(l=>l.match(/^\s*(-?\d+)\s*[|:]\s*(.+)$/)).filter(Boolean).map(m=>({offset:+m[1],text:m[2].replace(/\\n/g,'\n')}));
 export const rulesToText=r=>(r||[]).map(x=>`${x.offset} | ${String(x.text).replace(/\n/g,'\\n')}`).join('\n');
+

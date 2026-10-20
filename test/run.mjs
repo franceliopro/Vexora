@@ -31,12 +31,12 @@ const G=(nodes,edges)=>({nodes:nodes.map(([id,type,data])=>({id,type,data:data||
 { // setor: start → msg → choice → (o0 IA, o1 asaas→msg, o2 transfer)
  const g=G([['s','start'],['m','message',{text:'Oi {{nome}}!'}],['c','choice',{text:'Como ajudar?',options:['Dúvidas gerais','Financeiro','Suporte']}],['ai','transfer',{target:'ai',agent_id:1}],['a','asaas'],['f','message',{text:'Algo mais?'}],['h','transfer',{target:'queue'}]],
   [['s','next','m'],['m','next','c'],['c','o0','ai'],['c','o1','a'],['a','next','f'],['c','o2','h']]);
- const b=mk(g);let r=await b.say(null);eq([b.out[0],b.out[1].startsWith('Como ajudar?\n\n1. Dúvidas gerais'),r.done],['Oi Ana!',true,false],'engine start');
+ const b=mk(g);let r=await b.say(null);eq([b.out[0],b.out[1].startsWith('Como ajudar?\n\n1️⃣ Dúvidas gerais'),r.done],['Oi Ana!',true,false],'engine start');
  await b.say('financeiro');eq(b.out.at(-1).includes('CPF ou CNPJ'),true,'pede doc');
  await b.say('123');eq(b.out.at(-1).includes('inválido'),true,'doc inválido');
  await b.say('529.982.247-25');const sum=b.out.at(-2);eq([sum.includes('Maria Fernanda López'),sum.includes('Pessoa Física'),sum.includes('***.982.247-**'),sum.includes('Vencido'),sum.includes('10/01/2020'),sum.includes('R$ 150,00')],[true,true,true,true,true,true],'nome completo e documento mascarado');
  eq(b.out.at(-1),'Qual débito deseja pagar? Responda com o número.','pergunta débito');
- await b.say('1');eq(b.out.at(-1).includes('3. Pix copia e cola'),true,'formas');
+ await b.say('1');eq(b.out.at(-1).includes('3️⃣ Pix copia e cola'),true,'formas');
  await b.say('3');eq(b.out.slice(-4,-2),['💳 R$ 150,00 — venc. 10/01/2020\nPix copia e cola (toque e segure para copiar):','00020126PIX'],'pix');
  await b.say('2');eq(b.out.at(-1),'Algo mais?','segue fluxo pós-pagamento (não pagar outro)'); eq(b.run.vars._a,undefined,'limpa estado');
  // boleto/linha digitável
@@ -49,8 +49,8 @@ const G=(nodes,edges)=>({nodes:nodes.map(([id,type,data])=>({id,type,data:data||
 }
 { // pizzaria
  const g=G([['s','start'],['o','order'],['m','message',{text:'Pedido {{pedido}} ok'}]],[['s','next','o'],['o','next','m']]);let created;
- const b=mk(g,{createOrder:async o=>(created=o,{number:42,total:74})});await b.say(null);eq(b.out.at(-1).includes('1. Pizzas\n2. Bebidas'),true,'cardápio');
- await b.say('1');eq(b.out.at(-1).includes('a partir de R$ 40,00'),true,'itens');await b.say('1');eq(b.out.at(-1).includes('1. Média — R$ 40,00'),true,'variantes');
+ const b=mk(g,{createOrder:async o=>(created=o,{number:42,total:74})});await b.say(null);eq(b.out.at(-1).includes('1️⃣ Pizzas\n2️⃣ Bebidas'),true,'cardápio');
+ await b.say('1');eq(b.out.at(-1).includes('a partir de R$ 40,00'),true,'itens');await b.say('1');eq(b.out.at(-1).includes('1️⃣ Média — R$ 40,00'),true,'variantes');
  await b.say('grande');eq(b.out.at(-1).includes('Borda (+R$ 8,00)'),true,'addons');await b.say('1');await b.say('2');eq(b.out.at(-1).includes('Subtotal: R$ 136,00'),true,'subtotal (60+8)*2');
  await b.say('2');await b.say('1');eq(b.out.at(-1).includes('Centro — taxa R$ 6,00'),true,'zonas');await b.say('1');await b.say('Rua A, 10');await b.say('1');
  eq(b.out.at(-1).includes('*Total: R$ 142,00*'),true,'total c/ taxa');await b.say('1');
@@ -67,6 +67,7 @@ await import('./bot-entry-presence.mjs');
 await import('./agent-knowledge.mjs');
 await import('./text-providers.mjs');
 await import('./ai-choices.mjs');
+await import('./service-entry.mjs');
 await import('./tracking.mjs');
 await import('./realtime.mjs');
 await import('./driver-contracts.mjs');

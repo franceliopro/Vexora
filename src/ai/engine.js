@@ -37,6 +37,7 @@ REGRAS: ${ag.rules||'-'}
 Nunca converta CPF, CNPJ ou identificadores de redes sociais em telefone. Não invente números para ligação, cobranças ou resultados de consulta. Uma mensagem com CPF não prova que a consulta ao Asaas ocorreu.
 PROIBIDO (nunca faça): ${ag.forbidden||'-'}
 Protocolo deste atendimento: ${fresh.protocol||'(não disponível)'}. Informe este número quando solicitado; não invente protocolo.
+Chame o cliente pelo nome preferido: ${ct.rows[0].data?.preferred_name||ct.rows[0].name}. Não repita a apresentação nem as opções do bot se já estiverem no histórico.
 Contato: ${ct.rows[0].name}; ficha: ${JSON.stringify(ct.rows[0].data)}
 Agora: ${new Date().toISOString()} · ${clock.fuso} · ${clock.saudacao} (hora local: ${clock.hora})
 Equipes disponíveis: ${JSON.stringify(teams)}
@@ -71,7 +72,7 @@ Ações permitidas: ${(ag.tools||[]).join(',')}. Só use ações quando fizer se
  const latest=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(latest)||latest.automation_epoch!==cv.automation_epoch||!out.reply)return;
  const presentation=aiChoices(out.reply,out.options);let file=null;if(wantAudio&&ag.tts&&!presentation.choices){await presence.recording();file=await tts(ag.tts,out.reply).catch(e=>(console.error('tts',e.message),null));}
  await deliver(cv.id,file?{kind:'audio',body:out.reply,file,ai:true,epoch:cv.automation_epoch}:{...presentation,ai:true,epoch:cv.automation_epoch})}
-export async function respond(cv,ag,extra='',wantAudio=false,depth=0){await ensureAutomationProtocol(q,cv,deliver,bus);const presence=await beginPresence(cv,{query:q,drivers:D}).catch(()=>({recording:async()=>{},stop:async()=>{}}));try{return await respondWithPresence(cv,ag,extra,wantAudio,depth,presence)}finally{await presence.stop()}}
+export async function respond(cv,ag,extra='',wantAudio=false,depth=0){const current=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(current)||current.automation_epoch!==cv.automation_epoch)return;if(!['ai','hybrid'].includes(current.automation_mode)&&(await q("select id from bot_runs where conversation_id=$1 and status='active' limit 1",[cv.id])).rows.length)return;await ensureAutomationProtocol(q,cv,deliver,bus);const presence=await beginPresence(cv,{query:q,drivers:D}).catch(()=>({recording:async()=>{},stop:async()=>{}}));try{return await respondWithPresence(cv,ag,extra,wantAudio,depth,presence)}finally{await presence.stop()}}
 export async function onInbound(cv,msg){if(!cv.ai_on||!automationAllowed(cv))return;
  const ag=(cv.agent_id&&(await q('select * from agents where id=$1 and active',[cv.agent_id])).rows[0])||(await q('select * from agents where active and $1=any(channel_ids) limit 1',[cv.channel_id])).rows[0];if(!ag)return;
  let wantAudio=false;

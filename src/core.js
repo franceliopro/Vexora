@@ -1,9 +1,10 @@
+import {serviceEntry} from './service-entry.js';
 import {refreshContactProfile} from './contact-profile.js';
 import {financialDocumentIntake} from './financial-identity.js';
 import {notifyProtocol} from './service-protocol.js';
 import {routingCard} from './inbox-routing.js';
 import {automationAllowed} from './conversation-policy.js';
-import {q,adm,tenantTransaction} from './db.js';import {als} from './ctx.js';import {bus} from './bus.js';import {saveMedia} from './media.js';
+import {q,adm,tenantTransaction,withConversationLock} from './db.js';import {als} from './ctx.js';import {bus} from './bus.js';import {saveMedia} from './media.js';
 import * as meta from './drivers/meta.js';
 import * as waha from './drivers/waha.js';import * as baileys from './drivers/baileys.js';import * as zernio from './drivers/zernio.js';
 export const D={waha,baileys,zernio,meta};
@@ -16,18 +17,21 @@ export async function inbound(chId,m){
   let ct=(await query('select * from contacts where channel_id=$1 and handle=$2',[chId,m.handle])).rows[0];
   if(!ct)ct=(await query('insert into contacts(name,handle,channel_id) values($1,$2,$3) returning *',[m.name||m.handle,m.handle,chId])).rows[0];
   let cv=(await query('select * from conversations where contact_id=$1 order by id desc limit 1',[ct.id])).rows[0],fresh=false;
-  if(!cv||cv.status==='closed'){fresh=true;const st=(await query('select id from stages order by pos limit 1')).rows[0],ag=ch.config?.routing?.enabled?(ch.config.routing.agent_id?(await query('select id from agents where active and id=$1',[ch.config.routing.agent_id])).rows[0]:null):(await query('select id from agents where active and $1=any(channel_ids) limit 1',[chId])).rows[0];cv=(await query('insert into conversations(contact_id,channel_id,stage_id,team_id,agent_id,ai_on) values($1,$2,$3,$4,$5,$6) returning *',[ct.id,chId,st?.id,ch.team_id,ag?.id,!!ag&&!ch.config?.routing?.bot_id])).rows[0]}
+  if(!cv||cv.status==='closed'){fresh=true;const st=(await query('select id from stages order by pos limit 1')).rows[0],ag=ch.config?.routing?.enabled?(ch.config.routing.agent_id?(await query('select id from agents where active and id=$1',[ch.config.routing.agent_id])).rows[0]:null):(await query('select id from agents where active and $1=any(channel_ids) limit 1',[chId])).rows[0];cv=(await query("insert into conversations(contact_id,channel_id,stage_id,team_id,agent_id,ai_on,automation_mode,automation_paused) values($1,$2,$3,$4,$5,$6,'auto',false) returning *",[ct.id,chId,st?.id,ch.team_id,ag?.id,!!ag&&!ch.config?.routing?.bot_id])).rows[0]}
   if(m.externalConversation)await query("update contacts set data=coalesce(data,'{}'::jsonb)||$2 where id=$1",[ct.id,JSON.stringify({external_conversation_id:m.externalConversation,...(m.username?{sender_username:m.username}:{})})]);
   await query('update jobs set done=true where conversation_id=$1 and not done and stop_on_reply',[cv.id]);
   const msg=(await query("insert into messages(conversation_id,dir,kind,body,media_url,ext_id,filename) values($1,'in',$2,$3,$4,$5,$6) returning *",[cv.id,m.kind||'text',m.body||null,m.file?'/media/'+m.file:null,m.ext_id||null,m.filename||null])).rows[0];
   const boards=fresh?await routingCard(query,cv,ch):[];cv=(await query('update conversations set unread=unread+1,last_at=now(),last_in_at=now() where id=$1 returning *',[cv.id])).rows[0];return {cv,msg,fresh,boards,ch,ct};
- });if(!saved)return;let {cv,msg,fresh}=saved;
+ });if(!saved)return;return withConversationLock(saved.cv.id,async()=>{let {msg,fresh}=saved;let cv=(await q('select * from conversations where id=$1',[saved.cv.id])).rows[0];
  refreshContactProfile(q,saved.ch,saved.ct,D,m).then(()=>bus('conv',{id:cv.id})).catch(()=>{});
- bus('msg',{conversation_id:cv.id,message:msg});if(fresh)await notifyProtocol(q,cv.id,deliver,bus);for(const board_id of saved.boards||[])bus('crm',{board_id});const fl=await import('./flows.js');if(fresh){await fl.onNew(cv.id);if(cv.stage_id)await fl.onStage(cv.id,cv.stage_id)}
- let used=false;try{used=await (await import('./bots/runtime.js')).handle(cv,msg,fresh)}catch(e){console.error('bot',e.message)}
+ bus('msg',{conversation_id:cv.id,message:msg});if(fresh)await notifyProtocol(q,cv.id,deliver,bus);for(const board_id of saved.boards||[])bus('crm',{board_id});
+ const entry=await serviceEntry({q,cv,msg,fresh,channel:saved.ch,contact:(await q('select * from contacts where id=$1',[cv.contact_id])).rows[0],send:(body,choices)=>deliver(cv.id,{body:choices?body+'\n\n'+choices.options.map((x,i)=>(i+1)+'️⃣ '+x).join('\n'):body,choices,ai:true,epoch:cv.automation_epoch,executor:'bot'}),knownCustomer:async()=>(await import('./payments.js')).knownAsaasCustomer(saved.ch,saved.ct)});if(entry.used)return;if(entry.start)fresh=true;
+ let used=false;try{used=await (await import('./bots/runtime.js')).handle(cv,msg,fresh)}catch(e){used=true;console.error('bot',e.message)}
+ const fl=await import('./flows.js');if(fresh){await fl.onNew(cv.id);if(cv.stage_id)await fl.onStage(cv.id,cv.stage_id)}
  if(!used)cv=(await q('select * from conversations where id=$1',[cv.id])).rows[0]||cv;
  if(!used&&cv.ai_on&&automationAllowed(cv)){const context=(await q("select body from messages where conversation_id=$1 and dir='out' order by id desc limit 3",[cv.id])).rows.map(m=>m.body||'').join(' '),channel=(await q('select * from channels where id=$1',[cv.channel_id])).rows[0],contact=(await q('select * from contacts where id=$1',[cv.contact_id])).rows[0],pay=(await q("select value from settings where key='pay'")).rows[0]?.value;if(pay?.asaas?.key)used=await financialDocumentIntake({cv,text:msg.body,context,channel,contact,sandbox:!!pay.asaas.sandbox,lookup:async(doc,opts)=>(await import('./payments.js')).asaasDebts(doc,{...opts,conversation_id:cv.id}),send:body=>deliver(cv.id,{body,ai:true,epoch:cv.automation_epoch}),handoff:async()=>{const changed=await q("update conversations set assignee_id=null,ai_on=false,automation_mode='human',automation_paused=true,automation_epoch=automation_epoch+1,routing_managed=false,routing_attempts='{}' where id=$1 and automation_epoch=$2 and not automation_paused and status='open' returning id",[cv.id,cv.automation_epoch]);if(!changed.rows.length)return;await deliver(cv.id,{kind:'note',body:'Documento recebido: a equipe deve confirmar a identidade e consultar pelo botão Cobranças. Não use identificadores de rede como telefone.'});bus('conv',{id:cv.id})}})}
- if(!used)(await import('./ai/engine.js')).onInbound(cv,msg).catch(e=>console.error('ai',e.message));
+ if(!used)await (await import('./ai/engine.js')).onInbound(cv,msg).catch(e=>console.error('ai',e.message));
+});
 }
 export async function convFor(contactId){const cv=(await q('select * from conversations where contact_id=$1 order by id desc limit 1',[contactId])).rows[0];if(cv)return cv;const ct=(await q('select * from contacts where id=$1',[contactId])).rows[0];if(!ct?.channel_id)throw new Error('contato sem canal');const st=(await q('select id from stages order by pos limit 1')).rows[0];return (await q('insert into conversations(contact_id,channel_id,stage_id,ai_on) values($1,$2,$3,false) returning *',[ct.id,ct.channel_id,st?.id])).rows[0]}
 export async function deliver(cid,{kind='text',body,file,filename,author_id,ai=false,epoch,system=false,executor,choices}){

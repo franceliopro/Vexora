@@ -26,3 +26,7 @@ export async function migrate(){for(let i=0;i<40;i++){try{await adm('select 1');
 // One connection and one tenant context for an entire atomic operation.
 export async function tenantTransaction(tenant,fn){const c=await app.connect();try{await c.query('begin');await c.query("select set_config('app.tenant',$1,true)",[String(tenant)]);await c.query("select set_config('app.actor',$1,true)",[String(als.getStore()?.actor||'')]);const result=await fn((t,p)=>c.query(t,p));await c.query('commit');return result}catch(e){await c.query('rollback');throw e}finally{c.release()}}
 export async function adminTransaction(fn){const c=await admin.connect();try{await c.query('begin');const result=await fn((t,p)=>c.query(t,p));await c.query('commit');return result}catch(e){await c.query('rollback');throw e}finally{c.release()}}
+
+// A small dedicated pool keeps slow channel sends from exhausting the application's query pool.
+const processingLocks=new pg.Pool({connectionString:au.toString(),max:4});
+export async function withConversationLock(id,fn){const tenant=als.getStore()?.tenant;if(!tenant)throw Error('Empresa ausente');const c=await processingLocks.connect();try{await c.query('select pg_advisory_lock(hashtextextended($1,0))',[tenant+':process:'+id]);return await fn()}finally{try{await c.query('select pg_advisory_unlock_all()')}finally{c.release()}}}

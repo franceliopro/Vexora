@@ -1,7 +1,8 @@
+import {prettyNumber,optionNumber} from '../service-entry.js';
 // Motor de fluxos (tipo Typebot). Puro: recebe o grafo, o estado da execução e "deps" (efeitos). Testável sem banco.
 import {debtSummary,financialChunks} from '../debt-presentation.js';
 import {matchOpt,evalRules,tpl,maskName,maskDoc,personType,money,fdate,digits,validDoc,norm} from '../lib.js';
-const lst=(a,f)=>a.map((x,i)=>`${i+1}. ${f(x)}`).join('\n');
+const lst=(a,f)=>a.map((x,i)=>`${prettyNumber(i+1)} ${f(x)}`).join('\n');
 const nextOf=(g,id,out='next')=>(g.edges||[]).find(e=>e.from===id&&e.out===out)?.to;
 const CANCEL=t=>/^\s*cancelar\s*$/i.test(t||'');
 
@@ -39,7 +40,7 @@ async function onEnter(n,run,deps,ctx){const d=n.data||{},V=run.vars;
 
 async function onInput(n,input,run,deps,ctx){const d=n.data||{},V=run.vars,t=String(input??'').trim();
  switch(n.type){
-  case 'choice':{const o=d.options||[],i=choiceOption(o,t);if(i>=0)return {out:'o'+i};
+  case 'choice':{const o=d.options||[],i=choiceOption(o,String(optionNumber(t)??t));if(i>=0)return {out:'o'+i};
    run.tries++;await deps.send(`Opção inválida. ${tpl(d.text,ctx)}\n\n${lst(o,x=>x)}\n\nResponda com o número da opção.`,{text:'Opção inválida. '+tpl(d.text,ctx),options:o});return {stay:1}}
   case 'input':{let ok=!!t,val=t;if(d.validate==='doc'){ok=validDoc(t);val=digits(t)}else if(d.validate==='email')ok=/^\S+@\S+\.\S+$/.test(t);else if(d.validate==='number'){ok=t!==''&&!isNaN(+t.replace(',','.'));val=t.replace(',','.')}
    if(ok){V[d.var||'resposta']=val;return {}}if(++run.tries>=3)return {out:'invalid'};await deps.send(d.error||'Valor inválido, tente novamente.');return {stay:1}}
@@ -118,7 +119,7 @@ async function order(run,deps,t,enter){const V=run.vars,M=await deps.menu(),cats
 
 
 // Only choice blocks opt into AI; input, CPF and payment selection remain deterministic.
-export function choiceOption(options,text){const t=norm(String(text||'').trim());if(/^\d{1,2}$/.test(t)){const i=Number(t)-1;return i>=0&&i<options.length?i:-1}return options.findIndex(o=>norm(o)===t)}
+export function choiceOption(options,text){const t=norm(String(text||'').replace('🔟','10').replace(/\uFE0F|\u20E3/g,'').trim());if(/^\d{1,2}$/.test(t)){const i=Number(t)-1;return i>=0&&i<options.length?i:-1}return options.findIndex(o=>norm(o)===t)}
 export function shouldUseAI(node,msg){if(node?.type!=='choice'||node.data?.aiFallback!=='on')return false;if(msg.kind==='audio')return true;const text=String(msg.body||'').trim();return [...text].length>3&&choiceOption(node.data.options||[],text)<0}
 
 export const fallbackReady=(agent,msg)=>!!agent&&[].concat(agent.llm||[]).some(c=>c?.key&&c.model)&&(msg.kind!=='audio'||[].concat(agent.stt||[]).some(c=>c?.key&&c.model));
