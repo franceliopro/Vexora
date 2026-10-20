@@ -122,3 +122,23 @@
 @keyframes surface-ramp-in{from{opacity:0;transform:translate(12px,-10px) scale(.985)}to{opacity:1;transform:none}}
 @keyframes surface-rise-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){.nx-dialog[open],.nx-dialog.conversation-tool-dock[open],.queue-popover:popover-open,.attendance-filter-popover:popover-open,.emoji-picker[data-emoji-floating]:popover-open,.composer-command-picker:not([hidden]){animation:none}}
+
+/* Personal chat canvas: opaque bubbles preserve the current theme contrast. */
+.clean-message-stream[data-background],.background-preview{background-color:var(--chat-canvas,var(--bg));background-image:var(--chat-pattern,none);background-size:var(--chat-pattern-size,cover)}
+[data-background="whatsapp"]{--chat-canvas:#efe8dc;--chat-pattern:radial-gradient(#c7bda855 1px,transparent 1px);--chat-pattern-size:22px 22px}
+[data-background="mint"]{--chat-canvas:#e3eee7;--chat-pattern:radial-gradient(#7aab9040 1px,transparent 1px);--chat-pattern-size:24px 24px}
+[data-background="instagram"]{--chat-canvas:#f2e9f5;--chat-pattern:linear-gradient(145deg,#e4eaff,#f5e5f2 55%,#ffeadb)}
+[data-background="sunset"]{--chat-canvas:#f7e8e5;--chat-pattern:linear-gradient(145deg,#eee4ff,#fbe5eb,#ffefd8)}
+[data-background="lavender"]{--chat-canvas:#eeebf6}
+[data-background="ocean"]{--chat-canvas:#e5eff5;--chat-pattern:linear-gradient(150deg,#e9f3f6,#dfe8f4)}
+[data-background="sand"]{--chat-canvas:#f1ede4}
+[data-background="slate"]{--chat-canvas:#303b4b;--chat-pattern:linear-gradient(145deg,#303b4b,#243041)}
+[data-background="night"]{--chat-canvas:#17212e}
+.conversation-background-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.conversation-background-grid button{padding:5px;border-radius:16px}
+.conversation-background-grid button[aria-pressed="true"]{outline:2px solid var(--ac);outline-offset:1px}
+.background-preview{height:72px;width:100%;display:flex;align-items:center;justify-content:center;border-radius:12px}
+.background-preview>span{background:#fff;color:#202b38;padding:7px 14px;border-radius:12px;box-shadow:0 2px 8px #0001}
+
+.clean-message-stream[data-background]:not([data-background="default"]) .m{background:var(--card);color:var(--tx)}
+.clean-message-stream[data-background]:not([data-background="default"]) .m.out{background:color-mix(in srgb,var(--ac) 12%,var(--card));color:var(--tx)}
