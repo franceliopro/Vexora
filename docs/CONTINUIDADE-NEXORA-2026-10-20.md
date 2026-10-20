@@ -294,3 +294,10 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Gestão: Integrações → inbox → Bot, IA e CRM: selecionar Bot de entrada e IA para texto livre/áudio. Em conversa já iniciada: Escolher humano, IA ou bot → Chatbot, selecionar bot e agente de apoio. Humano assumir continua pausando tudo; não reativar sem decisão explícita.
 - PWA Android/iOS e desenho de novas telas mobile adiados conforme orientação; nenhuma mudança de domínio nesta etapa.
 - Verificações: npm test cobre limites 1/2/3/4 caracteres, texto exato, áudio, falta de LLM/STT, repetição após múltiplos erros, saudações/financeiro e PF/PJ/Admin. PostgreSQL/WASM verifica upgrade com backup idempotente e preservação de personalizações e credenciais. Sem atendimento real enviado.
+
+## 24. Carregamento de templates e novo bot
+- Corrigido `ask()` genérico: `dialog.append` recebia um array de campos como texto, em vez de elementos. Agora espalha os campos e associa labels/IDs. Isso impedia usar corretamente o formulário Novo bot.
+- Novo bot inclui Rastreamento Veicular · 3 plataformas na seleção de modelos e cria uma cópia independente em rascunho com grafo atual (inclui PF/PJ). Reutiliza agente e equipes do template da empresa, sem sobrescrever o bot instalado, canais ou credenciais. Primeira criação instala o template e usa o bot resultante; chamadas seguintes geram novos bots. Transação + trava do template evitam corrida de instalação.
+- API POST /templates/:id/bots para criar cópia; POST /templates/:id/apply agora inclui objeto bot no retorno. Ambas restritas a administradores e ao tenant.
+- Usar template renderiza lista como elementos, mostra carregamento/erros e abre diretamente o editor do bot instalado na área Workflows. Reaplicar não duplica agente nem equipes. Se o bot original foi excluído, orienta criar nova cópia em vez de falhar silenciosamente.
+- Testes: npm test; PostgreSQL/WASM para cópias distintas com agente reutilizado; Chromium com APIs simuladas exercitando Novo bot → Rastreamento → editor e Usar template → fluxo instalado.
