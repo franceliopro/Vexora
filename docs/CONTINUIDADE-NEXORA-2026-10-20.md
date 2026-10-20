@@ -497,3 +497,10 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 
 - Complemento: bloco Integração cadastrada reutiliza agent_connections e o cofre de Bearer dos agentes. Parâmetros JSON são renderizados nos valores; resultados ficam em variável e há saídas Sucesso/Erro. A idempotência inclui bot_run e bloco sem alterar chaves anteriores das ferramentas de IA.
 - Execução invocada sem confirmação de início não é retomada por uma nova mensagem após crash; exige conferência do histórico/intervenção explícita.
+
+## 44. Alertas pessoais para Meus
+- Conta (avatar) → Alertas de atendimento: aviso na tela, som, volume, quatro tons sintetizados e notificação do navegador; prévias e autorização explícita.
+- Preferências locais por empresa/usuário/navegador. Padrão: aviso visual ligado, som/notificação desligados até configuração. Com aplicativo fechado depende de futura PWA; não há push/service worker nesta entrega.
+- Endpoint `/api/attendance/alerts` usa os mesmos predicados ACL/Meus (inclui convites). WebSocket dispara consulta coalescida; sem polling ou recarga. Baseline inicial/reconexão silenciosa, apenas entrada em Meus ou incremento do ID de mensagem recebida. Saídas/notas/recibos não disparam. Notificação nativa sem dados pessoais; ledger local e Web Locks evitam duplicação entre abas compatíveis.
+- Asaas: testes `asaas-shared-base` e `day-period` aprovados com API simulada: base única por empresa, CPF formatado, identificação ausente versus sem débitos, DDD/nono dígito e estado reiniciado no bloco do bot. Sem consulta real à conta nesta sessão.
+- Teste `attendance-alerts.mjs`: baseline, entrada, mensagem, erro de atualização, reconexão e deduplicação. Áudio real e permissão do SO dependem de teste do usuário no navegador.
