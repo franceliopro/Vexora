@@ -30,13 +30,13 @@ export async function inbound(chId,m){
  if(!used)(await import('./ai/engine.js')).onInbound(cv,msg).catch(e=>console.error('ai',e.message));
 }
 export async function convFor(contactId){const cv=(await q('select * from conversations where contact_id=$1 order by id desc limit 1',[contactId])).rows[0];if(cv)return cv;const ct=(await q('select * from contacts where id=$1',[contactId])).rows[0];if(!ct?.channel_id)throw new Error('contato sem canal');const st=(await q('select id from stages order by pos limit 1')).rows[0];return (await q('insert into conversations(contact_id,channel_id,stage_id,ai_on) values($1,$2,$3,false) returning *',[ct.id,ct.channel_id,st?.id])).rows[0]}
-export async function deliver(cid,{kind='text',body,file,filename,author_id,ai=false,epoch,system=false,executor}){
+export async function deliver(cid,{kind='text',body,file,filename,author_id,ai=false,epoch,system=false,executor,choices}){
  const cv=(await q('select c.*,ct.handle,ct.data contact_data,ch.driver,ch.config,ch.active channel_active,ch.id chid from conversations c join contacts ct on ct.id=c.contact_id join channels ch on ch.id=c.channel_id where c.id=$1',[cid])).rows[0];
  if(ai&&kind!=='note'&&(!automationAllowed(cv)||(epoch!==undefined&&cv.automation_epoch!==epoch)))return null;
  if(!cv)throw Error('Conversa não encontrada');if(kind!=='note'&&!cv.channel_active)throw Error('Inbox pausada ou removida. Habilite a inbox em Integrações para responder.');
  let ext=null,dir='out';
  if(kind==='note')dir='int';else{const last=(await q("select ext_id,kind from messages where conversation_id=$1 and dir='in' order by at desc limit 1",[cid])).rows[0];
-  ext=await D[cv.driver].send({id:cv.chid,config:cv.config},{to:cv.handle,kind,body,file,filename,externalConversation:cv.contact_data?.external_conversation_id,replyTo:last})}
+  ext=await D[cv.driver].send({id:cv.chid,config:cv.config},{to:cv.handle,kind,body,file,filename,choices,externalConversation:cv.contact_data?.external_conversation_id,replyTo:last})}
  const msg=(await q('insert into messages(conversation_id,dir,kind,body,media_url,author_id,ai,ext_id,filename,executor) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning *',[cid,dir,kind,body||null,file?'/media/'+file:null,author_id||null,ai||system,ext,filename||null,executor||(system?'system':ai?'ai':author_id?'human':null)])).rows[0];
  if(kind!=='note')await q('update conversations set last_at=now() where id=$1',[cid]);
  bus('msg',{conversation_id:cid,message:msg});return msg}

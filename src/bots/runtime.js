@@ -16,7 +16,7 @@ async function safeFetch(d,ctx){let u;try{u=new URL(tpl(d.url,ctx))}catch{return
   const t=(await r.text()).slice(0,100000);let data;try{data=JSON.parse(t)}catch{data=t}return {ok:r.ok,data}}catch{return {ok:false}}}
 const mkDeps=cv=>({
  contactAction:(type,d)=>contactAction(q,cv,type,d),note:body=>deliver(cv.id,{kind:'note',body,ai:true,executor:'bot'}),
- send:t=>deliver(cv.id,{body:String(t),ai:true,executor:'bot',epoch:cv.automation_epoch}),
+ send:(t,choices)=>deliver(cv.id,{body:String(t),choices,ai:true,executor:'bot',epoch:cv.automation_epoch}),
  close:async d=>{if(d.text)await deliver(cv.id,{body:d.text,ai:true,executor:'bot',epoch:cv.automation_epoch});const closed=await tenantTransaction(als.getStore()?.tenant,query=>closeAutomated(query,cv,{...d,executor:'bot'}));if(closed)bus('conv',{id:cv.id});return closed},
  setStage:id=>setStage(cv.id,+id),
  builtins:async()=>{const ct=(await q('select name,handle,data from contacts where id=$1',[cv.contact_id])).rows[0]||{};const n=new Date(),zone=await companyTimeZone(q),clock=localGreeting(n,zone);

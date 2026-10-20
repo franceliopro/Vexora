@@ -21,7 +21,7 @@ async function onEnter(n,run,deps,ctx){const d=n.data||{},V=run.vars;
  switch(n.type){
   case 'start':return {};
   case 'message':await deps.send(tpl(d.text,ctx));return {};
-  case 'choice':{const o=d.options||[];await deps.send(`${tpl(d.text,ctx)}\n\n${lst(o,x=>x)}`);return {stay:1}}
+  case 'choice':{const o=d.options||[];await deps.send(`${tpl(d.text,ctx)}\n\n${lst(o,x=>x)}`,{text:tpl(d.text,ctx),options:o});return {stay:1}}
   case 'input':await deps.send(tpl(d.text,ctx));return {stay:1};
   case 'condition':return {out:evalRules(d.rules,d.mode,ctx)?'yes':'no'};
   case 'set':if(!/^[a-zA-Z]\w{0,60}$/.test(d.k||''))throw Error('Variável inválida');V[d.k]=tpl(d.v,ctx);return {};
@@ -40,7 +40,7 @@ async function onEnter(n,run,deps,ctx){const d=n.data||{},V=run.vars;
 async function onInput(n,input,run,deps,ctx){const d=n.data||{},V=run.vars,t=String(input??'').trim();
  switch(n.type){
   case 'choice':{const o=d.options||[],i=choiceOption(o,t);if(i>=0)return {out:'o'+i};
-   run.tries++;await deps.send(`Opção inválida. ${tpl(d.text,ctx)}\n\n${lst(o,x=>x)}\n\nResponda com o número da opção.`);return {stay:1}}
+   run.tries++;await deps.send(`Opção inválida. ${tpl(d.text,ctx)}\n\n${lst(o,x=>x)}\n\nResponda com o número da opção.`,{text:'Opção inválida. '+tpl(d.text,ctx),options:o});return {stay:1}}
   case 'input':{let ok=!!t,val=t;if(d.validate==='doc'){ok=validDoc(t);val=digits(t)}else if(d.validate==='email')ok=/^\S+@\S+\.\S+$/.test(t);else if(d.validate==='number'){ok=t!==''&&!isNaN(+t.replace(',','.'));val=t.replace(',','.')}
    if(ok){V[d.var||'resposta']=val;return {}}if(++run.tries>=3)return {out:'invalid'};await deps.send(d.error||'Valor inválido, tente novamente.');return {stay:1}}
   case 'asaas':return asaas(n,run,deps,t,false);

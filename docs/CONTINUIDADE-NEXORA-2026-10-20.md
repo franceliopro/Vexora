@@ -312,3 +312,15 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Testes: npm test com seleção por inbox, primeira entrada, presença typing→recording→paused, canal sem suporte e pausa humana simulados. Sem conexão real aos provedores e sem atendimento externo de teste.
 
 - Protocolo: bot e IA passam a conferir o envio do protocolo antes de responder, inclusive tickets antigos not_requested quando a automação foi autorizada. Mantém a reserva de envio única; sent não repete, check_required não é reenviado às cegas. Variável {{protocolo}} disponível no bot e número no contexto da IA, sem geração paralela de IDs.
+
+## 26. Presets econômicos de IA e botões de escolha
+
+- Ao criar/adicionar modelo e trocar provedor, o formulário preenche modelo, endereço e voz; todos editáveis. Abrir configurações preserva valores existentes. Trocar provedor limpa a chave para evitar envio de segredo ao provedor errado.
+- Texto: OpenRouter/Qwen, Groq GPT-OSS 20B, xAI Grok 4.3 sem raciocínio, OpenAI GPT-4.1 mini, Gemini 2.5 Flash Lite, Qwen Flash direto, Claude Haiku 4.5 e compatível. ChatGPT/Gemini do consumidor não equivalem a créditos de API.
+- Transcrição: Groq Whisper Large V3 Turbo; OpenAI/OpenRouter GPT-4o mini transcribe. Sem LLM de raciocínio para transcrever. Voz: OpenRouter Grok Voice/eve; OpenAI mini TTS/alloy; ElevenLabs Flash v2.5; Microsoft Azure Speech/Francisca. Azure exige endereço da região do recurso; ElevenLabs permite alterar ID da voz conforme acesso da conta.
+- Adapters reais Groq/Qwen compatíveis, ElevenLabs TTS e Azure SSML escapado. Sugestões não garantem disponibilidade/cota nem falha zero. Configurações instaladas não são sobrescritas no banco.
+- Instruções iniciais de agentes em português; regra global pede ortografia/concordância corretas sem modificar documentos/nomes/URLs por suposição.
+- Escolhas do bot enviam opções estruturadas ao driver, mantendo texto numerado no histórico. Meta oficial WhatsApp: até 3 botões curtos ou lista até 10 opções; Instagram/Messenger: quick replies com limites. Inboxes gerenciadas via Zernio: até 3 botões postback, título até 20 caracteres, texto até 640. Menus maiores nessa integração usam números. Baileys/WAHA preservam números. Não há tentativa automática de reenvio após erro ambíguo.
+- Respostas interativas nx:N viram número para o motor determinístico. IDs não conferem permissões; valem como resposta numérica na etapa corrente. Webhooks continuam assinados e isolados por conta. Pausa humana/epoch preservados.
+- Fontes consultadas: docs.zernio.com/messages/send-inbox-message.mdx; docs.x.ai/developers/migration/may-15-retirement; console.groq.com/docs/speech-to-text; ai.google.dev/gemini-api/docs/models; elevenlabs.io/docs; learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech.
+- Validação local: npm test, contratos simulados de adapters/botões/retorno/fallback e navegador Chromium desktop/mobile. Teste real de APIs, botões e cobrança pendente após deploy, com credenciais do cliente. Nenhum envio real efetuado nesta alteração.

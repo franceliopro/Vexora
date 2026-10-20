@@ -30,6 +30,7 @@ async function respondWithPresence(cv,ag,extra='',wantAudio=false,depth=0,presen
  const lastU=[...h].reverse().find(m=>m.role==='user').content;
  const [ct,st,us,docs]=await Promise.all([q('select * from contacts where id=$1',[cv.contact_id]),q('select id,name,kind from stages order by pos'),q("select id,name,role from users where not is_ai"),rag(ag.id,lastU)]);
  const sys=`Você é ${ag.name}, atendente virtual. ${ag.prompt}
+Escreva em português do Brasil, com ortografia, acentuação e concordância corretas. Seja claro e natural. Preserve nomes próprios, documentos, valores, identificadores e URLs; nunca os corrija por suposição.
 TOM: ${ag.tone||'natural e cordial'}
 REGRAS: ${ag.rules||'-'}
 Nunca converta CPF, CNPJ ou identificadores de redes sociais em telefone. Não invente números para ligação, cobranças ou resultados de consulta. Uma mensagem com CPF não prova que a consulta ao Asaas ocorreu.

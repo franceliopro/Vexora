@@ -90,7 +90,7 @@ V.delivery=async m=>{const [cats,items,zones]=await Promise.all([api('/t/menu_ca
 const NT={
  start:{t:'Início',c:'#16a34a',o:()=>['next'],f:[]},
  message:{t:'Enviar mensagem',c:'#2563eb',o:()=>['next'],f:[{k:'text',l:'Mensagem',area:1}]},
- choice:{t:'Pedir para escolher',c:'#0d9488',o:d=>(d.options||[]).map((_,i)=>'o'+i),f:[{k:'text',l:'Mensagem',area:1},{k:'options',l:'Opções (uma por linha)',lines:1},{k:'aiFallback',l:'Texto com mais de 3 caracteres fora das opções ou áudio',sel:[['','Repetir opções'],['on','Transferir para IA com o histórico']]}]},
+ choice:{t:'Pedir para escolher',c:'#0d9488',o:d=>(d.options||[]).map((_,i)=>'o'+i),f:[{k:'text',l:'Mensagem',area:1},{k:'options',l:'Opções (uma por linha; botões automáticos nos canais compatíveis)',lines:1},{k:'aiFallback',l:'Texto com mais de 3 caracteres fora das opções ou áudio',sel:[['','Repetir opções'],['on','Transferir para IA com o histórico']]}]},
  input:{t:'Perguntar e guardar',c:'#7c3aed',o:()=>['next','invalid'],f:[{k:'text',l:'Pergunta',area:1},{k:'var',l:'Guardar na variável'},{k:'validate',l:'Validar como',sel:[['','Texto livre'],['doc','CPF/CNPJ'],['email','E-mail'],['number','Número']]},{k:'error',l:'Mensagem de erro'}]},
  condition:{t:'Condição',c:'#ea580c',o:()=>['yes','no'],f:[{k:'rules',l:'Regras (uma por linha)',area:1,ph:'primeira_conversa = sim\nhora > 18\nnome ~ ana'},{k:'mode',l:'Passa se',sel:[['all','todas verdadeiras'],['any','alguma verdadeira']]}]},
  set:{t:'Definir variável',c:'#64748b',o:()=>['next'],f:[{k:'k',l:'Variável'},{k:'v',l:'Valor'}]},
