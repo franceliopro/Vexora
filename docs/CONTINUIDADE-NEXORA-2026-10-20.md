@@ -374,3 +374,11 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Foto e assinatura imediatamente depois de Perfil.
 - Equipes/setores do usuário, Equipes em Outros e Canais permitidos em três molduras lado a lado no PC, com legendas e explicações independentes. No celular, uma moldura por linha. Listas longas têm rolagem interna; vínculos e permissões preservados.
 - Verificação de sintaxe e regressão no navegador desktop/mobile.
+
+## 32. Editar e excluir usuários e setores
+
+- Administração mostra Editar usuário / Editar setor e Excluir. E-mail do usuário também pode ser alterado, com validação e unicidade do banco.
+- Confirmação por nome exato antes da exclusão. Exclusão operacional preserva registros históricos e autoria: usuário recebe deleted_at e active=false; setor recebe archived_at e sai dos seletores. Membros removidos; carteira do usuário liberada. Logs próprios em governance_events com RLS/ator/entidade/nome e data.
+- Não permite excluir próprio usuário ou perfil dono. Usuários com atendimentos abertos precisam transferir/concluir antes. Setores com atendimento aberto, inbox ativa ou bot ativo apontando para eles precisam ajustar esses vínculos antes. A interface mostra a causa do bloqueio.
+- Migração 027 também impede, no banco, novas atribuições a setores/usuários excluídos. Referências históricas permanecem válidas. Transferências humanas e de bot validam destino; distribuição e templates não selecionam setores excluídos. API genérica não faz exclusão física desses cadastros.
+- Testes: exclusão administrativa real via API/PGlite, confirmação incorreta, perfil sem acesso, proteção de próprio dono, vínculo a inbox, autoria preservada, membros removidos e auditoria isolada por tenant; regressão de CRM/filas/navegador.
