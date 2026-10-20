@@ -1,0 +1,3 @@
+import {norm} from '../lib.js';
+export function entryTrigger(trigger,msg,first){const t=trigger||{type:'first'};if(t.type==='first')return first;if(t.type==='any')return true;if(t.type==='keyword'){const text=norm(msg.body||''),words=String(t.words||'').split(',').map(norm).filter(Boolean);return !!words.length&&(t.match==='all'?words.every(w=>text.includes(w)):words.some(w=>text.includes(w)))}return false}
+export function entryBot(bots,routing,channel,msg,first){return bots.find(b=>b.active&&(routing?.enabled?b.id===routing.bot_id:!b.channel_ids?.length||b.channel_ids.includes(channel))&&entryTrigger(b.trigger,msg,first))}

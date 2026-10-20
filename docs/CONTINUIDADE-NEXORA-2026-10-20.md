@@ -301,3 +301,14 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - API POST /templates/:id/bots para criar cópia; POST /templates/:id/apply agora inclui objeto bot no retorno. Ambas restritas a administradores e ao tenant.
 - Usar template renderiza lista como elementos, mostra carregamento/erros e abre diretamente o editor do bot instalado na área Workflows. Reaplicar não duplica agente nem equipes. Se o bot original foi excluído, orienta criar nova cópia em vez de falhar silenciosamente.
 - Testes: npm test; PostgreSQL/WASM para cópias distintas com agente reutilizado; Chromium com APIs simuladas exercitando Novo bot → Rastreamento → editor e Usar template → fluxo instalado.
+
+
+## 25. Entrada do bot e indicadores de processamento
+- Bot com gatilho first pode iniciar em ticket automático ainda aberto sem nenhuma execução anterior de bot. Antes, dependia de fresh (ticket recém-criado), deixando tickets anteriores à ativação sem bot. Não reinicia bot já concluído ou pausado; modo humano/IA explícito permanece respeitado.
+- Seleção explícita Bot de entrada da inbox prevalece sobre a lista genérica channel_ids do bot. Inbox configurada com Sem bot continua sem bot. Bot deve estar ativo; novos templates permanecem rascunhos até ativação pelo administrador.
+- Tela Bot, IA e CRM informa bot ativo, rascunho ou ausência de seleção. Não há acesso ao banco de produção nesta verificação; validar o vínculo do canal real e eventual atendimento já assumido pelo humano.
+- Baileys e WAHA implementam presence typing/recording/paused. IA mostra digitando durante processamento e gravando enquanto sintetiza TTS; bot mostra digitando durante execução. Sem atrasos artificiais. Falhas de presença não impedem resposta e estado é limpo no finally ou ao detectar mudança de epoch/pausa humana. Canais sem suporte seguem sem indicador. Não há promessa de fazer cliente acreditar que é atendido por pessoa.
+- Botões do bot: evolução planejada com representação comum de opções, IDs estáveis de resposta e adaptação por capacidade do canal; usar reply buttons/listas/quick replies oficiais conforme canal e limite, mantendo menu numerado de fallback. Esta etapa não envia botões nativos ainda. A escolha deve virar a mesma opção determinística, sem passar para IA ao receber clique válido.
+- Testes: npm test com seleção por inbox, primeira entrada, presença typing→recording→paused, canal sem suporte e pausa humana simulados. Sem conexão real aos provedores e sem atendimento externo de teste.
+
+- Protocolo: bot e IA passam a conferir o envio do protocolo antes de responder, inclusive tickets antigos not_requested quando a automação foi autorizada. Mantém a reserva de envio única; sent não repete, check_required não é reenviado às cegas. Variável {{protocolo}} disponível no bot e número no contexto da IA, sem geração paralela de IDs.

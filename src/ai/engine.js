@@ -1,3 +1,5 @@
+import {ensureAutomationProtocol} from '../service-protocol.js';
+import {beginPresence} from './presence.js';
 import {transcribeAudio,synthesizeAudio} from './audio-providers.js';
 import {textModel} from './providers.js';
 import {financialChunks} from '../debt-presentation.js';
@@ -8,7 +10,7 @@ import {guardDocumentReply} from '../financial-identity.js';
 import {moveCRMFromConversation} from '../crm.js';
 import {companyTimeZone} from '../timezone.js';
 import {automationAllowed} from '../conversation-policy.js';import {localGreeting} from '../tracking-template.js';import {routeTracking} from '../tracking-routing.js';
-import fs from 'fs';import {q,tenantTransaction} from '../db.js';import {deliver,setStage} from '../core.js';import {saveMedia,MEDIA,readMedia} from '../media.js';import {createAppt} from '../gcal.js';
+import fs from 'fs';import {q,tenantTransaction} from '../db.js';import {deliver,setStage,D} from '../core.js';import {saveMedia,MEDIA,readMedia} from '../media.js';import {createAppt} from '../gcal.js';
 const post=async(u,h,b)=>{const r=await fetch(u,{method:'POST',headers:{'content-type':'application/json',...h},body:JSON.stringify(b)});if(!r.ok)throw new Error(u+' '+r.status+' '+(await r.text()).slice(0,200));return r};
 const chain=async(c,fn)=>{let err;for(const x of [].concat(c||[])){try{return await fn(x)}catch(e){err=e;console.error('fallback:',e.message)}}throw err||new Error('provedor não configurado')}; // vários provedores por agente: cai pro próximo
 const llm=(cfg,system,msgs)=>chain(cfg,c=>textModel(c,system,msgs));
@@ -21,7 +23,7 @@ async function rag(aid,text){const e=await emb(text).catch(()=>null);
  if(e)return (await q('select content from docs where (agent_id=$1 or agent_id is null) and emb is not null order by emb <=> $2::vector limit 4',[aid,'['+e+']'])).rows.map(r=>r.content);
  const w=text.split(/\s+/).filter(x=>x.length>3).slice(0,4);if(!w.length)return [];
  return (await q('select content from docs where (agent_id=$1 or agent_id is null) and content ilike any($2) limit 4',[aid,w.map(x=>'%'+x+'%')])).rows.map(r=>r.content)}
-export async function respond(cv,ag,extra='',wantAudio=false,depth=0){const fresh=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(fresh)||fresh.automation_epoch!==cv.automation_epoch)return;
+async function respondWithPresence(cv,ag,extra='',wantAudio=false,depth=0,presence){const fresh=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(fresh)||fresh.automation_epoch!==cv.automation_epoch)return;
  const teams=(await q('select id,name from teams order by id')).rows,clock=localGreeting(new Date(),await companyTimeZone(q));
  let h=(await q("select dir,body from messages where conversation_id=$1 and kind<>'note' and dir<>'int' and body is not null order by at desc limit 20",[cv.id])).rows.reverse().map(m=>({role:m.dir==='in'?'user':'assistant',content:m.body}));
  h=h.reduce((a,m)=>{const l=a[a.length-1];l&&l.role===m.role?l.content+='\n'+m.content:a.push({...m});return a},[]);while(h[0]&&h[0].role!=='user')h.shift();if(!h.length)h=[{role:'user',content:'(início)'}];
@@ -32,6 +34,7 @@ TOM: ${ag.tone||'natural e cordial'}
 REGRAS: ${ag.rules||'-'}
 Nunca converta CPF, CNPJ ou identificadores de redes sociais em telefone. Não invente números para ligação, cobranças ou resultados de consulta. Uma mensagem com CPF não prova que a consulta ao Asaas ocorreu.
 PROIBIDO (nunca faça): ${ag.forbidden||'-'}
+Protocolo deste atendimento: ${fresh.protocol||'(não disponível)'}. Informe este número quando solicitado; não invente protocolo.
 Contato: ${ct.rows[0].name}; ficha: ${JSON.stringify(ct.rows[0].data)}
 Agora: ${new Date().toISOString()} · ${clock.fuso} · ${clock.saudacao} (hora local: ${clock.hora})
 Equipes disponíveis: ${JSON.stringify(teams)}
@@ -61,10 +64,11 @@ Ações permitidas: ${(ag.tools||[]).join(',')}. Só use ações quando fizer se
    if(a.t==='set')await q('update contacts set data=data||$2 where id=$1',[cv.contact_id,JSON.stringify({[a.k]:a.v})]);
    if(a.t==='book')await createAppt({contact_id:cv.contact_id,title:a.title||'Agendamento',start:a.start,minutes:a.minutes})
   }catch(e){if(a.t==='book')retry=`O horário ${a.start} falhou (${e.message}). Peça desculpas e ofereça outro horário.`;else console.error('action',a.t,e.message)}}
- if(retry&&depth<1)return respond(cv,ag,retry,wantAudio,1);
+ if(retry&&depth<1)return respondWithPresence(cv,ag,retry,wantAudio,1,presence);
  const latest=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(latest)||latest.automation_epoch!==cv.automation_epoch||!out.reply)return;
- let file=null;if(wantAudio&&ag.tts)file=await tts(ag.tts,out.reply).catch(e=>(console.error('tts',e.message),null));
+ let file=null;if(wantAudio&&ag.tts){await presence.recording();file=await tts(ag.tts,out.reply).catch(e=>(console.error('tts',e.message),null));}
  await deliver(cv.id,file?{kind:'audio',body:out.reply,file,ai:true,epoch:cv.automation_epoch}:{body:out.reply,ai:true,epoch:cv.automation_epoch})}
+export async function respond(cv,ag,extra='',wantAudio=false,depth=0){await ensureAutomationProtocol(q,cv,deliver,bus);const presence=await beginPresence(cv,{query:q,drivers:D}).catch(()=>({recording:async()=>{},stop:async()=>{}}));try{return await respondWithPresence(cv,ag,extra,wantAudio,depth,presence)}finally{await presence.stop()}}
 export async function onInbound(cv,msg){if(!cv.ai_on||!automationAllowed(cv))return;
  const ag=(cv.agent_id&&(await q('select * from agents where id=$1 and active',[cv.agent_id])).rows[0])||(await q('select * from agents where active and $1=any(channel_ids) limit 1',[cv.channel_id])).rows[0];if(!ag)return;
  let wantAudio=false;
