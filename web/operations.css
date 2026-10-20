@@ -142,3 +142,12 @@
 
 .clean-message-stream[data-background]:not([data-background="default"]) .m{background:var(--card);color:var(--tx)}
 .clean-message-stream[data-background]:not([data-background="default"]) .m.out{background:color-mix(in srgb,var(--ac) 12%,var(--card));color:var(--tx)}
+
+.agent-skill-group{border:1px solid var(--ln);border-radius:16px;margin:12px 0;padding:12px;max-height:220px;overflow:auto}.agent-skill-group legend{font-weight:600;padding:0 6px}.agent-skill-group .nx-check{display:flex;gap:8px;margin:8px 0}
+
+.lead-context-panel{border:1px solid var(--ln);border-radius:14px;padding:12px;margin:12px 0}
+.lead-context-panel summary{cursor:pointer;font-weight:600}
+.lead-context-panel>div{max-height:350px;overflow:auto}
+.lead-context-event{padding:10px 0;border-bottom:1px solid var(--ln);overflow-wrap:anywhere}
+.lead-context-event small{display:block;color:var(--mu)}
+.lead-payload-example{white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;border-radius:14px;background:var(--bg)}

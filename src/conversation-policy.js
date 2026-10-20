@@ -4,7 +4,7 @@ export function accessPredicate(alias='c',user='$2'){return `exists(select 1 fro
  (${alias}.assignee_id=${user} and coalesce((au.permissions->>'mine')::boolean,true)) or
  exists(select 1 from participants ap where ap.conversation_id=${alias}.id and ap.user_id=${user}) or
  exists(select 1 from conversation_team_participants atp join team_members atm on atm.team_id=atp.team_id where atp.conversation_id=${alias}.id and atm.user_id=${user}) or
- (${alias}.assignee_id is null and ${alias}.status='open' and coalesce((au.permissions->>'new')::boolean,au.role='agent') and exists(select 1 from team_members am where am.team_id=${alias}.team_id and am.user_id=${user})) or
+ (${alias}.assignee_id is null and ${alias}.status='open' and coalesce((au.permissions->>'new')::boolean,au.role='agent') and (${alias}.team_id is null or exists(select 1 from team_members am where am.team_id=${alias}.team_id and am.user_id=${user}))) or
  (au.role='agent' and coalesce((au.permissions->>'others')::boolean,false) and au.permissions->'others_team_ids' @> to_jsonb(${alias}.team_id))
  ))))`}
 export function controlPredicate(alias='c',user='$2'){return `(exists(select 1 from users au where au.id=${user} and au.active and au.role in ('owner','admin')) or (${alias}.assignee_id=${user} and ${accessPredicate(alias,user)}))`}

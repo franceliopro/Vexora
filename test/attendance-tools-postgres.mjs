@@ -1,3 +1,5 @@
+import {ingestLead,recordNativeReferral} from '../src/lead-intelligence.js';
+import {createAgentCard,delegateAgent,handoffHuman,validateSkills} from '../src/ai/skills.js';
 import {recordReceipt,mountMessageReceipts} from '../src/message-receipts.js';
 import {mountKnowledge} from '../src/knowledge.js';
 import {mountServiceWorkflow} from '../src/service-workflow.js';
@@ -69,6 +71,34 @@ try{
  const receiptMessage=(await q("insert into messages(conversation_id,dir,kind,body,ext_id) values(1,'out','text','Cobrança de teste','receipt-test') returning id")).rows[0];const receiptEvents=[];
  await recordReceipt(q,(type,data)=>receiptEvents.push({type,data}),1,'receipt-test','sent');await recordReceipt(q,(type,data)=>receiptEvents.push({type,data}),1,'receipt-test','read');await recordReceipt(q,()=>{},1,'receipt-test','sent');
  const delivery=await call('conversations/1/delivery?ids='+receiptMessage.id,'GET',undefined,1);assert.equal(delivery.status,200);assert.equal(delivery.data[0].status,'read');assert.equal((await tx(2,query=>query('select * from message_receipts'))).rows.length,0);assert.equal((await call('conversations/1/delivery?ids='+receiptMessage.id,'GET',undefined,3)).status,403);assert.ok(receiptEvents.some(e=>e.data.status==='read'));
+ // Company operation with direct users and no departments.
+ await q("insert into users(id,name,role,permissions) values(850001,'Sem equipe','agent','{}'),(850002,'Restrito sem fila','restricted','{}')");
+ await q("insert into contacts(id,name,handle,channel_id) values(850001,'Lead sem equipe','lead-no-team',1)");
+ await q("insert into conversations(id,contact_id,channel_id,team_id,ai_on,automation_mode) values(850001,850001,1,null,true,'ai')");
+ assert.equal((await conversationFor(q,850001,850001)).id,850001);
+ await assert.rejects(()=>conversationFor(q,850001,850002),/sem permissão/);
+ await q("update users set permissions='{\"channel_ids\":[999]}' where id=850001");
+ await assert.rejects(()=>conversationFor(q,850001,850001),/sem permissão/);
+ await q("update users set permissions='{}' where id=850001");
+ const skillBoard=(await q("insert into crm_boards(name,code) values('IA oportunidades','IA') returning *")).rows[0];
+ const skillStage=(await q("insert into crm_stages(board_id,name,pos) values($1,'Novo',0) returning *",[skillBoard.id])).rows[0];
+ const cvNoTeam=(await q('select * from conversations where id=850001')).rows[0];
+ const ai={id:850001,skills:{board_ids:[skillBoard.id],agent_ids:[]}};
+ const cardA=await tx(1,query=>createAgentCard(query,cvNoTeam,ai,{board_id:skillBoard.id,stage_id:skillStage.id,title:'Teste IA'}));
+ const cardB=await tx(1,query=>createAgentCard(query,cvNoTeam,ai,{board_id:skillBoard.id}));
+ assert.equal(cardA.id,cardB.id);
+ await assert.rejects(()=>tx(1,query=>createAgentCard(query,cvNoTeam,{skills:{board_ids:[]}},{board_id:skillBoard.id})),/não autorizado/);
+ await tx(1,query=>handoffHuman(query,cvNoTeam,ai,{user_id:850001}));
+ const humanCv=(await q('select * from conversations where id=850001')).rows[0];assert.equal(humanCv.assignee_id,850001);assert.equal(humanCv.team_id,null);assert.equal(humanCv.automation_paused,true);
+ await assert.rejects(()=>tx(1,query=>createAgentCard(query,cvNoTeam,ai,{board_id:skillBoard.id})),/Controle/);
+ const source=(await q("insert into lead_sources(name,channel_id,secret) values('Formulário',1,$1) returning *",[seal('test-key')])).rows[0];
+ const event=await tx(1,query=>ingestLead(query,source,{type:'form',external_id:'evt-one',handle:'lead-no-team',fields:{vehicle:'Truck'}}));
+ assert.equal(event.contact_id,850001);
+ assert.equal((await tx(1,query=>ingestLead(query,source,{type:'form',external_id:'evt-one',handle:'lead-no-team'}))).duplicate,true);
+ assert.equal((await q('select count(*)::int n from lead_events where source_id=$1',[source.id])).rows[0].n,1);
+ assert.equal((await tx(2,query=>query('select * from lead_events'))).rows.length,0);
+ await assert.rejects(()=>tx(2,query=>validateSkills(query,{role:'supervisor',board_ids:[skillBoard.id]})),/inválido/);
+ console.log('OK: IA com painéis autorizados, deduplicação, pausa humana, ACL sem equipes e eventos de origem isolados.');
  console.log('OK: tarefas com conclusão, ACL/RLS e concorrência; supervisão qualitativa auditada e relatório de equipes, pessoas, CRM e tarefas.');
  console.log('OK: filas/contadores exatos acima de 200 tickets, filtros e ACL; arquivo/lixeira/retorno auditados; Drive individual, preparo sem envio, PDF e bloqueio de download (Google simulado).');
 }finally{server.close();await db.close()}

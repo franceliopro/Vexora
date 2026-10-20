@@ -57,3 +57,16 @@ export async function handle(cv,msg,fresh){if(!canBotRun(cv))return false;let ru
  if(res.stopped)await deliver(cv.id,{kind:'note',body:'Bot interrompido: '+res.stopped,ai:true,executor:'bot'});
  await q("update bot_runs set node=$2,waiting=$3,vars=$4,tries=$5,status=$6,updated_at=now() where id=$1 and status='active'",[run.id,r.node,r.waiting,JSON.stringify(r.vars),r.tries,res.done?'concluido':'active']);if(res.done&&run.invoked)await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='ai',ai_on=true where id=$1 and automation_mode='bot' and not automation_paused",[cv.id]);return true}
 
+
+export async function invokeAgentBot(cv,ag,id){
+ if(!(ag.skills?.bot_ids||[]).includes(Number(id)))throw Error('Fluxo não autorizado');
+ const next=await tenantTransaction(cv.tenant_id,async query=>{
+  const {skillGuard}=await import('../ai/skills.js');await skillGuard(query,cv);
+  const bot=(await query('select * from bots where id=$1 and active',[Number(id)])).rows[0];if(!bot||bot.channel_ids?.length&&!bot.channel_ids.includes(cv.channel_id))throw Error('Bot não habilitado nesta inbox');
+  const start=bot.graph?.nodes?.find(n=>n.type==='start');if(!start)throw Error('Fluxo sem início');
+  await query("update bot_runs set status='substituido',updated_at=now() where conversation_id=$1 and status='active'",[cv.id]);
+  const current=(await query("update conversations set automation_mode='bot',ai_on=false,agent_id=$2,automation_epoch=automation_epoch+1 where id=$1 returning *",[cv.id,ag.id])).rows[0];
+  await query("insert into bot_runs(bot_id,conversation_id,node,invoked) values($1,$2,$3,true)",[bot.id,cv.id,start.id]);await query('update bots set runs=runs+1 where id=$1',[bot.id]);return current;
+ });
+ await deliver(cv.id,{kind:'note',body:'Agente de IA acionou um fluxo autorizado. O histórico foi preservado.',ai:true});bus('conv',{id:cv.id});return handle(next,{body:'iniciar'},false);
+}

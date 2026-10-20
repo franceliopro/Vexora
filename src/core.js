@@ -1,3 +1,4 @@
+import {recordNativeReferral} from './lead-intelligence.js';
 import {conversationVariables,renderFieldVariables} from './customer-variables.js';
 import {companyDayVariables,renderDayVariables} from './day-period.js';
 import {deferBotEntry} from './bots/initial-delay.js';
@@ -25,6 +26,7 @@ export async function inbound(chId,m){
   if(m.externalConversation)await query("update contacts set data=coalesce(data,'{}'::jsonb)||$2 where id=$1",[ct.id,JSON.stringify({external_conversation_id:m.externalConversation,...(m.username?{sender_username:m.username}:{})})]);
   await query('update jobs set done=true where conversation_id=$1 and not done and stop_on_reply',[cv.id]);
   const msg=(await query("insert into messages(conversation_id,dir,kind,body,media_url,ext_id,filename) values($1,'in',$2,$3,$4,$5,$6) returning *",[cv.id,m.kind||'text',m.body||null,m.file?'/media/'+m.file:null,m.ext_id||null,m.filename||null])).rows[0];
+  await recordNativeReferral(query,ch,ct,cv,m);
   const boards=fresh?await routingCard(query,cv,ch):[];cv=(await query('update conversations set unread=unread+1,last_at=now(),last_in_at=now() where id=$1 returning *',[cv.id])).rows[0];return {cv,msg,fresh,boards,ch,ct};
  });if(!saved)return;bus('conv',{id:saved.cv.id});return processInbound(saved,{source:m});
 }

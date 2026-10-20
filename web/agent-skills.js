@@ -1,0 +1,24 @@
+const AGENT_ROLE_OPTIONS=[['assistant','Assistente virtual'],['supervisor','Supervisor'],['sdr','SDR · qualificação'],['partner','Parceiro comercial'],['employee','Funcionário'],['coordinator','Coordenador']];
+function agentSkillsEditor(host,a){
+ const config=a.skills||{},role=UX.select(host,'Papel na operação',AGENT_ROLE_OPTIONS,config.role||'assistant'),sets=Object.fromEntries(['agent_ids','bot_ids','board_ids','connection_ids'].map(k=>[k,new Set(config[k]||[])]));
+ host.append(h('p',{class:'mu'},'O papel orienta o comportamento; as habilidades e os vínculos abaixo determinam o que o agente pode executar. Equipes são opcionais: o encaminhamento humano também funciona diretamente para um atendente.'));
+ const status=h('p',{role:'status'});host.append(status);let ready=false;
+ Promise.all([api('/t/agents'),api('/t/bots'),api('/crm/boards'),api('/agent-connections')]).then(([agents,bots,boards,connections])=>{
+  for(const [key,label,rows]of [['agent_ids','Especialistas para encaminhamento',agents.filter(x=>x.id!==a.id)],['bot_ids','Fluxos que pode acionar',bots],['board_ids','Painéis onde pode criar oportunidades',boards],['connection_ids','Sistemas externos que pode consultar ou acionar',connections]]){
+   const group=h('fieldset',{class:'agent-skill-group'},h('legend',{},label));if(!rows.length)group.append(h('p',{class:'mu'},'Nenhum cadastrado.'));
+   for(const row of rows)group.append(h('label',{class:'nx-check'},h('input',{type:'checkbox',checked:sets[key].has(row.id),onchange:e=>e.target.checked?sets[key].add(row.id):sets[key].delete(row.id)}),row.name+(row.active===false?' · inativo':'')));
+   host.append(group);
+  }ready=true;status.textContent='Os destinos selecionados ainda precisam da habilidade correspondente marcada em Ações permitidas.';
+ }).catch(e=>status.textContent='Não foi possível carregar os vínculos: '+e.message);
+ return {role:()=>role.value,value:()=>{if(!ready)throw Error('Aguarde os vínculos de habilidades carregarem antes de salvar');return {role:role.value,...Object.fromEntries(Object.entries(sets).map(([k,v])=>[k,[...v]]))}}};
+}
+async function agentConnectionsPanel(m){
+ const box=h('div',{class:'card'});m.append(box);
+ async function load(){const [rows,runs]=await Promise.all([api('/agent-connections'),api('/agent-connections/runs')]);box.replaceChildren(h('h3',{},'Conexões para habilidades da IA'),h('p',{class:'mu'},'Cadastre uma API HTTPS com resposta JSON. A chave fica protegida no servidor. Depois selecione a conexão no agente e marque “Consultar ou acionar API”. POST pode alterar dados externos: descreva com precisão quando a IA está autorizada a usá-lo.'),UX.button('+ Conectar sistema',()=>edit({method:'GET',parameters:[]}),'g'),...rows.map(c=>h('div',{class:'nx-item'},h('b',{},c.name),h('p',{class:'mu'},c.method+' · '+(c.active?(c.has_key?'Chave cadastrada · aguarda uso confirmado':'Cadastrada · aguarda uso confirmado'):'Desativada')),UX.button('Configurar',()=>edit(c),'g s'),c.active&&UX.button('Desativar',async()=>{await api('/agent-connections/'+c.id,'DELETE');load()},'g s'))));box.append(h('details',{},h('summary',{},'Últimas execuções de conexões'),...runs.map(r=>h('p',{},r.connection_name+' · '+(r.status==='completed'?'Concluída':'Sem confirmação · conferir antes de repetir')+' · '+new Date(r.at).toLocaleString('pt-BR')+' ',h('a',{href:'#inbox?conversation='+r.conversation_id},'Ver atendimento')))))}
+ function edit(c){UX.dialog('Conexão de sistema externo',(f,save)=>{
+ const name=UX.input(f,'Nome',{value:c.name||'',required:true}),description=UX.area(f,'Quando e para que usar',c.description||''),url=UX.input(f,'Endpoint HTTPS',{value:c.url||'',type:'url',required:true}),method=UX.select(f,'Método',[['GET','GET · consultar'],['POST','POST · executar ação']],c.method),key=UX.input(f,c.has_key?'Nova chave Bearer (vazio mantém a atual)':'Chave Bearer (opcional)',{type:'password',autocomplete:'off'}),parameters=UX.area(f,'Parâmetros permitidos · nome | descrição, um por linha',(c.parameters||[]).map(x=>x.name+' | '+x.description).join('\n'));
+ f.append(h('p',{class:'mu'},'Passo 1: use o endpoint documentado pelo fornecedor. Passo 2: copie a chave API, se houver. Passo 3: liste somente os parâmetros necessários. Passo 4: autorize esta conexão no agente. A confirmação aparecerá no histórico após uma execução real. Redirecionamentos e endereços de rede interna são bloqueados. Uma chamada sem confirmação não é repetida automaticamente.'));
+ save(async()=>{await api('/agent-connections'+(c.id?'/'+c.id:''),c.id?'PUT':'POST',{name:name.value,description:description.value,url:url.value,method:method.value,key:key.value,active:true,parameters:parameters.value.split('\n').filter(x=>x.trim()).map(line=>{const [name,...rest]=line.split('|');return {name:name.trim(),description:rest.join('|').trim()}})});await load()});
+ },true)}
+ await load();
+}

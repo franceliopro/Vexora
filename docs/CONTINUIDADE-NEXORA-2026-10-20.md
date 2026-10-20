@@ -449,3 +449,20 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Seletor de emojis usa popover manual na camada superior, dentro do diálogo de origem quando modal, escapando do overflow da barra de respostas rápidas. Reposiciona ao rolar/redimensionar, fecha por Esc/clique fora e limpa observadores ao sair. Esc fecha o seletor superior antes do painel financeiro abaixo.
 - Janelas transitórias têm glass discreto com fallback sólido, modos claro/escuro, ponta de balão e entrada curta em rampa. A conversa permanece sólida. Movimento reduzido respeitado.
 - Validação desta sessão: sintaxe dos JS alterados, construção isolada dos dois painéis, mapeamento de ACK, evento de entrega, progressão sem regressão de estado e navegação/rolagem com DOM simulado. O ambiente de execução está indisponível: não foi possível repetir Chromium, PGlite/migração nem testes integrados completos. Regressões adicionadas à suíte para executar quando o ambiente estiver disponível. Não houve envio real nem validação com provedores de produção.
+
+
+## 41. Fundos, habilidades de IA e inteligência de leads
+- Commit inicial de fundos/Alt+H: 6913e6fd76113e5c53f36ebbb1ab1c7f893df4a7.
+- Dez fundos pessoais, com superfícies opacas nas mensagens. Atalho Alt+H reutiliza o botão da ficha/ticket.
+- Migração 032: agents.skills (papel e vínculos), agent_connections com chave cifrada, agent_tool_runs, lead_sources e lead_events. RLS forçada e fk_guard nas tabelas novas.
+- Configuração dos agentes mantém abas e salvamento de rascunho; adiciona papéis, conjuntos sugeridos e destinos explicitamente autorizados.
+- Novas ações reais crm_create, qualify, label_create, delegate_ai, start_bot, call_api. Transferência humana valida usuário ativo/canal/permissão, aceita usuário sem equipe. Trocas preservam histórico e guardam epoch/pausa humana.
+- APIs: endpoint/método/parâmetros fixados pelo administrador, HTTPS público com DNS fixado, sem redirect, 8s/64KB; execução registrada antes da chamada, sem repetição automática ambígua. Resposta JSON alimenta nova resposta da IA; não envia o JSON bruto ao cliente.
+- ACL corrigida: fila sem equipe disponível a quem tem permissão Novos e canal. Não abre conversas já atribuídas nem libera restritos sem permissão.
+- Inteligência de leads tem fonte assinada HMAC, rotação de chave, dedup por external_id, contato por handle+inbox exatos, mapeamento para campos personalizados e contexto na ficha.
+- Referências nativas presentes na mensagem Meta e metadata.referral das redes gerenciadas entram pelo inbound. Não captura evento avulso sem mensagem nem rastreia navegação anônima.
+- Catálogo compartilhado agora inclui lead.origem/campanha/pagina/qualificacao/pontuacao. Contexto compartilhado com bot/IA/respostas rápidas; ficha atualiza quando os metadados mudam.
+- Guia operacional: docs/AGENTES-E-ORIGENS.md.
+- Validação realizada: compilação de sintaxe no isolate; funções isoladas de catálogo/variáveis, estrutura de habilidades e transferência direta sem equipe com query simulada.
+- Regressões adicionadas: test/agent-lead-policy.mjs no npm test; cenários PGlite de ACL sem equipe, card autorizado/idempotente, pausa humana, origem/dedup/RLS.
+- Limite: exec_command indisponível; não houve npm test, execução SQL ou navegador real nesta rodada. Não declarar produção validada. Imagens do usuário não acessíveis; não houve reprodução visual das capturas.
