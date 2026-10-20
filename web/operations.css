@@ -68,3 +68,10 @@
 @media(max-width:650px){.crm-card-dialog,.crm-settings-dialog{max-height:94dvh}.crm-card-history{max-height:200px}.crm-settings-dialog .nx-split>section:last-child{max-height:350px}}
 
 .crm-card-dialog .crm-outcome{white-space:nowrap;display:inline-flex;gap:6px;align-items:center}.crm-card-dialog .nx-result-row .row{flex-wrap:nowrap;gap:8px}
+
+/* Compact automation workspace and signature baseline. */
+.suite-signature{align-items:baseline}.suite-signature strong,.suite-signature .suite-word,.suite-signature small{line-height:1}.suite-signature .suite-icon{align-self:flex-end}
+.workflow-heading{display:flex;align-items:center;gap:18px;padding:10px 20px;border-bottom:1px solid var(--ln);background:var(--card);flex:none;min-height:52px;box-sizing:border-box}
+.workflow-heading h2{margin:0;font-size:17px;letter-spacing:-.02em}.workflow-heading>.workflow-tabs{border:0;padding:0;margin:0;gap:5px;flex:0 1 auto}.workflow-heading>.workflow-tabs .btn{padding:7px 12px;min-height:34px}.workflow-heading>button:last-child{margin-left:auto}
+.workflow-hub:has(.cg-editor) .workflow-heading{padding-top:6px;padding-bottom:6px;min-height:46px}.cg-toolbar{padding-top:8px!important;padding-bottom:8px!important}.cg-location{padding-top:5px!important;padding-bottom:5px!important}
+@media(max-width:650px){.workflow-heading{padding:8px 10px;gap:8px;min-height:48px}.workflow-heading h2{font-size:15px}.workflow-heading>.workflow-tabs .btn{font-size:11px;padding:6px 9px}.workflow-heading>.workflow-tabs .btn span{gap:5px}.workflow-heading>.workflow-tabs svg{width:14px;height:14px}}

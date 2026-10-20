@@ -246,3 +246,10 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - “Chave” renomeada para “Prefixo dos cards”, com explicação e exemplo SUP-123; não é credencial. Etiquetas padrão no formulário usam as cores/ícones do produto.
 - Janela do card com fechar circular e resultados ganho/perda arredondados. Histórico e seleção de etiquetas têm rolagem interna; ações Salvar/Cancelar permanecem no rodapé. Configurações também limitam listas longas.
 - Verificação: npm test (inclui motor puro de grafos); PostgreSQL/WASM com todas as migrações, snapshot, retomada, ramo de resposta e bloqueio de mutação após humano assumir; teste Chromium com APIs simuladas para arraste/zoom, edição/salvamento de grafo, suporte, cores e histórico longo. Validar integrações reais separadamente.
+
+
+## 19. Espaço do editor e assinatura
+- Workflows agora tem título, Conversação e Follow-up na mesma linha; removidas as abas informativas Redes sociais e Agendadas. As rotas antigas abrem Conversação. Agenda e lembretes do atendimento não mudaram.
+- Cabeçalho, barra de ferramentas e localização compactados para liberar altura do cenário, com adaptação ao celular.
+- Assinatura néxora SUITE by EFFE alinhada pela linha de base; ícone alinhado à base do grupo.
+- Início explica gatilhos e canais. Mensagens/palavras-chave funcionam nos canais conectados. Reações, comentários e outros eventos públicos ainda dependem de implementação específica; esta alteração não os ativa.
