@@ -466,3 +466,14 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Validação realizada: compilação de sintaxe no isolate; funções isoladas de catálogo/variáveis, estrutura de habilidades e transferência direta sem equipe com query simulada.
 - Regressões adicionadas: test/agent-lead-policy.mjs no npm test; cenários PGlite de ACL sem equipe, card autorizado/idempotente, pausa humana, origem/dedup/RLS.
 - Limite: exec_command indisponível; não houve npm test, execução SQL ou navegador real nesta rodada. Não declarar produção validada. Imagens do usuário não acessíveis; não houve reprodução visual das capturas.
+
+
+## 42. Editor de agentes reorganizado conforme referências visuais
+- Quatro seções: Perfil, Comportamento, Conhecimento, Configurações; navegação lateral no desktop, abas no mobile, conteúdo com rolagem independente e salvar/cancelar fixos. Mantidos os tokens visuais da Néxora.
+- Reutilizados controles e endpoints existentes; nenhum dado migrado ou agente substituído. Edição usa cópia local até salvar. Estado ativo não vira rascunho por um salvamento parcial. Cancelar descarta apenas alterações não salvas.
+- Preservados prompt/regras/tom/proibições, credenciais, provedores existentes, opções extras dos modelos, habilidades/destinos e bases de conhecimento. Campos vazios existentes não recebem presets automaticamente.
+- Sugestões de tom atuam apenas quando escolhidas explicitamente. Revisão do agente verifica preenchimento; não simula uso real de provedor.
+- Adicionado Revisar fluxo no editor de chatbot/follow-up: aponta pendências estruturais e navega ao bloco sem executar ou modificar o fluxo.
+- Validação: npm test passou; Chromium com APIs simuladas validou preservação integral de fixture ativa, modelos/segredos/opções extras, quatro seções, conhecimento, teclado, mobile sem overflow, falha sem perda de edição, cancelar/reabrir e criação de rascunho parcial. Capturas desktop/mobile inspecionadas.
+- Novos arquivos: web/agent-editor.js, web/agent-editor.css, web/workflow-review.js, test/agent-editor-browser.mjs. Teste de atendimento atualizado para os novos nomes de navegação.
+- Pedido adicional em andamento: separar bots de atendimento/automação, horários e gatilhos API/campanha/sequência/manual.

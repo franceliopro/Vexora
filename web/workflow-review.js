@@ -1,0 +1,10 @@
+// A read-only checklist. It never changes a graph or sends a client message.
+function workflowReview(graph,catalog){
+ const nodes=graph.nodes||[],edges=graph.edges||[],issues=[],starts=nodes.filter(n=>n.type==='start'),ids=new Set();
+ const add=(n,message)=>issues.push({node_id:n?.id||null,title:n?.label||catalog[n?.type]?.t||n?.type||'Fluxo',message});
+ if(starts.length!==1)add(null,'Configure exatamente um bloco de início.');
+ for(const n of nodes){if(ids.has(n.id))add(n,'O identificador deste bloco está duplicado.');ids.add(n.id);if(!catalog[n.type])add(n,'Este tipo de bloco não é suportado pelo editor.');if(['message','choice','input'].includes(n.type)&&!String(n.data?.text||'').trim())add(n,'Preencha a mensagem que o cliente deve receber.');if(n.type==='choice'&&!String(n.data?.options||'').trim())add(n,'Cadastre as opções que o cliente pode escolher.');if(n.type==='transfer'&&['user','team','ai'].includes(n.data?.target)){const field={user:'user_id',team:'team_id',ai:'agent_id'}[n.data.target];if(!n.data[field])add(n,'Escolha o destino deste encaminhamento.')}}
+ const outputs=new Set();for(const e of edges){const key=e.from+':'+e.out;if(!ids.has(e.from)||!ids.has(e.to))add(nodes.find(n=>n.id===e.from),'Uma conexão aponta para um bloco inexistente.');if(outputs.has(key))add(nodes.find(n=>n.id===e.from),'Uma saída está conectada a mais de um destino.');outputs.add(key)}
+ if(starts.length===1){const seen=new Set(),pending=[starts[0].id];while(pending.length){const id=pending.pop();if(seen.has(id))continue;seen.add(id);pending.push(...edges.filter(e=>e.from===id&&ids.has(e.to)).map(e=>e.to))}for(const n of nodes)if(!seen.has(n.id))add(n,'Este bloco não pode ser alcançado a partir do início.');if(!edges.some(e=>e.from===starts[0].id))add(starts[0],'Conecte o início ao primeiro passo do atendimento.')}
+ return issues;
+}

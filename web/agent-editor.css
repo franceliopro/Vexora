@@ -1,0 +1,71 @@
+/* Scoped workspace: existing Suite surfaces and brand tokens stay in control. */
+dialog.nx-dialog.agent-editor-dialog{width:min(1200px,96vw);max-width:1200px;height:min(850px,94dvh);max-height:94dvh;padding:0;overflow:hidden;border:1px solid var(--ln);border-radius:24px;background:var(--bg);color:var(--tx);box-shadow:0 28px 90px #18243b40}
+.agent-editor-dialog[open]{display:flex;flex-direction:column}
+.agent-editor-dialog .nx-dialog-title{position:relative;top:0;flex-shrink:0;padding:18px 22px;border-bottom:1px solid var(--ln);background:var(--card);gap:16px;z-index:2}
+.agent-editor-title,.agent-editor-top-actions{display:flex;align-items:center;gap:12px;min-width:0}
+.agent-editor-title>div{min-width:0}
+.agent-editor-title small{font-size:9px;letter-spacing:.15em;color:var(--mu);font-weight:700}
+.agent-editor-dialog .nx-dialog-title h2{margin:4px 0 0;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:440px}
+.agent-editor-dialog .nx-dialog-title button{width:auto;height:36px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;padding:8px 12px;white-space:nowrap}
+.agent-editor-dialog .nx-dialog-title button[aria-label]{width:36px;padding:8px}
+.agent-editor-dialog svg{width:20px;height:20px;flex-shrink:0}
+.agent-editor-state{font-size:11px;color:var(--ac);background:color-mix(in srgb,var(--ac) 9%,var(--card));border:1px solid color-mix(in srgb,var(--ac) 20%,var(--ln));border-radius:999px;padding:6px 10px;white-space:nowrap}
+.agent-editor-form{display:flex;flex-direction:column;min-height:0;flex:1;padding:0;margin:0;overflow:hidden}
+.agent-editor-layout{display:grid;grid-template-columns:235px minmax(0,1fr);min-height:0;flex:1}
+.agent-editor-sidebar{padding:22px 14px;border-right:1px solid var(--ln);overflow:auto}
+.agent-editor-nav-caption{color:var(--mu);font-size:10px;letter-spacing:.03em;margin:0 12px 16px}
+.agent-editor-nav{display:flex;flex-direction:column;gap:8px}
+.agent-editor-nav>.btn{display:block;width:100%;padding:14px 12px;text-align:left;background:transparent;border:1px solid transparent;border-radius:16px;height:auto;white-space:normal}
+.agent-editor-nav>.btn.selected{background:color-mix(in srgb,var(--ac) 9%,var(--card));border-color:color-mix(in srgb,var(--ac) 24%,var(--ln));color:var(--ac)}
+.agent-editor-step{display:flex;gap:10px;align-items:flex-start}
+.agent-editor-step b{display:block;font-size:12px;font-weight:650}
+.agent-editor-step small{display:block;font-size:10px;line-height:1.5;margin-top:5px;color:var(--mu)}
+.agent-editor-sidebar-note{font-size:10px;line-height:1.7;color:var(--mu);padding:18px 12px}
+.agent-editor-content{padding:24px;overflow:auto;min-width:0;scrollbar-gutter:stable;overscroll-behavior:contain}
+.agent-editor-panel[hidden]{display:none!important}
+.agent-editor-group{background:var(--card);border:1px solid var(--ln);border-radius:18px;padding:22px;margin-bottom:16px;min-width:0}
+.agent-editor-group-heading{margin-bottom:20px}
+.agent-editor-group h3{font-size:15px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.agent-editor-group p.mu{font-size:11px;line-height:1.65}
+.agent-editor-dialog label{font-size:12px;display:block;margin:16px 0 7px}
+.agent-editor-dialog input:not([type=checkbox]),.agent-editor-dialog select,.agent-editor-dialog textarea{width:100%;box-sizing:border-box;border-radius:11px;padding:11px 12px;min-height:42px;font-size:12px}
+.agent-editor-dialog textarea{min-height:110px;line-height:1.7;resize:vertical}
+.agent-editor-dialog input:focus-visible,.agent-editor-dialog textarea:focus-visible,.agent-editor-dialog select:focus-visible,.agent-editor-dialog button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.agent-editor-dialog label.nx-check{display:flex;align-items:center;gap:10px;line-height:1.5}
+.agent-editor-dialog .agent-action-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:16px 0}
+.agent-editor-dialog .agent-action-row{border:1px solid var(--ln);border-radius:12px;padding:10px 12px;align-items:center}
+.agent-editor-dialog .agent-action-row label{margin:0;flex:1;min-width:0}
+.agent-editor-dialog .agent-action-row:has(input:checked){border-color:color-mix(in srgb,var(--ac) 30%,var(--ln));background:color-mix(in srgb,var(--ac) 5%,var(--card))}
+.agent-editor-dialog .agent-skill-group{max-height:210px;margin-top:16px}
+.agent-editor-dialog .knowledge-drop{margin:18px 0;border-radius:16px}
+.agent-editor-dialog .card{box-shadow:none;border-radius:14px;margin:12px 0}
+.agent-editor-dialog .agent-variable-guide{margin-top:20px}
+.agent-tone-choices{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
+.agent-tone-choices button[aria-pressed=true]{border-color:var(--ac);color:var(--ac);background:color-mix(in srgb,var(--ac) 7%,var(--card))}
+.agent-section-save{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:0 2px 10px}
+.agent-section-save small{font-size:10px}
+.agent-editor-dialog form>.provider-check-status{margin:0;padding:0 22px;flex-shrink:0;font-size:11px;max-height:64px;overflow:auto;background:var(--card)}
+.agent-editor-dialog form>.provider-check-status:not(:empty){padding-top:10px;padding-bottom:10px;border-top:1px solid var(--ln)}
+.agent-editor-dialog form>.nx-dialog-actions{position:relative;flex-shrink:0;padding:14px 22px;margin:0;background:var(--card);border-top:1px solid var(--ln);border-radius:0;z-index:2}
+.agent-editor-dialog>.nx-error{margin:0;padding:0 22px;background:var(--card);max-height:68px;overflow:auto;flex-shrink:0}
+.agent-editor-dialog>.nx-error:not(:empty){padding-top:10px;padding-bottom:10px}
+@supports(backdrop-filter:blur(16px)){.agent-editor-dialog .nx-dialog-title,.agent-editor-dialog form>.nx-dialog-actions{background:color-mix(in srgb,var(--card) 94%,transparent);backdrop-filter:blur(16px)}}
+@media(max-width:760px){
+ dialog.nx-dialog.agent-editor-dialog{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0;border-radius:0}
+ .agent-editor-dialog .nx-dialog-title{padding:10px 12px;gap:8px}
+ .agent-editor-dialog .nx-dialog-title h2{font-size:14px;max-width:42vw}
+ .agent-editor-title{gap:5px}.agent-editor-title small{font-size:8px}
+ .agent-editor-top-actions{gap:5px}.agent-editor-state{display:none}
+ .agent-editor-dialog .nx-dialog-title .agent-editor-top-actions button:not([aria-label]){font-size:10px;padding:6px 8px}
+ .agent-editor-layout{display:flex;flex-direction:column}
+ .agent-editor-sidebar{padding:8px;border-right:0;border-bottom:1px solid var(--ln);overflow:visible;flex-shrink:0}
+ .agent-editor-nav-caption,.agent-editor-sidebar-note,.agent-editor-step small{display:none}
+ .agent-editor-nav{flex-direction:row;overflow-x:auto;gap:6px;scrollbar-width:thin}
+ .agent-editor-nav>.btn{width:auto;padding:10px 12px;flex-shrink:0;border-radius:12px}
+ .agent-editor-step{align-items:center;gap:6px}.agent-editor-step b{font-size:11px}.agent-editor-step svg{width:16px;height:16px}
+ .agent-editor-content{padding:12px;flex:1}.agent-editor-group{padding:16px;border-radius:16px}
+ .agent-editor-dialog .agent-action-list{grid-template-columns:1fr}
+ .agent-editor-dialog form>.nx-dialog-actions{padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom))}
+}
+
+.workflow-review-item{border:1px solid var(--ln);border-radius:14px;padding:14px;margin:12px 0}.workflow-review-item p{font-size:12px;color:var(--mu)}

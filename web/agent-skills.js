@@ -10,7 +10,7 @@ function agentSkillsEditor(host,a){
    host.append(group);
   }ready=true;status.textContent='Os destinos selecionados ainda precisam da habilidade correspondente marcada em Ações permitidas.';
  }).catch(e=>status.textContent='Não foi possível carregar os vínculos: '+e.message);
- return {role:()=>role.value,value:()=>{if(!ready)throw Error('Aguarde os vínculos de habilidades carregarem antes de salvar');return {role:role.value,...Object.fromEntries(Object.entries(sets).map(([k,v])=>[k,[...v]]))}}};
+ return {role:()=>role.value,value:()=>{if(!ready)throw Error('Aguarde os vínculos de habilidades carregarem antes de salvar');return {...structuredClone(config),role:role.value,...Object.fromEntries(Object.entries(sets).map(([k,v])=>[k,[...v]]))}}};
 }
 async function agentConnectionsPanel(m){
  const box=h('div',{class:'card'});m.append(box);

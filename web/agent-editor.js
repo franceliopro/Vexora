@@ -1,0 +1,23 @@
+// Presentation only: the existing controls and save payload remain the source of truth.
+function agentEditorWorkspace(form,dialog,close,agent){
+ dialog.classList.add('agent-editor-dialog');form.classList.add('agent-editor-form');form.noValidate=true;
+ const heading=dialog.querySelector('.nx-dialog-title'),title=h('h2',{},agent.id?'Editar agente de IA':'Novo agente de IA'),state=h('span',{class:'agent-editor-state'},agent.active?'Ativo':'Rascunho'),review=UX.button('Revisar configuração',()=>reviewAction(),'g s');let reviewAction=()=>{};
+ heading.replaceChildren(h('div',{class:'agent-editor-title'},UX.button(icon('back'),()=>requestClose(),'g',{'aria-label':'Voltar aos agentes'}),h('div',{},h('small',{},'INTELIGÊNCIA · NÉXORA'),title)),h('div',{class:'agent-editor-top-actions'},state,review,UX.button('×',()=>requestClose(),'g',{'aria-label':'Fechar editor de agente'})));
+ const nav=h('div',{class:'agent-editor-nav',role:'tablist','aria-label':'Configuração do agente'}),content=h('div',{class:'agent-editor-content'}),layout=h('div',{class:'agent-editor-layout'},h('aside',{class:'agent-editor-sidebar'},h('p',{class:'agent-editor-nav-caption'},'Seu agente, passo a passo'),nav,h('p',{class:'agent-editor-sidebar-note'},'Configure no seu ritmo. Salve o que já estiver pronto e continue depois.')),content),panels=[],buttons=[];
+ form.append(layout);const definitions=[['Perfil','Identidade e estilo do atendimento','agent'],['Comportamento','Instruções, habilidades e destinos','bots'],['Conhecimento','Arquivos e fontes de informação','file'],['Configurações','Canais, modelos de texto e voz','set']];
+ const select=index=>{panels.forEach((p,i)=>p.hidden=i!==index);buttons.forEach((b,i)=>{b.classList.toggle('selected',i===index);b.setAttribute('aria-selected',String(i===index));b.tabIndex=i===index?0:-1});content.scrollTop=0};
+ definitions.forEach(([name,description,ic],i)=>{const id='agent-editor-'+crypto.randomUUID(),panel=h('section',{id,role:'tabpanel','aria-label':name,class:'agent-editor-panel',hidden:i!==0}),button=UX.button(h('span',{class:'agent-editor-step'},icon(ic),h('span',{},h('b',{},name),h('small',{},description))),()=>select(i),'g',{'role':'tab','id':id+'-tab','aria-controls':id,'aria-selected':String(i===0),tabindex:i===0?0:-1});panel.setAttribute('aria-labelledby',button.id);panels.push(panel);buttons.push(button);nav.append(button);content.append(panel)});
+ nav.addEventListener('keydown',e=>{if(!['ArrowDown','ArrowUp','ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const current=buttons.indexOf(document.activeElement),index=e.key==='Home'?0:e.key==='End'?buttons.length-1:(Math.max(0,current)+(['ArrowDown','ArrowRight'].includes(e.key)?1:-1)+buttons.length)%buttons.length;select(index);buttons[index].focus()});
+ select(0);
+ const indexByTitle={'Identidade e canais':0,'Papel e vínculos':1,'Comportamento':1,'Ações permitidas':1,'Conhecimento':2,'Modelos e voz':3};
+ function step(name,help){const collapsible=name==='Papel e vínculos',group=h(collapsible?'details':'div',{class:'agent-editor-group'},h(collapsible?'summary':'div',{class:'agent-editor-group-heading'},h('h3',{},name,helpBubble(name,help)),h('p',{class:'mu'},help)));panels[indexByTitle[name]].append(group);return group}
+ function requestClose(){if(dialog.dataset.dirty==='true'&&!confirm('Descartar as alterações não salvas deste agente?'))return;close()}
+ dialog.addEventListener('cancel',e=>{e.preventDefault();e.stopImmediatePropagation();if(dialog.dataset.dirty==='true'&&!confirm('Descartar as alterações não salvas deste agente?')){e.preventDefault();return}close()},true);
+ const inspect=(data)=>{const missing=agentSetupMissing(data);state.textContent=(data.active?'Ativo':'Rascunho')+(missing.length?' · incompleto':'');return missing};
+ return {step,panels,content,select,inspect,requestClose,onReview:fn=>reviewAction=fn,rename:name=>title.textContent=name||'Novo agente de IA',moveToSettings:node=>panels[3].append(node)};
+}
+function agentToneChoices(host,input){
+ const tones=['Cordial e objetivo','Consultivo e acolhedor','Neutro e equilibrado','Formal e institucional'],choices=h('div',{class:'agent-tone-choices',role:'group','aria-label':'Sugestões de tom de fala'});
+ function draw(){choices.replaceChildren(...tones.map(value=>UX.button(value,()=>{input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));draw()},'g s',{'aria-pressed':String(input.value===value)})))}
+ draw();input.after(choices);input.addEventListener('input',draw);
+}
