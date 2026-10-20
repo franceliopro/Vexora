@@ -477,3 +477,23 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Validação: npm test passou; Chromium com APIs simuladas validou preservação integral de fixture ativa, modelos/segredos/opções extras, quatro seções, conhecimento, teclado, mobile sem overflow, falha sem perda de edição, cancelar/reabrir e criação de rascunho parcial. Capturas desktop/mobile inspecionadas.
 - Novos arquivos: web/agent-editor.js, web/agent-editor.css, web/workflow-review.js, test/agent-editor-browser.mjs. Teste de atendimento atualizado para os novos nomes de navegação.
 - Pedido adicional em andamento: separar bots de atendimento/automação, horários e gatilhos API/campanha/sequência/manual.
+
+
+## 43. Chatbots estratégicos, horário e acionamento integrado
+- Migração 033: bot_api_keys (cofre), bot_invocations (fila com idempotência/RLS/FK) e graph_snapshot em bot_runs. Sem migração destrutiva dos bots existentes.
+- trigger.kind attendance/automation, trigger.hours always/inside/outside e trigger.sources manual/api/campaign/sequence/ai. Padrões mantêm entrada anterior. Validação server-side e configuração visual no Início e no card.
+- settings.business_hours: calendário semanal, intervalos, datas fechadas e fuso existente da empresa. Desativado considera aberto sempre. Seleção de entrada e espera inicial reavaliam o horário; inbox pode ter outside_bot_id.
+- Variável horario_atendimento (aberto/fechado) no catálogo integrado, bot/IA, respostas rápidas e condições.
+- API assinada HMAC por bot, validade 5min, external_id único; HTTP 202 registra fila. Somente conversas existentes e abertas; não interrompe humano.
+- Na conversa: ícone Iniciar chatbot, Alt+B, @@chatbot, seleção de modo híbrido ou controle do bot, confirmação explícita para substituir bot ativo e consulta do estado do acionamento. Não bloqueia compositor.
+- Campanhas: seleção de até 100 atendimentos abertos carregados, resultado por atendimento e histórico de acionamentos. Não é disparo frio nem importação de público.
+- Follow-up: bloco start_bot encerra a sequência e solicita chatbot pela fila. IA também encaminha à fila usando os vínculos autorizados.
+- Worker 1s, até 20 itens por empresa, bloqueio de conversa, epoch, status pré-efeito check_required e grafo congelado. Sem repetição automática ambígua. Controle humano cancelando pendência validado.
+- Coleta pode persistir diretamente um campo do contato. Novos blocos crm_create/crm_move reutilizam o CRM vinculado à conversa e preservam restrição de conclusão final. HTTP do bot agora usa HTTPS público com DNS fixado e limites.
+- UI lista Atendimento/Automação, chips de horário, fontes autorizadas, calendário, histórico e palco com pontos/realce sutis. Mantido editor movível/zoomável e personalidade Néxora.
+- Ajustes de robustez do editor de agente: rótulos acessíveis independentes das interrogações, fechamento bloqueado durante salvamento e alteração posterior ao início do save não perde marca de edição.
+- Validação executada: npm test; test/agent-editor-browser.mjs; test/bot-strategies-browser.mjs; test/attendance-browser.mjs; test/bot-strategies-postgres.mjs; test/attendance-tools-postgres.mjs. Chromium com APIs simuladas; PGlite com todas as migrações até 033, incluindo cenários antes pendentes de 031/032. Nenhum envio real nem chave real utilizada.
+- Guia: docs/CHATBOTS-ESTRATEGIAS.md. Ainda não há recepção de evento público de comentário/Story como gatilho nativo; isso depende de adaptador e permissão de cada rede.
+
+- Complemento: bloco Integração cadastrada reutiliza agent_connections e o cofre de Bearer dos agentes. Parâmetros JSON são renderizados nos valores; resultados ficam em variável e há saídas Sucesso/Erro. A idempotência inclui bot_run e bloco sem alterar chaves anteriores das ferramentas de IA.
+- Execução invocada sem confirmação de início não é retomada por uma nova mensagem após crash; exige conferência do histórico/intervenção explícita.

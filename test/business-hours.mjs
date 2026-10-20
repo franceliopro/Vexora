@@ -1,0 +1,23 @@
+import {advance} from '../src/bots/engine.js';
+import assert from 'node:assert/strict';
+import {businessOpen,validateBusinessHours,validateBotStrategy,botScheduleAllowed} from '../src/business-hours.js';
+import {entryBot} from '../src/bots/entry.js';
+const hours=validateBusinessHours({enabled:true,week:{2:[{start:'08:00',end:'12:00'},{start:'13:00',end:'18:00'}]},closed_dates:['2026-10-27']});
+assert.equal(businessOpen(hours,'America/Cuiaba',new Date('2026-10-20T12:00:00Z')),true);
+assert.equal(businessOpen(hours,'America/Cuiaba',new Date('2026-10-20T16:00:00Z')),false);
+assert.equal(businessOpen(hours,'America/Cuiaba',new Date('2026-10-20T21:30:00Z')),true);
+assert.equal(businessOpen(hours,'America/Sao_Paulo',new Date('2026-10-20T21:30:00Z')),false);
+assert.equal(businessOpen(hours,'America/Cuiaba',new Date('2026-10-27T12:00:00Z')),false);
+assert.equal(businessOpen({},'America/Cuiaba'),true);
+assert.throws(()=>validateBusinessHours({week:{1:[{start:'22:00',end:'06:00'}]}}));
+assert.throws(()=>validateBusinessHours({week:{1:[{start:'08:00',end:'13:00'},{start:'12:00',end:'18:00'}]}}));
+assert.throws(()=>validateBotStrategy({sources:['unknown']}));assert.equal(botScheduleAllowed({hours:'outside'},false),true);
+const bots=[{id:1,active:true,trigger:{type:'first',kind:'automation'}},{id:2,active:true,trigger:{type:'first',hours:'inside'}},{id:3,active:true,trigger:{type:'first',hours:'outside'}}],routing={enabled:true,bot_id:2,outside_bot_id:3};
+assert.equal(entryBot(bots,routing,1,{body:'Olá'},true,{hoursOpen:true}).id,2);
+assert.equal(entryBot(bots,routing,1,{body:'Olá'},true,{hoursOpen:false}).id,3);
+assert.equal(entryBot([bots[0]],{},1,{body:'Olá'},true),undefined);
+console.log('OK: horários por fuso, almoço, fechamento excepcional, sobreposição, bots de entrada/automação e alternativa fora do expediente.');
+
+const actions=[],run={node:'input',waiting:true,vars:{},tries:0},graph={nodes:[{id:'input',type:'input',data:{text:'Sua placa?',var:'placa',contactField:'campo_501'}},{id:'crm',type:'crm_create',data:{board_id:7,title:'Frota {{placa}}',var:'card_id'}},{id:'move',type:'crm_move',data:{stage_id:8}}],edges:[{from:'input',out:'next',to:'crm'},{from:'crm',out:'next',to:'move'}]};
+await advance({graph,run,text:'ABC1D23',deps:{builtins:async()=>({}),contactAction:async(t,d)=>actions.push({t,...d}),crmCreate:async d=>{actions.push(d);return{id:99}},crmMove:async d=>actions.push(d)}});assert.equal(actions[0].field,'campo_501');assert.equal(actions[1].title,'Frota ABC1D23');assert.equal(actions[2].card_id,99);
+console.log('OK: coleta persiste campo e usa a variável no CRM, com ID do card disponível para mover.');

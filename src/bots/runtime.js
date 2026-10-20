@@ -1,3 +1,7 @@
+import {createAgentCard,skillGuard} from '../ai/skills.js';
+import {moveCRMFromConversation} from '../crm.js';
+import {requestConnection,callAgentConnection} from '../agent-connections.js';
+import {companyBusinessOpen} from '../business-hours.js';
 import {conversationVariables} from '../customer-variables.js';
 import {companyDayVariables} from '../day-period.js';
 import {customerName} from '../customer-name.js';
@@ -11,14 +15,11 @@ import {financialPhone} from '../financial-identity.js';
 import {companyTimeZone} from '../timezone.js';
 import {canBotRun} from '../conversation-policy.js';
 import {localGreeting} from '../tracking-template.js';
-import dns from 'dns/promises';import {q,tenantTransaction} from '../db.js';import {als} from '../ctx.js';import {advance,shouldUseAI,fallbackReady} from './engine.js';import {deliver,setStage,convFor,D} from '../core.js';import {asaasDebts,asaasPay} from '../payments.js';import {menuFor,createOrder} from '../delivery.js';import {norm,tpl,isPrivateIp} from '../lib.js';
+import {q,tenantTransaction} from '../db.js';import {als} from '../ctx.js';import {advance,shouldUseAI,fallbackReady} from './engine.js';import {deliver,setStage,convFor,D} from '../core.js';import {asaasDebts,asaasPay} from '../payments.js';import {menuFor,createOrder} from '../delivery.js';import {norm,tpl} from '../lib.js';
 
-async function safeFetch(d,ctx){let u;try{u=new URL(tpl(d.url,ctx))}catch{return {ok:false}}if(!/^https?:$/.test(u.protocol))return {ok:false};
- const addrs=await dns.lookup(u.hostname,{all:true}).catch(()=>[]);if(!addrs.length||addrs.some(a=>isPrivateIp(a.address)))return {ok:false,error:'destino bloqueado'}; // SSRF
- try{const m=(d.method||'GET').toUpperCase(),r=await fetch(u,{method:m,redirect:'manual',signal:AbortSignal.timeout(8000),headers:{'content-type':'application/json'},body:m==='GET'?undefined:tpl(d.body,ctx)});
-  const t=(await r.text()).slice(0,100000);let data;try{data=JSON.parse(t)}catch{data=t}return {ok:r.ok,data}}catch{return {ok:false}}}
+async function safeFetch(d,ctx){try{const url=tpl(d.url,ctx),method=(d.method||'GET').toUpperCase();if(new URL(url).protocol!=='https:'||!['GET','POST'].includes(method))return {ok:false,error:'Use API pública HTTPS com GET ou POST'};const parameters=method==='POST'?JSON.parse(tpl(d.body||'{}',ctx)):{};if(!parameters||typeof parameters!=='object'||Array.isArray(parameters)||JSON.stringify(parameters).length>16000)return {ok:false,error:'Corpo JSON inválido'};return {ok:true,data:await requestConnection({url,method},parameters)}}catch{return {ok:false,error:'Consulta externa não confirmada'}}}
 const mkDeps=cv=>({
- contactAction:(type,d)=>contactAction(q,cv,type,d),note:body=>deliver(cv.id,{kind:'note',body,ai:true,executor:'bot'}),
+ contactAction:(type,d)=>contactAction(q,cv,type,d),crmCreate:async d=>{const card=await tenantTransaction(cv.tenant_id,query=>createAgentCard(query,cv,{id:null,executor:'bot',skills:{board_ids:[Number(d.board_id)]}},d));bus('crm',{board_id:card.board_id});return card},crmMove:async d=>{const board_id=await tenantTransaction(cv.tenant_id,async query=>{await skillGuard(query,cv);return moveCRMFromConversation(query,cv,d)});bus('crm',{board_id})},note:body=>deliver(cv.id,{kind:'note',body,ai:true,executor:'bot'}),
  send:(t,choices)=>deliver(cv.id,{body:String(t),choices,ai:true,executor:'bot',epoch:cv.automation_epoch}),
  close:async d=>{if(d.text)await deliver(cv.id,{body:d.text,ai:true,executor:'bot',epoch:cv.automation_epoch});const closed=await tenantTransaction(als.getStore()?.tenant,query=>closeAutomated(query,cv,{...d,executor:'bot'}));if(closed)bus('conv',{id:cv.id});return closed},
  setStage:id=>setStage(cv.id,+id),
@@ -31,18 +32,20 @@ const mkDeps=cv=>({
   else if(t==='team'){if(!(await q('select id from teams where id=$1 and archived_at is null',[d.team_id])).rows.length)throw Error('Setor indisponível');await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='human',automation_paused=true,ai_on=false,assignee_id=null,team_id=$2 where id=$1",[cv.id,d.team_id||null])}
   else await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='human',automation_paused=true,ai_on=false,assignee_id=null where id=$1",[cv.id]);
   await deliver(cv.id,{kind:'note',body:`🤖 Bot transferiu a conversa (${t})`,ai:true})},
- http:safeFetch,asaasDebts:async(doc,options)=>{const ch=(await q('select * from channels where id=$1',[cv.channel_id])).rows[0],phone=financialPhone(ch,{handle:cv.handle});if(options?.verifyPhone&&!phone)throw Error('Identidade do titular requer confirmação humana neste canal');try{return await asaasDebts(doc,{...options,phone,conversation_id:cv.id})}catch(e){await deliver(cv.id,{kind:'note',body:'Consulta Asaas do bot não concluída: '+e.message,ai:true,executor:'bot'});throw e}},asaasPay,menu:menuFor,
+ api:async(d,ctx)=>{try{const raw=JSON.parse(d.body||'{}'),parameters=Object.fromEntries(Object.entries(raw).map(([key,value])=>[key,typeof value==='string'?tpl(value,ctx):value]));const data=await callAgentConnection({query:q,transaction:tenantTransaction,cv,ag:{id:null,skills:{connection_ids:[Number(d.connection_id)]}},action:{connection_id:Number(d.connection_id),parameters},scope:'bot:'+cv._bot_run_id+':'+d.node_id});return {ok:true,data}}catch(e){await deliver(cv.id,{kind:'note',body:'Integração do chatbot sem confirmação. Confira o histórico antes de repetir.',ai:true,executor:'bot'});return {ok:false}}},http:async(d,ctx)=>{const current=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!canBotRun(current)||current.automation_epoch!==cv.automation_epoch)throw Error('Automação pausada');return safeFetch(d,ctx)},asaasDebts:async(doc,options)=>{const ch=(await q('select * from channels where id=$1',[cv.channel_id])).rows[0],phone=financialPhone(ch,{handle:cv.handle});if(options?.verifyPhone&&!phone)throw Error('Identidade do titular requer confirmação humana neste canal');try{return await asaasDebts(doc,{...options,phone,conversation_id:cv.id})}catch(e){await deliver(cv.id,{kind:'note',body:'Consulta Asaas do bot não concluída: '+e.message,ai:true,executor:'bot'});throw e}},asaasPay,menu:menuFor,
  createOrder:o=>createOrder({...o,source:'whatsapp',contact_id:cv.contact_id,customer_name:cv.cname,customer_phone:cv.handle})});
 // Retorna true se um bot "consumiu" a mensagem (a IA não deve responder).
 export async function handle(cv,msg,fresh){if(!canBotRun(cv))return false;let run=(await q("select * from bot_runs where conversation_id=$1 and status='active'",[cv.id])).rows[0],bot;
  if(run&&Date.now()-new Date(run.updated_at)>12*36e5){await q("update bot_runs set status='expirado' where id=$1",[run.id]);run=null}
+ if(run?.vars?._invocation_id&&Number(msg._invocation_id)!==Number(run.vars._invocation_id)){const invocation=(await q('select status from bot_invocations where id=$1',[run.vars._invocation_id])).rows[0];if(invocation?.status!=='started')return true}
  if(run&&run.waiting&&msg.at&&new Date(msg.at)<=new Date(run.updated_at))return true;
  if(run){bot=(await q('select * from bots where id=$1',[run.bot_id])).rows[0];if(!bot||!bot.active&&!run.invoked){await q("update bot_runs set status='encerrado' where id=$1",[run.id]);run=null}}
  if(!run){if(!msg.body&&msg.kind!=='audio')return false;
-  const routing=(await q('select config from channels where id=$1',[cv.channel_id])).rows[0]?.config?.routing;const prior=(await q('select id from bot_runs where conversation_id=$1 limit 1',[cv.id])).rows[0];bot=entryBot((await q('select * from bots where active order by id')).rows,routing,cv.channel_id,msg,fresh||!prior);if(!bot)return false;
+  const routing=(await q('select config from channels where id=$1',[cv.channel_id])).rows[0]?.config?.routing;const prior=(await q('select id from bot_runs where conversation_id=$1 limit 1',[cv.id])).rows[0];bot=entryBot((await q('select * from bots where active order by id')).rows,routing,cv.channel_id,msg,fresh||!prior,{hoursOpen:await companyBusinessOpen(q)});if(!bot)return false;
   if(!fresh&&Number(bot.trigger?.cooldownHours)>0){const last=(await q('select max(br.updated_at) at from bot_runs br join conversations c on c.id=br.conversation_id where br.bot_id=$1 and c.contact_id=$2',[bot.id,cv.contact_id])).rows[0]?.at;if(last&&Date.now()-new Date(last)<Math.min(8760,Number(bot.trigger.cooldownHours))*36e5)return false}
   const st=(bot.graph.nodes||[]).find(n=>n.type==='start');if(!st)return false;
   run=(await q("insert into bot_runs(bot_id,conversation_id,node) values($1,$2,$3) returning *",[bot.id,cv.id,st.id])).rows[0];await q('update bots set runs=runs+1 where id=$1',[bot.id])}
+ if(run.graph_snapshot)bot={...bot,graph:run.graph_snapshot};
  const waitingNode=(bot.graph.nodes||[]).find(n=>n.id===run.node);
  if(run.waiting&&shouldUseAI(waitingNode,msg)){
   const routing=(await q('select config from channels where id=$1',[cv.channel_id])).rows[0]?.config?.routing,preferred=cv.agent_id||routing?.agent_id||null;const ag=(await q('select * from agents where active and (id=$1 or $2=any(channel_ids)) order by (id=$1) desc nulls last,id limit 1',[preferred,cv.channel_id])).rows[0];
@@ -51,22 +54,15 @@ export async function handle(cv,msg,fresh){if(!canBotRun(cv))return false;let ru
   if(ready){const changed=await q("update conversations set automation_mode='ai',ai_on=true,agent_id=$3,automation_epoch=automation_epoch+1 where id=$1 and automation_epoch=$2 and not automation_paused and status='open' and assignee_id is null returning id",[cv.id,cv.automation_epoch,ag.id]);if(changed.rows.length){await q("update bot_runs set status='transferido_ia',updated_at=now() where id=$1 and status='active'",[run.id]);await deliver(cv.id,{kind:'note',body:'Bot transferiu à IA: resposta fora das opções ou áudio. Histórico preservado.'});bus('conv',{id:cv.id});return false}}
  }
  const ct=(await q('select name,handle from contacts where id=$1',[cv.contact_id])).rows[0]||{};const r={node:run.node,waiting:run.waiting,vars:run.vars||{},tries:run.tries||0};
- await ensureAutomationProtocol(q,cv,deliver,bus);const presence=await beginPresence(cv,{query:q,drivers:D}).catch(()=>({stop:async()=>{}}));let res;try{res=await advance({graph:bot.graph,run:r,text:run.waiting?(msg.body||''):null,deps:mkDeps({...cv,cname:ct.name,handle:ct.handle})})}
+ await ensureAutomationProtocol(q,cv,deliver,bus);const presence=await beginPresence(cv,{query:q,drivers:D}).catch(()=>({stop:async()=>{}}));let res;try{res=await advance({graph:bot.graph,run:r,text:run.waiting?(msg.body||''):null,deps:mkDeps({...cv,_bot_run_id:run.id,cname:ct.name,handle:ct.handle})})}
  catch(e){console.error('bot',e.message);await q("update bot_runs set status='erro' where id=$1 and status='active'",[run.id]);return true}finally{await presence.stop()}
  if(typeof r.vars.novo_nome==='string'&&r.vars.novo_nome!==run.vars?.novo_nome){const {cleanPreferredName}=await import('../service-entry.js');const preferred=cleanPreferredName(r.vars.novo_nome);if(preferred)await q("update contacts set data=coalesce(data,'{}'::jsonb)||$2 where id=$1",[cv.contact_id,JSON.stringify({preferred_name:preferred,novo_nome:preferred})])}
  if(res.stopped)await deliver(cv.id,{kind:'note',body:'Bot interrompido: '+res.stopped,ai:true,executor:'bot'});
- await q("update bot_runs set node=$2,waiting=$3,vars=$4,tries=$5,status=$6,updated_at=now() where id=$1 and status='active'",[run.id,r.node,r.waiting,JSON.stringify(r.vars),r.tries,res.done?'concluido':'active']);if(res.done&&run.invoked)await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='ai',ai_on=true where id=$1 and automation_mode='bot' and not automation_paused",[cv.id]);return true}
+ await q("update bot_runs set node=$2,waiting=$3,vars=$4,tries=$5,status=$6,updated_at=now() where id=$1 and status='active'",[run.id,r.node,r.waiting,JSON.stringify(r.vars),r.tries,res.done?'concluido':'active']);if(res.done&&run.invoked&&run.vars?._resume_ai!==false)await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='ai',ai_on=true where id=$1 and automation_mode='bot' and not automation_paused",[cv.id]);if(res.done&&run.vars?._invocation_source&&run.vars?._resume_ai===false)await q("update conversations set automation_mode='human',automation_paused=true,ai_on=false where id=$1 and automation_epoch=$2 and automation_mode in ('bot','hybrid')",[cv.id,cv.automation_epoch]);return true}
 
 
 export async function invokeAgentBot(cv,ag,id){
  if(!(ag.skills?.bot_ids||[]).includes(Number(id)))throw Error('Fluxo não autorizado');
- const next=await tenantTransaction(cv.tenant_id,async query=>{
-  const {skillGuard}=await import('../ai/skills.js');await skillGuard(query,cv);
-  const bot=(await query('select * from bots where id=$1 and active',[Number(id)])).rows[0];if(!bot||bot.channel_ids?.length&&!bot.channel_ids.includes(cv.channel_id))throw Error('Bot não habilitado nesta inbox');
-  const start=bot.graph?.nodes?.find(n=>n.type==='start');if(!start)throw Error('Fluxo sem início');
-  await query("update bot_runs set status='substituido',updated_at=now() where conversation_id=$1 and status='active'",[cv.id]);
-  const current=(await query("update conversations set automation_mode='bot',ai_on=false,agent_id=$2,automation_epoch=automation_epoch+1 where id=$1 returning *",[cv.id,ag.id])).rows[0];
-  await query("insert into bot_runs(bot_id,conversation_id,node,invoked) values($1,$2,$3,true)",[bot.id,cv.id,start.id]);await query('update bots set runs=runs+1 where id=$1',[bot.id]);return current;
- });
- await deliver(cv.id,{kind:'note',body:'Agente de IA acionou um fluxo autorizado. O histórico foi preservado.',ai:true});bus('conv',{id:cv.id});return handle(next,{body:'iniciar'},false);
+ const {enqueueBot}=await import('../bot-strategies.js');const last=(await q("select id from messages where conversation_id=$1 and dir='in' order by id desc limit 1",[cv.id])).rows[0];
+ return tenantTransaction(cv.tenant_id,query=>enqueueBot(query,{conversation_id:cv.id,bot_id:Number(id),source:'ai',request_key:'ai:'+cv.id+':'+cv.automation_epoch+':'+(last?.id||0)+':'+id}));
 }

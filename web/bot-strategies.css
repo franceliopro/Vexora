@@ -1,0 +1,23 @@
+.bot-strategy-tabs{display:flex;gap:8px;padding:8px 28px;flex-wrap:wrap}
+.bot-strategy-tabs .selected{color:var(--ac);border-color:var(--ac);background:color-mix(in srgb,var(--ac) 8%,var(--card))}
+.bot-strategy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px}
+.bot-strategy-card{border:1px solid var(--ln);background:linear-gradient(145deg,color-mix(in srgb,var(--ac) 3%,var(--card)),var(--card));transition:border-color .15s,box-shadow .15s}
+.bot-strategy-card:hover{border-color:color-mix(in srgb,var(--ac) 40%,var(--ln));box-shadow:0 8px 30px color-mix(in srgb,var(--ac) 9%,transparent)}
+.bot-strategy-card-title{display:flex;align-items:center;gap:10px}.bot-strategy-card-title h3{flex:1;margin:0;overflow-wrap:anywhere}
+.bot-strategy-card-title svg{width:24px;height:24px;color:var(--ac);flex-shrink:0}
+.bot-strategy-actions,.bot-strategy-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.bot-strategy-fields{border:1px solid var(--ln);border-radius:14px;padding:14px;background:var(--card);margin:12px 0}
+.bot-strategy-fields label.nx-check{display:flex;gap:8px;align-items:center;font-size:12px;line-height:1.5;margin:12px 0}
+.bot-strategy-fields input[type=checkbox]{width:16px!important;height:16px;min-height:16px;min-width:16px;flex:0 0 16px;padding:0;margin:0;accent-color:var(--ac)}
+.workflow-body>.top .btn{white-space:nowrap}.workflow-body>.top>.row{gap:8px;flex-wrap:wrap}
+.business-hours-day{border:1px solid var(--ln);border-radius:14px;margin:12px 0;padding:12px}
+.business-hours-day legend{padding:0 6px;font-weight:600;font-size:12px}
+.business-hours-period{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) 36px;gap:8px;align-items:center;margin-bottom:8px}
+.business-hours-period input{width:100%;min-width:0;box-sizing:border-box}
+.bot-api-example{padding:14px;background:var(--bg);border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+.bot-campaign-targets{max-height:320px;overflow:auto;padding:8px;border:1px solid var(--ln);border-radius:14px;margin:16px 0}
+.bot-campaign-targets .nx-check{display:flex;gap:10px;align-items:center;padding:8px;margin:0}
+.cg-viewport{background-image:radial-gradient(color-mix(in srgb,var(--ac) 18%,var(--ln)) 1px,transparent 1px);background-size:24px 24px}
+.cg-node.selected{box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 15%,transparent),0 12px 34px #17213a18}
+@media(max-width:700px){.bot-strategy-tabs{padding:8px 14px}.bot-strategy-card{padding:16px}.bot-strategy-card-title h3{font-size:14px}.business-hours-period{gap:5px}}
+@media(prefers-reduced-motion:reduce){.bot-strategy-card{transition:none}}

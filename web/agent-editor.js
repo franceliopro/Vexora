@@ -11,8 +11,8 @@ function agentEditorWorkspace(form,dialog,close,agent){
  select(0);
  const indexByTitle={'Identidade e canais':0,'Papel e vínculos':1,'Comportamento':1,'Ações permitidas':1,'Conhecimento':2,'Modelos e voz':3};
  function step(name,help){const collapsible=name==='Papel e vínculos',group=h(collapsible?'details':'div',{class:'agent-editor-group'},h(collapsible?'summary':'div',{class:'agent-editor-group-heading'},h('h3',{},name,helpBubble(name,help)),h('p',{class:'mu'},help)));panels[indexByTitle[name]].append(group);return group}
- function requestClose(){if(dialog.dataset.dirty==='true'&&!confirm('Descartar as alterações não salvas deste agente?'))return;close()}
- dialog.addEventListener('cancel',e=>{e.preventDefault();e.stopImmediatePropagation();if(dialog.dataset.dirty==='true'&&!confirm('Descartar as alterações não salvas deste agente?')){e.preventDefault();return}close()},true);
+ function requestClose(){if(dialog.dataset.saving==='true')return;if(dialog.dataset.dirty==='true'&&!confirm('Descartar as alterações não salvas deste agente?'))return;close()}
+ dialog.addEventListener('cancel',e=>{e.preventDefault();e.stopImmediatePropagation();if(dialog.dataset.saving==='true')return;if(dialog.dataset.dirty==='true'&&!confirm('Descartar as alterações não salvas deste agente?')){e.preventDefault();return}close()},true);
  const inspect=(data)=>{const missing=agentSetupMissing(data);state.textContent=(data.active?'Ativo':'Rascunho')+(missing.length?' · incompleto':'');return missing};
  return {step,panels,content,select,inspect,requestClose,onReview:fn=>reviewAction=fn,rename:name=>title.textContent=name||'Novo agente de IA',moveToSettings:node=>panels[3].append(node)};
 }

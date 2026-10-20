@@ -29,8 +29,11 @@ async function onEnter(n,run,deps,ctx){const d=n.data||{},V=run.vars;
   case 'tag':case 'contact':await deps.contactAction(n.type,{...d,value:tpl(d.value,ctx)});return {};
   case 'note':await deps.note(tpl(d.text,ctx));return {};
   case 'cycle':{const key='_cycle_'+n.id,count=Number(V[key]||0),limit=Math.max(1,Math.min(20,Number(d.limit)||1));if(count<limit){V[key]=count+1;return {out:'repeat'}}return {out:'done'}};
+  case 'crm_create':{const card=await deps.crmCreate({...d,title:tpl(d.title,ctx)});V[d.var||'card_id']=card.id;return {}};
+  case 'crm_move':await deps.crmMove({card_id:Number(V[d.card_var||'card_id']),stage_id:Number(d.stage_id)});return {};
   case 'stage':if(d.stage)await deps.setStage(d.stage);return {};
   case 'transfer':if(d.text)await deps.send(tpl(d.text,ctx));await deps.transfer(d);return {};
+  case 'api':{const r=await deps.api({...d,node_id:n.id},ctx);if(d.var)V[d.var]=r.ok?r.data:null;return {out:r.ok?'ok':'error'}}
   case 'http':{const r=await deps.http(d,ctx);if(d.var)V[d.var]=r.ok?r.data:null;return {out:r.ok?'ok':'error'}}
   case 'asaas':return asaas(n,run,deps,null,true);
   case 'order':return order(run,deps,null,true);
@@ -43,7 +46,7 @@ async function onInput(n,input,run,deps,ctx){const d=n.data||{},V=run.vars,t=Str
   case 'choice':{const o=d.options||[],i=choiceOption(o,String(optionNumber(t)??t));if(i>=0)return {out:'o'+i};
    run.tries++;await deps.send(`Opção inválida. ${tpl(d.text,ctx)}\n\n${lst(o,x=>x)}\n\nResponda com o número da opção.`,{text:'Opção inválida. '+tpl(d.text,ctx),options:o});return {stay:1}}
   case 'input':{let ok=!!t,val=t;if(d.validate==='doc'){ok=validDoc(t);val=digits(t)}else if(d.validate==='email')ok=/^\S+@\S+\.\S+$/.test(t);else if(d.validate==='number'){ok=t!==''&&!isNaN(+t.replace(',','.'));val=t.replace(',','.')}
-   if(ok){V[d.var||'resposta']=val;return {}}if(++run.tries>=3)return {out:'invalid'};await deps.send(d.error||'Valor inválido, tente novamente.');return {stay:1}}
+   if(ok){if(d.contactField)try{await deps.contactAction('contact',{field:d.contactField,value:val})}catch{if(++run.tries>=3)return {out:'invalid'};await deps.send(d.error||'Não consegui salvar esse dado na ficha. Confira a informação e tente novamente.');return {stay:1}}V[d.var||'resposta']=val;return {}}if(++run.tries>=3)return {out:'invalid'};await deps.send(d.error||'Valor inválido, tente novamente.');return {stay:1}}
   case 'asaas':return asaas(n,run,deps,t,false);
   case 'order':return order(run,deps,t,false)}
  return {}}

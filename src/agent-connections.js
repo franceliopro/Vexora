@@ -20,12 +20,12 @@ export async function requestConnection(c,args){
   });req.setTimeout(8000,()=>req.destroy(Error('Tempo de consulta esgotado; confira o sistema externo antes de repetir')));req.on('error',reject);req.end(body);
  });
 }
-export async function callAgentConnection({query,transaction,cv,ag,action}){
+export async function callAgentConnection({query,transaction,cv,ag,action,scope}){
  const id=Number(action.connection_id);if(!(ag.skills?.connection_ids||[]).includes(id))throw Error('Conexão não autorizada');
  const c=(await query('select * from agent_connections where id=$1 and active',[id])).rows[0];if(!c)throw Error('Conexão inativa');
  const args=action.parameters||{};if(!args||typeof args!=='object'||Array.isArray(args)||JSON.stringify(args).length>16000||Object.entries(args).some(([key,v])=>!c.parameters.some(p=>p.name===key)||!['string','number','boolean'].includes(typeof v)))throw Error('Parâmetros não autorizados');
  const last=(await query("select id from messages where conversation_id=$1 and dir='in' order by id desc limit 1",[cv.id])).rows[0];
- const ordered=Object.fromEntries(Object.keys(args).sort().map(k=>[k,args[k]])),key=crypto.createHash('sha256').update(JSON.stringify([cv.id,last?.id,id,ordered])).digest('hex');
+ const ordered=Object.fromEntries(Object.keys(args).sort().map(k=>[k,args[k]])),key=crypto.createHash('sha256').update(JSON.stringify([cv.id,last?.id,id,ordered,...(scope?[String(scope)]:[])])).digest('hex');
  const run=await transaction(cv.tenant_id,async q=>{await skillGuard(q,cv);return (await q('insert into agent_tool_runs(conversation_id,connection_id,run_key) values($1,$2,$3) on conflict(tenant_id,run_key) do nothing returning id',[cv.id,id,key])).rows[0]});
  if(!run){const previous=(await query('select status,result from agent_tool_runs where run_key=$1',[key])).rows[0];if(previous?.status==='completed')return previous.result;throw Error('Execução anterior sem confirmação. Um responsável deve conferir o sistema externo; não houve repetição automática.')}
  try{const result=await requestConnection(c,args);await query("update agent_tool_runs set status='completed',result=$2 where id=$1",[run.id,JSON.stringify(result)]);await serviceEvent(query,cv.id,null,'ai_api_completed',{agent_id:ag.id,connection_id:id,run_id:run.id});return result}catch(e){await serviceEvent(query,cv.id,null,'ai_api_check_required',{agent_id:ag.id,connection_id:id,run_id:run.id});throw e}
