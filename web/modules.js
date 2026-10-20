@@ -90,7 +90,7 @@ V.delivery=async m=>{const [cats,items,zones]=await Promise.all([api('/t/menu_ca
 const NT={
  start:{t:'Início',c:'#16a34a',o:()=>['next'],f:[]},
  message:{t:'Enviar mensagem',c:'#2563eb',o:()=>['next'],f:[{k:'text',l:'Mensagem',area:1}]},
- choice:{t:'Pedir para escolher',c:'#0d9488',o:d=>[...(d.options||[]).map((_,i)=>'o'+i),'invalid'],f:[{k:'text',l:'Mensagem',area:1},{k:'options',l:'Opções (uma por linha)',lines:1}]},
+ choice:{t:'Pedir para escolher',c:'#0d9488',o:d=>[...(d.options||[]).map((_,i)=>'o'+i),'invalid'],f:[{k:'text',l:'Mensagem',area:1},{k:'options',l:'Opções (uma por linha)',lines:1},{k:'aiFallback',l:'Texto fora das opções ou áudio',sel:[['','Repetir opções'],['on','Transferir para IA com o histórico']]}]},
  input:{t:'Perguntar e guardar',c:'#7c3aed',o:()=>['next','invalid'],f:[{k:'text',l:'Pergunta',area:1},{k:'var',l:'Guardar na variável'},{k:'validate',l:'Validar como',sel:[['','Texto livre'],['doc','CPF/CNPJ'],['email','E-mail'],['number','Número']]},{k:'error',l:'Mensagem de erro'}]},
  condition:{t:'Condição',c:'#ea580c',o:()=>['yes','no'],f:[{k:'rules',l:'Regras (uma por linha)',area:1,ph:'primeira_conversa = sim\nhora > 18\nnome ~ ana'},{k:'mode',l:'Passa se',sel:[['all','todas verdadeiras'],['any','alguma verdadeira']]}]},
  set:{t:'Definir variável',c:'#64748b',o:()=>['next'],f:[{k:'k',l:'Variável'},{k:'v',l:'Valor'}]},
@@ -99,6 +99,7 @@ const NT={
  asaas:{t:'Consultar cobranças (Asaas)',c:'#0891b2',o:()=>['next','none','error'],f:[{k:'text',l:'Pergunta do CPF/CNPJ (opcional)',area:1},{k:'docVar',l:'Usar CPF/CNPJ já guardado na variável (opcional)'}]},
  order:{t:'Pedido no WhatsApp (cardápio)',c:'#d97706',o:()=>['next','cancel','error'],f:[]},
  http:{t:'Chamar API externa',c:'#475569',o:()=>['ok','error'],f:[{k:'url',l:'URL'},{k:'method',l:'Método',sel:[['GET','GET'],['POST','POST']]},{k:'body',l:'Corpo (JSON)',area:1},{k:'var',l:'Guardar resposta em'}]},
+ close:{t:'Concluir atendimento',c:'#059669',o:()=>[],f:[{k:'reason',l:'Motivo do encerramento'},{k:'text',l:'Mensagem de despedida',area:1},{k:'outcome',l:'Resultado',sel:[['resolved','Resolvido'],['question','Dúvida esclarecida'],['other','Outro']]}]},
  end:{t:'Fim',c:'#334155',o:()=>[],f:[]}};
 const OL={next:'',yes:'sim',no:'não',invalid:'inválido',none:'sem débitos',error:'erro',ok:'ok',cancel:'cancelou'};
 const uid=()=>'n'+Math.random().toString(36).slice(2,8);

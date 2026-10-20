@@ -124,3 +124,7 @@ Processo de atendimento consolidado a partir das telas: [governança, filas, fic
 ## Atendimento e CRM implementados
 
 Veja [entrega, acesso ao QR Code, governança, painéis e configuração de confirmações externas](docs/ENTREGA-ATENDIMENTO-CRM.md). As migrações 005/006 adicionam ciclos, eventos e oportunidades sem apagar as conversas anteriores. Conexões externas ainda exigem configuração e homologação com suas credenciais.
+
+## Continuidade do projeto
+
+Leia [o registro completo de 20/10/2026](docs/CONTINUIDADE-NEXORA-2026-10-20.md) para decisões de produto, arquitetura, recursos entregues, configuração Bot → IA, financeiro, testes e pendências de homologação.

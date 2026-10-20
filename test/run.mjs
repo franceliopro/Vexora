@@ -34,7 +34,7 @@ const G=(nodes,edges)=>({nodes:nodes.map(([id,type,data])=>({id,type,data:data||
  const b=mk(g);let r=await b.say(null);eq([b.out[0],b.out[1].startsWith('Como ajudar?\n\n1. Dúvidas gerais'),r.done],['Oi Ana!',true,false],'engine start');
  await b.say('financeiro');eq(b.out.at(-1).includes('CPF ou CNPJ'),true,'pede doc');
  await b.say('123');eq(b.out.at(-1).includes('inválido'),true,'doc inválido');
- await b.say('529.982.247-25');const sum=b.out.at(-2);eq([sum.includes('Ma*** Fe****** Ló***'),sum.includes('Pessoa Física'),sum.includes('***.982.247-**'),sum.includes('vencido'),sum.includes('10/01/2020'),sum.includes('R$ 150,00')],[true,true,true,true,true,true],'débitos mascarados');
+ await b.say('529.982.247-25');const sum=b.out.at(-2);eq([sum.includes('Maria Fernanda López'),sum.includes('Pessoa Física'),sum.includes('***.982.247-**'),sum.includes('Vencido'),sum.includes('10/01/2020'),sum.includes('R$ 150,00')],[true,true,true,true,true,true],'nome completo e documento mascarado');
  eq(b.out.at(-1),'Qual débito deseja pagar? Responda com o número.','pergunta débito');
  await b.say('1');eq(b.out.at(-1).includes('3. Pix copia e cola'),true,'formas');
  await b.say('3');eq(b.out.slice(-4,-2),['💳 R$ 150,00 — venc. 10/01/2020\nPix copia e cola (toque e segure para copiar):','00020126PIX'],'pix');
@@ -60,6 +60,7 @@ const G=(nodes,edges)=>({nodes:nodes.map(([id,type,data])=>({id,type,data:data||
  const d=mk(g);await d.say(null);await d.say('2');await d.say('1');await d.say('3');eq(d.out.at(-1).includes('Subtotal: R$ 21,00'),true,'sem variantes');await d.say('2');await d.say('1');await d.say('1');eq(d.out.at(-1).includes('mínimo para Centro é R$ 30,00'),true,'pedido mínimo');
 }
 await import('./financial-identity.mjs');
+await import('./automation-experience.mjs');
 await import('./product.mjs');
 await import('./tracking.mjs');
 await import('./realtime.mjs');

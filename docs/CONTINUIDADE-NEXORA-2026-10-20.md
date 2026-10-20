@@ -1,0 +1,205 @@
+# Néxora Suite — registro de continuidade
+
+Atualizado em 20/10/2026. Documento técnico e de produto para retomar o trabalho sem depender do histórico do chat. Leia também `docs/PROMPT-MESTRE.md`, `docs/PROCESSO-ATENDIMENTO.md`, `docs/ATENDIMENTO-CRM-OPERACAO.md`, `docs/INTEGRACOES-GUIADAS.md` e `docs/RASTREAMENTO-VEICULAR.md`. Havendo divergência, confronte os requisitos abaixo com o código e com o comportamento real. Este registro não substitui uma homologação em produção.
+
+## 1. Projeto, publicação e decisões de negócio
+
+- Repositório correto: https://github.com/franceliopro/Nexora. Não usar Nexora2.
+- Aplicação informada pelo usuário: https://nexora.effe.site/. Painel master: `/platform.html`. Atendimento: `/#inbox`; integrações: `/#integrations`; CRM: `/#pipeline`.
+- O usuário autorizou commits incrementais em `main`; seu Dokploy/Aiodeploy acompanha as alterações. Commit publicado não comprova que o novo contêiner está saudável.
+- Nesta sessão, a pasta local `Nexora` não possui checkout Git. A publicação foi feita pela API do GitHub: ler HEAD, criar árvore baseada na árvore atual, criar commit filho e atualizar a referência com `expected_sha`. Nunca sobrescrever mudanças concorrentes.
+- A Néxora é vendida ao cliente final: empresas, clínicas, escritórios etc. Não é plataforma de revenda para os clientes. Personalização de marca/domínio por empresa não concede poder de revenda.
+- O dono da plataforma é master; somente ele e poderes equivalentes ativam módulos e fazem a gestão central de redes sociais. Administrador de uma empresa não é superadministrador da plataforma.
+- O provedor social gerenciado não deve aparecer para a empresa contratante. A conta central e o custo são administrados pelo dono da Néxora. O cliente vê Instagram, Messenger e suas inboxes, sem a marca Zernio ou sua chave.
+- Cada empresa usa suas próprias credenciais financeiras e suas próprias autorizações Google. Não colocar segredos em código, documentação, capturas ou respostas de API ao navegador.
+
+### Organização do produto
+
+Os onze pontos são uma sequência de organização e implantação, não onze produtos independentes ou telas de segmentos:
+
+1. Central de Atendimento
+2. CRM
+3. Inteligência e Rastreamento de Leads
+4. Agentes de IA
+5. Chatbots
+6. Campanhas
+7. Sequências
+8. Mensagens Agendadas
+9. Integração e API
+10. Pagamentos
+11. Personalização para cada Cliente
+
+Prioridade: estabilizar atendimento e CRM, validar conversas reais e financeiro, depois aprofundar bots/IA e inteligência de leads. Segmentos viraram templates de configuração. Não entregar telas vazias de segmentos como se fossem ERPs completos.
+
+## 2. Requisitos e preferências do usuário
+
+Interface em português, simples, fluida, limpa, responsiva, utilizável no celular, com cantos arredondados, cores sutis, claro/escuro e identidade própria. HelenaCRM é referência funcional, sem copiar sua marca. As imagens enviadas são referências; as duas últimas mostram colunas arredondadas e uma coluna destacada ao receber um card.
+
+Logo da empresa no topo com acesso ao atendimento. Logotipo claro, logotipo escuro e favicon são arquivos distintos. Rodapé Néxora Suite by EFFE. Marca, fontes e cor por empresa. Ajuda contextual deve explicar o que é, para que serve e como usar cada recurso, sem despejar termos técnicos no atendimento.
+
+Na fila: Meus selecionado ao abrir; Novos/Meus/Outros com contagens; concluídos como ícone; arquivados/lixeira/todos em lista nos três pontos. Filtro junto à busca, em lista flutuante leve, não modal grande. Não repor botões de Agenda/Inboxes/Passo a passo na barra lateral da fila.
+
+Conversa: protocolo, origem reconhecível, responsável, etiquetas visíveis; atribuir e convidar perto de concluir. Ficha do cliente à direita aberta por padrão, recolhível, com etiquetas, campos e nota pessoal. Compositor estável durante novas mensagens. Agenda, arquivos, cobranças, CRM e respostas rápidas acessíveis sem perder a conversa. Detalhes internos de driver/IDs não devem poluir a ficha.
+
+## 3. Arquitetura real e isolamento
+
+Node ESM, Express, PostgreSQL, WebSocket e JavaScript/CSS no navegador; não há build de frontend. Docker inicia `src/server.js`. Dependências principais em `package.json`. `web/index.html` é a casca; scripts posteriores substituem partes antigas de interface. Antes de editar uma função, buscar a última definição carregada, especialmente `conversationCRM` em `web/conversation-inline.js` e as views em `web/organization.js`.
+
+O banco atual é PostgreSQL compartilhado com `tenant_id`, RLS e contexto AsyncLocalStorage, não um banco físico separado por empresa. A ideia original de banco independente por cliente não foi entregue. Não prometer MySQL/MariaDB ou isolamento físico de bancos sem implementar um provisionador específico.
+
+- `src/db.js`: pools administrativo e da aplicação; `q` aplica contexto de empresa/ator; `tenantTransaction` mantém operação atômica. Tabelas de provedores centrais são revogadas para a role da aplicação.
+- `src/ctx.js`: contexto, assinaturas de URLs e endereço público.
+- `src/server.js`: APIs, autenticação, estáticos, callbacks, migrações, WebSocket e tarefas periódicas.
+- `src/conversation-policy.js`: visibilidade e controle das conversas.
+- `src/governance.js`: permissões operacionais e normalização de papéis.
+- `src/conversation-actions.js`: assumir, atribuir, convidar e modos de automação.
+- `src/core.js`: recepção, deduplicação, contato/conversa, bot/IA e entrega de mensagens.
+
+Agentes não devem acessar conversas de colegas sem convite, participação de equipe autorizada ou supervisão explícita. Atribuir troca a responsabilidade; convidar compartilha sem remover o responsável. Assumir pausa automações e incrementa `automation_epoch`, usado para recusar respostas atrasadas. Não remover essas verificações para facilitar um teste.
+
+## 4. Atendimento implementado
+
+Filas, filtros e contagens com regras compartilhadas; busca por contato, mensagem e protocolo; governança; convite individual/equipe; transferência; conversa humana, bot, IA e híbrida; mensagens e anexos; notas internas; respostas rápidas; ficha/histórico/etiquetas/campos; agenda e Drive no fluxo; cobranças; conclusão com resultado e motivo; relatórios de atendimento.
+
+`web/attendance.js` mantém compositor, foco, cursor, rascunhos e gravação estáveis nas atualizações. Não substituir toda a tela a cada evento. Reconexão WebSocket usa espera progressiva. Testes simulados não mostraram F5 periódico; um loop real exige analisar logs de contêiner, sessão e rede.
+
+`src/service-routing.js`: filas compartilhadas/sequenciais/equilibradas, carteira e transbordo. O ciclo é de 30 segundos; considera usuários ativos elegíveis, não presença online precisa. Não rouba uma atribuição humana manual. Evita repetir indefinidamente os mesmos agentes; ao esgotar possibilidades deixa a conversa na fila. Equipes privadas/escopos dependem de governança e participação correta.
+
+### Protocolo
+
+`src/service-protocol.js` e migração 016: número próprio no formato NX-ANO-EMPRESA-ID, imutável, visível e copiável; tentativa de aviso ao cliente na primeira entrada. Estados de entrega distinguem pendente, enviando, enviado e necessidade de conferência. Não repetir cegamente após falha ambígua. Conversas antigas recebem número sem disparo em massa.
+
+### Identificação de bot/IA e origem
+
+Ícones coloridos da rede no atendimento e nas inboxes: WhatsApp verde, Instagram em gradiente, Messenger azul, Telegram e X. Bot e IA são indicadores separados da origem da mensagem. Um bot não deve ser apresentado como uma rede.
+
+A migração 017 adiciona `messages.executor` para distinguir novas mensagens de bot, IA, sistema e humano. Historicamente `ai=true` também marcava mensagens de bot/protocolo, então o rótulo anterior “Agente IA” não comprovava o executor. Não inventar uma classificação retroativa: mensagens antigas sem executor ficam como “Automação”.
+
+## 5. CRM implementado e ajustes atuais
+
+`src/crm.js` e `web/crm.js`: painéis, etapas personalizadas, drag and drop, alternativa por toque, Kanban/Lista/Agenda/Relatório, etiquetas, campos, responsável, busca avançada, oportunidades vinculadas a contato e conversa, histórico/notas, contagem de mensagens não lidas e acesso às conversas respeitando permissões.
+
+Conclusão exige ganho/perda; perda tem motivo administrável. Cards concluídos saem do Kanban e permanecem em outras visões. Reabertura recupera etapa anterior. Inatividade configurável gera perda com motivo próprio. Duplicar copia configuração sem clientes. Exclusões têm destino, confirmação externa e auditoria. Relatórios administrativos incluem resultados, valores, conversão, ciclos, etapas e motivos. Há versionamento otimista para evitar sobrescrita simultânea e comemoração visual/sonora configurável.
+
+Correções de 20/10:
+
+- Lista de cards traz também etiquetas do contato; o Kanban une etiquetas do contato e da oportunidade sem duplicar. Filtro de etiqueta considera ambas.
+- Painéis vêm em ordem de criação decrescente por ID; abertura direta do CRM seleciona o mais recente acessível.
+- “Kanban da conversa” abre o painel vinculado à conversa, priorizando oportunidade aberta daquela conversa. Sem vínculo, oferece criação/integração; múltiplas oportunidades continuam acessíveis no gerenciador.
+- Cards ganham foto/iniciais, título na cor da marca ao passar o mouse/foco, colunas arredondadas e destaque de fundo/brilho na coluna que recebe o arraste. Respeita preferência por menos movimento.
+
+O CRM não deve concluir uma venda só porque uma cobrança foi enviada. Fechamento de atendimento e ganho/perda de oportunidade continuam conceitos diferentes.
+
+## 6. Inboxes e conexões
+
+`src/integrations.js`, `src/managed-social.js`, `web/integrations.js`, `web/inboxes.js` e painel master. Inboxes têm nome, conta/sessão, conexão consultada e última mensagem recebida. Conectado não prova recepção de webhook nem envio de resposta: essas etapas precisam ser verificadas separadamente.
+
+Baileys mantém sessão em volume persistente, QR, conta e estado; WAHA usa serviço externo; Meta oficial usa credenciais/permissões e webhook; Zernio utiliza conta central criptografada, reserva de conta por empresa e ativação no master. O perfil Instagram informado pelo usuário é @franceliopro, mas o estado atual dessa conta não foi consultado com acesso autenticado nesta etapa.
+
+Exclusão de inbox é remoção operacional com preservação de histórico; confirmação pelo nome, opção copiar, restauração e testes de API existem. Não apagar mensagens/conversas para “corrigir” uma inbox. Não conectar a mesma sessão Baileys simultaneamente em várias réplicas.
+
+A rota de vínculos de inbox existia em `src/inbox-routing.js`, mas não estava montada no servidor. Foi montada nesta etapa. Em Integrações, administradores têm **Bot, IA e CRM**: bot de entrada, IA de fallback, painéis vinculados e criação automática de oportunidade. Isso torna a configuração acessível e mantém as verificações de empresa e recursos ativos. Fluxos existentes nos vínculos são preservados.
+
+### Fotos dos contatos
+
+`src/contact-profile.js`: valida URL HTTPS sem credenciais e guarda URL/data de consulta por 24 horas. Não baixa URLs arbitrárias no servidor. O navegador usa imagem com fallback de iniciais e sem envio de referrer. Campos ficam em `contacts.data.avatar_url` e `avatar_checked_at`.
+
+Baileys usa `profilePictureUrl`; WAHA usa API de foto de contato; Meta Instagram/Messenger consulta `profile_pic`. A API oficial WhatsApp não é tratada como fonte universal de foto de consumidores. Dados recebidos de redes gerenciadas podem trazer imagem; o adaptador também tenta metadados de participante da conversa. A documentação pública de conversa Zernio não garante um campo de avatar para todos os canais: imagem ausente/permissão negada/URL expirada é limitação real, não deve bloquear a conversa. Homologar com cada inbox; não afirmar cobertura completa sem ver resposta real. Fotos aparecem na lista, cabeçalho, ficha e cards quando disponíveis.
+
+## 7. Financeiro e o problema do CPF como telefone
+
+O usuário relatou que Instagram e WhatsApp já consumiram Asaas em seus testes. Isso é relato de produção, não execução autenticada do agente nesta sessão. Foi identificado um caminho incorreto: o identificador de rede do contato era disponibilizado ao bot como telefone. Também havia possibilidade de a IA responder sem uma consulta executada.
+
+`src/financial-identity.js` agora diferencia documento, telefone real de WhatsApp e ID social. A IA recebe regra contra inventar telefone/cobrança/resultado; um filtro impede ecoar o CPF como número de ligação. Sem o histórico exato não é possível provar como a resposta estranha original foi gerada.
+
+**CPF isolado não comprova identidade.** Na consulta automatizada com verificação telefônica, WhatsApp precisa corresponder ao cadastro Asaas. Instagram/Messenger não fornecem automaticamente telefone verificado: encaminhar para conferência humana na mesma conversa, sem sugerir ligação para um número derivado de documento/ID. O atendente pode confirmar identidade e usar o botão Cobranças. Falta implementar OTP ou vínculo comprovado para divulgação financeira autônoma nesses canais. Não remover a proteção para fazer uma demonstração parecer funcionar.
+
+`src/payments.js`: clientes por CPF/CNPJ, débitos pendentes/vencidos, configuração por plataforma, links/linha digitável/Pix/fatura. `src/financial.js`: configuração/status/validação, consulta confirmada por operador, token temporário limitado à empresa/usuário/conversa, resumo e envio idempotente, criação de cobrança e Stripe Checkout. `src/financial-provider.js`: requisições, mensagens e autenticação de webhook. `src/payment-status.js`: confirmação vinculada à origem, ambiente e pagamento, sem duplicar eventos.
+
+`src/debt-presentation.js`: apresentação determinística, nome completo sem máscara conforme pedido, tipo de pessoa, documento mascarado, valor/vencimento/status e descrição separados por blocos, total. Mensagens extensas são divididas para não exceder limites usuais. Fluxo do bot permite selecionar débito e meio, e inclui fatura completa, sem duplicá-la quando já foi escolhida. Fatura não disponível exige encaminhamento; nunca inventar URL/código.
+
+Asaas tem Sandbox/Produção explícitos, teste de credencial com feedback e dados do webhook na tela. Cada empresa configura sua chave. Sandbox não quita dívida real. Stripe usa chave e webhook de teste/produção; Stripe Connect OAuth não foi implementado. Não há contabilidade completa de estornos/chargebacks.
+
+## 8. Bot primeiro, IA como alternativa e encerramento
+
+Em **Integrações → inbox → Bot, IA e CRM**, escolher bot de entrada e IA. Ativar os recursos e configurar modelos/credenciais antes de testar. O bot precisa estar ativo e aplicável ao canal. A IA precisa estar ativa e selecionada ou habilitada nesse canal.
+
+No editor do bot, bloco **Pedir para escolher → Texto fora das opções ou áudio → Transferir para IA com o histórico**:
+
+- opção reconhecida (número ou texto de opção) continua no bot;
+- texto fora das opções ou áudio transfere à IA se houver agente elegível;
+- leitura de áudio precisa de STT configurado na IA;
+- CPF, seleção de débito e meio de pagamento continuam determinísticos no fluxo financeiro; não são entregues ao modelo só por serem números;
+- sem IA elegível, o fluxo conserva sua validação/repetição;
+- execução transferida deixa de ficar ativa; próximas mensagens continuam na IA, sem bot responder junto;
+- humano que assumir pausa tudo; não retomar automaticamente.
+
+Novos templates de rastreamento incluem fallback nas escolhas. **Templates já instalados são preservados**: editar seus blocos existentes para habilitar o recurso, não reinstalar apagando configurações. Templates de produto são criados em rascunho/inativos; não significam operação já autorizada na conta real.
+
+Novo bloco **Concluir atendimento** define despedida, motivo e resultado. Na IA, a ação `close` deve estar explicitamente na lista de ações permitidas. A instrução limita encerramento a resolução/solicitação do cliente; não encerra por mera emissão de cobrança. `src/automation-close.js` usa transação, bloqueio de linha e epoch, recusa conversa humana/atribuída, encerra execuções/tarefas e registra evento de conclusão com executor. Não marca CRM como ganho automaticamente. Nós antigos “Fim” continuam apenas terminando o fluxo, salvo configuração explícita; trocar pelo novo bloco quando o objetivo for concluir o atendimento.
+
+## 9. Template de rastreamento veicular
+
+Ceeb Vision, Link e Rastreabem. Cada uma tem Suporte e Financeiro; Comercial e Administrativo são gerais: oito equipes. São nomes de filas, não integrações reais de telemetria com essas plataformas.
+
+Triagem: saudação conforme fuso da empresa → setor → plataforma para Suporte/Financeiro → pagamento/atendente → documento/consulta/meios/fatura ou equipe exata. IA também pode fazer triagem e invocar fluxo financeiro seguro. Configurar fuso **America/Cuiaba** para o cliente citado, não inferir pelo servidor. Suporte humano pausa automação e mantém contexto.
+
+## 10. Agenda, Drive e relatórios
+
+Master configura uma vez aplicativo OAuth Google, credenciais e callbacks; a empresa/usuário autoriza no painel. `src/google-oauth-config.js` mantém credenciais centrais criptografadas e fallback de ambiente. Configuração inicial no Google Cloud ainda é necessária; autorização não elimina registro do aplicativo e publicação/verificação exigidas pelo Google.
+
+Agendas pessoais ou compartilhadas, responsáveis, conflitos, agendamento e confirmação na conversa, lembretes configurados explicitamente. Integração atual publica eventos/consulta disponibilidade, não sincroniza toda a agenda externa em duas vias. Apple oferece arquivo ICS, não integração CalDAV/OAuth completa. Drive por usuário, leitura de arquivos/pastas e preparação de anexos com limite de 20 MB, sem dar acesso ao Drive de outra pessoa.
+
+Relatórios incluem primeira resposta, tempos de atendimento/ciclo, volumes e resultados por equipe/agente, motivos; permissões administrativas. Confirmar com dados reais se os indicadores atendem a operação. Lembretes não devem disparar repetidamente ou por inbox pausada.
+
+## 11. Incidente de implantação e prevenção
+
+Houve erro 404 causado por processo Node que não subia: `ERR_MODULE_NOT_FOUND` em `src/inbox-routing.js`, importado por `src/core.js`. O arquivo existia localmente, mas não havia sido publicado. Commit corretivo **35c6d1e414ee297ac4a8886f7fd0d3a83ccdd4e8** adicionou o módulo e verificação de imports no teste/build Docker. Reconhecido como falha de entrega, não problema do usuário.
+
+`npm test` e Dockerfile executam `scripts/check-imports.mjs`. Ao publicar via API, incluir TODOS os novos módulos, migrações, testes e assets. Validar árvore proposta, não apenas pasta local. Checar logs do novo contêiner antes de declarar produção recuperada. Manter `JWT_SECRET`, `PUBLIC_URL`, credenciais e volumes persistentes; trocar JWT_SECRET pode invalidar autorizações/segredos criptografados. Não resetar banco nem remover volumes para corrigir um build.
+
+Implantação e backup estão no README, docker-compose e scripts. Revisar diferenças entre Docker Compose e Swarm antes de aplicar; não presumir que uma instalação Portainer existente foi validada. A sessão atual não teve acesso ao Dokploy nem prova de saúde externa após cada commit.
+
+## 12. Validação executada nesta etapa
+
+1. `npm test`: imports e contratos puros/simulados, documento/telefone, fallback bot/IA, apresentação financeira, encerramento, avatars/cache, templates, fuso, reconexão, drivers e assinatura/isolamento.
+2. `test/service-crm-postgres.mjs`: todas as migrações em PostgreSQL/WASM, RLS, governança, assumir/convidar/atribuir, CRM, encerramento/reabertura/inatividade, auditoria, confirmação externa simulada; acrescentado fechamento automático auditado e bloqueio após intervenção humana; ordem de painéis decrescente.
+3. `test/financial-reminders-postgres.mjs`: financeiro, idempotência e lembretes com provedores simulados.
+4. `test/attendance-browser.mjs`: Chromium desktop/celular com APIs simuladas, fila/filtro, ausência de F5, rascunho/foco/compositor, inboxes, etiquetas do contato no card, origem colorida, avatar de fixture e coluna receptora no arraste.
+5. Entrada real `src/server.js` iniciada localmente com pool de banco adaptado para PostgreSQL/WASM: `/` e `/platform.html` retornaram 200. Isso valida carregamento e migrações locais, não o contêiner de produção nem login real.
+
+Para repetir, instalar ferramentas de teste fora das dependências de produção e informar os caminhos:
+
+```sh
+npm test
+PGLITE_MODULE=/caminho/pglite/dist/index.js PGLITE_VECTOR_MODULE=/caminho/pglite-pgvector/dist/index.js node test/service-crm-postgres.mjs
+PGLITE_MODULE=/caminho/pglite/dist/index.js PGLITE_VECTOR_MODULE=/caminho/pglite-pgvector/dist/index.js node test/financial-reminders-postgres.mjs
+PLAYWRIGHT_MODULE=/caminho/playwright/index.mjs CHROMIUM_EXECUTABLE=/caminho/chromium node test/attendance-browser.mjs
+```
+
+Capturas e runtimes em `/tmp` são transitórios. O código/testes/documentação publicados no repositório são a referência durável. Nunca substituir a homologação com redes reais por mocks e chamar de integração aprovada.
+
+## 13. Próximas validações e pendências
+
+- Confirmar build/saúde do deploy e migração 017; testar usuário real, não apenas página estática.
+- Master: confirmar inbox Instagram da empresa, webhook ativo e última entrada; enviar uma DM externa, responder e conferir entrega. Repetir WhatsApp. Usuário relatou sucesso Asaas em ambos, mas precisa homologar novo fluxo Bot → IA e seu modo/configuração.
+- Configurar fallback nos blocos do bot já instalado, IA elegível e STT para áudio; escolher o bot/IA na inbox. Testar 1/2/3 sem resposta duplicada, texto fora das opções, áudio, assumir humano durante processamento e encerramento.
+- Testar foto real por provider; investigar payload/escopos quando Zernio não entregar imagem. Não obter fotos raspando perfis privados.
+- Asaas Sandbox: CPF válido de titular confirmado, nome completo e documento mascarado, vários débitos/vencidos, descrição/valores, quatro meios com fatura, pagamento confirmado por webhook e erro de chave/ambiente. Instagram autônomo precisa de identidade verificável/OTP antes de divulgar débitos.
+- Homologar vínculos de inbox/painel e criação automática com RLS, etiquetas e avisos de não lidas.
+- Checar OAuth Google real, callbacks, renovação, agendas e Drive com contas de empresas diferentes.
+- Depois avançar inteligência/rastreamento de leads, bot e IA. Campanhas/ERP/e-commerce/Meta Ads/setores verticais completos não devem ser considerados prontos por haver menus ou estruturas iniciais.
+- Limitações adicionais: presença online precisa, sincronização externa de agenda em duas vias, Apple nativo, app personalizado nativo, sticker/GIF completo e bancos físicos por empresa continuam fora do que foi comprovado.
+
+## 14. Fontes consultadas para a implementação atual
+
+- https://docs.zernio.com/webhooks/inbox
+- https://docs.zernio.com/messages/get-inbox-conversation
+- https://waha.devlike.pro/docs/how-to/contacts/
+- https://developers.facebook.com/documentation/business-messaging/instagram-messaging/features/user-profile
+- https://developers.facebook.com/documentation/business-messaging/messenger-platform/identity/user-profile
+- API `profilePictureUrl` conferida também no pacote Baileys instalado.
+
+## 15. Prompt curto de retomada
+
+> Trabalhe em franceliopro/Nexora, nunca Nexora2. Leia este documento e o código atual. Priorize atendimento/CRM e homologação real antes de ampliar módulos. O dono autoriza commits incrementais em main com autodeploy; preserve alterações concorrentes. Não exponha o provedor social central aos clientes. Atribuir e convidar são ações diferentes; humano pausa bot/IA. CPF não é telefone nem comprovação de identidade. Não repita segredos do chat. Inspecione HEAD e todos os imports/migrações antes de publicar. Informe com precisão o que passou em teste simulado e o que foi validado ao vivo. Não apague banco, histórico ou sessões para contornar problemas. Continue a partir das pendências, sem reconstruir a aplicação do zero.

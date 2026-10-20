@@ -1,4 +1,5 @@
 // Motor de fluxos (tipo Typebot). Puro: recebe o grafo, o estado da execução e "deps" (efeitos). Testável sem banco.
+import {debtSummary,financialChunks} from '../debt-presentation.js';
 import {matchOpt,evalRules,tpl,maskName,maskDoc,personType,money,fdate,digits,validDoc,norm} from '../lib.js';
 const lst=(a,f)=>a.map((x,i)=>`${i+1}. ${f(x)}`).join('\n');
 const nextOf=(g,id,out='next')=>(g.edges||[]).find(e=>e.from===id&&e.out===out)?.to;
@@ -29,7 +30,8 @@ async function onEnter(n,run,deps,ctx){const d=n.data||{},V=run.vars;
   case 'http':{const r=await deps.http(d,ctx);if(d.var)V[d.var]=r.ok?r.data:null;return {out:r.ok?'ok':'error'}}
   case 'asaas':return asaas(n,run,deps,null,true);
   case 'order':return order(run,deps,null,true);
-  case 'end':return {end:1};
+  case 'close':await deps.close({reason:d.reason||'Fluxo de atendimento concluído',outcome:d.outcome||'resolved',text:d.text});return {end:1};
+  case 'end':if(d.close)await deps.close({reason:d.reason||'Fluxo concluído',outcome:'resolved'});return {end:1};
   default:return {}}}
 
 async function onInput(n,input,run,deps,ctx){const d=n.data||{},V=run.vars,t=String(input??'').trim();
@@ -52,7 +54,7 @@ async function asaas(n,run,deps,t,enter){const d=n.data||{},V=run.vars,A=V._a??=
   if(!r.debts.length){await deps.send(`Não encontramos débitos em aberto para ${personType(doc)} ${maskDoc(doc)}. ✅`);return {out:'none'}}
   A.debts=r.debts;A.name=r.name;
   const tot=r.debts.reduce((a,x)=>a+ +x.value,0);
-  await deps.send(`Encontrei ${r.debts.length} débito(s) para *${maskName(r.name)}* (${personType(doc)} · ${maskDoc(doc)}):\n\n${lst(r.debts,x=>`${money(x.value)} — venc. ${fdate(x.dueDate)} (${stTxt(x,today)})${x.description?'\n   '+String(x.description).slice(0,60):''}`)}\n\nTotal: ${money(tot)}`);
+  for(const chunk of financialChunks(debtSummary(r,doc,today)))await deps.send(chunk);
   if(r.debts.length===1){A.sel=0;return askMethod()}
   A.step='pick';await deps.send('Qual débito deseja pagar? Responda com o número.');return {stay:1}};
  const askMethod=async()=>{A.step='method';await deps.send(`Como prefere pagar?\n\n${lst(METHODS,x=>x)}`);return {stay:1}};
@@ -111,3 +113,6 @@ async function order(run,deps,t,enter){const V=run.vars,M=await deps.menu(),cats
  return {out:'error'};
  async function payStep(){O.step='pay';await say(`Forma de pagamento?\n\n${lst(M.pay_methods,x=>x)}`);return stay}}
 
+
+// Only choice blocks opt into AI; input, CPF and payment selection remain deterministic.
+export function shouldUseAI(node,msg){return node?.type==='choice'&&node.data?.aiFallback==='on'&&(msg.kind==='audio'||!!msg.body&&matchOpt(node.data.options||[],String(msg.body).trim())<0)}

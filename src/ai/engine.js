@@ -1,3 +1,5 @@
+import {closeAutomated} from '../automation-close.js';
+import {bus} from '../bus.js';
 import {guardDocumentReply} from '../financial-identity.js';
 import {moveCRMFromConversation} from '../crm.js';
 import {companyTimeZone} from '../timezone.js';
@@ -40,6 +42,7 @@ Atendentes humanos: ${JSON.stringify(us.rows)}
 ${extra}
 Responda SOMENTE JSON: {"reply":"texto curto","actions":[{"t":"move_stage","stage":"nome"},{"t":"handoff","user_id":N,"why":""},{"t":"invite","user_id":N},{"t":"book","title":"","start":"ISO","minutes":30},{"t":"set","k":"campo","v":"valor"}]}
 Para rastreamento veicular, use {"t":"tracking_triage","sector":"suporte|financeiro|comercial|administrativo","platform":"ceeb_vision|link|rastreabem","payment":true|false}. Só use depois de coletar os dados necessários. Para pagamento, o fluxo seguro solicitará documento e verificará o telefone.
+Para concluir, somente se close estiver permitido e o cliente indicar que foi resolvido ou pedir encerramento, use {"t":"close","reason":"motivo objetivo","outcome":"resolved|question|other"}. Nunca conclua só porque enviou uma cobrança; envio não significa pagamento.
 Ações permitidas: ${(ag.tools||[]).join(',')}. Só use ações quando fizer sentido. Atualize a ficha (set) quando descobrir dados do cliente.`;
  const crm=(ag.tools||[]).includes('crm_move')?(await q("select c.id,c.title,c.board_id,s.id stage_id,s.name stage_name,s.final from crm_cards c join crm_stages s on s.board_id=c.board_id where c.conversation_id=$1 and c.status='open'",[cv.id])).rows:[];
  const crmContext='CRM desta conversa: '+JSON.stringify(crm)+'. Se crm_move for permitido, use {t: \"crm_move\", card_id:N, stage_id:N} somente para etapas intermediárias; encerramento exige humano.';
@@ -47,6 +50,7 @@ Ações permitidas: ${(ag.tools||[]).join(',')}. Só use ações quando fizer se
  out.reply=guardDocumentReply(out.reply||'',lastU.split(/\r?\n/).at(-1)||'');let retry='';
  for(const a of out.actions||[]){const current=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(current)||current.automation_epoch!==cv.automation_epoch)return;if(!(ag.tools||[]).includes(a.t))continue;
   try{
+   if(a.t==='close'){if(out.reply)await deliver(cv.id,{body:out.reply,ai:true,epoch:cv.automation_epoch});const closed=await tenantTransaction(cv.tenant_id,query=>closeAutomated(query,cv,{reason:a.reason,outcome:a.outcome||'resolved',executor:'ai'}));if(closed)bus('conv',{id:cv.id});out.reply=null;break}
    if(a.t==='crm_move'){const bid=await tenantTransaction(cv.tenant_id,query=>moveCRMFromConversation(query,cv,a));(await import('../bus.js')).bus('crm',{board_id:bid})}
    if(a.t==='move_stage'){const s=st.rows.find(x=>x.name.toLowerCase()===String(a.stage).toLowerCase());if(s)await setStage(cv.id,s.id)}
    if(a.t==='tracking_triage'){const result=await routeTracking(q,cv,a,text=>deliver(cv.id,{body:text,ai:true,epoch:cv.automation_epoch}));if(result==='bot'){await (await import('../bots/runtime.js')).handle({...cv,automation_mode:'bot',ai_on:false},{body:'iniciar'},false)}out.reply=null;break}

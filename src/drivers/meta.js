@@ -2,9 +2,9 @@
 import crypto from 'node:crypto';
 import {saveMedia,readMedia,mediaType} from '../media.js';
 export const graphBase=c=>`https://${c.config.platform==='instagram'&&c.config.login==='instagram'?'graph.instagram.com':'graph.facebook.com'}/${c.config.version||'v26.0'}`;
-export async function graph(c,path,{method='GET',body}={}){
+export async function graph(c,path,{method='GET',body,timeout=25000}={}){
  const headers={authorization:'Bearer '+c.config.token};if(body&&!(body instanceof FormData))headers['content-type']='application/json';
- const r=await fetch(graphBase(c)+'/'+path,{method,headers,body:body instanceof FormData?body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(25000)});const j=await r.json();
+ const r=await fetch(graphBase(c)+'/'+path,{method,headers,body:body instanceof FormData?body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(timeout)});const j=await r.json();
  if(!r.ok||j.error)throw Error('Meta recusou a operação ('+r.status+', código '+(j.error?.code||'indisponível')+'). Confira token, permissões e janela de atendimento.');return j;
 }
 export function verify(c,raw,headers){const sig=String(headers['x-hub-signature-256']||'');if(!c.config.app_secret||!raw||!/^sha256=[a-f0-9]{64}$/.test(sig))return false;return crypto.timingSafeEqual(Buffer.from(sig.slice(7),'hex'),crypto.createHmac('sha256',c.config.app_secret).update(raw).digest())}
@@ -22,3 +22,4 @@ export async function send(c,{to,kind='text',body,file,filename}){const cfg=c.co
 export async function connect(c){return graph(c,encodeURIComponent(c.config.account_id)+'?fields=id')}
 export async function subscribe(c){if(c.config.platform==='whatsapp')throw Error('Na Meta, assine o campo messages do WhatsApp Business Account no aplicativo.');return graph(c,encodeURIComponent(c.config.account_id)+'/subscribed_apps',{method:'POST',body:{subscribed_fields:'messages,messaging_postbacks'}})}
 export const qr=async()=>null;
+export async function profile(c,contact){if(c.config.platform==='whatsapp')return {};const p=await graph(c,encodeURIComponent(contact.handle)+'?fields=name,profile_pic',{timeout:5000});return {avatar:p.profile_pic}}
