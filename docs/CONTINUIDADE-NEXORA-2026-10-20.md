@@ -368,3 +368,9 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Cada salvamento reaproveita o mesmo ID, sem duplicar agente. Documentos/URLs são importados pela fila existente, que remove somente itens confirmados; se a base falhar após salvar configuração, informa Dados do agente salvos / Base pendente e mantém os itens restantes para tentar depois.
 - Trocar agente humano continua usando nome conhecido e equipe atuais: apresentação na assunção e prefixo nas próximas mensagens manuais; não altera mensagens históricas nem cabeçalho nativo dos aplicativos externos.
 - Testes: criação parcial sem chave/canal, manutenção do diálogo e reaproveitamento via PUT no navegador, validação de ativação incompleta e suíte anterior. Deploy e envio real continuam sujeitos a teste com as contas conectadas.
+
+## 31. Organização do cadastro de usuários
+
+- Foto e assinatura imediatamente depois de Perfil.
+- Equipes/setores do usuário, Equipes em Outros e Canais permitidos em três molduras lado a lado no PC, com legendas e explicações independentes. No celular, uma moldura por linha. Listas longas têm rolagem interna; vínculos e permissões preservados.
+- Verificação de sintaxe e regressão no navegador desktop/mobile.

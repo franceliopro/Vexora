@@ -89,3 +89,6 @@
 }
 .team-member-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(100px,180px);align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--line,#e8eaf0)}
 .team-member-row .nx-check{margin:0}.team-member-row>div{min-width:0}.team-member-row input[type=number]{width:100%;margin:4px 0 0}.team-member-row label{font-size:12px}
+
+.user-access-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:20px 0;align-items:stretch}.user-access-group{min-width:0;margin:0;padding:14px;border:1px solid var(--ln,#e6e8ef);border-radius:14px;max-height:330px;overflow:auto}.user-access-group legend{font-size:13px;font-weight:600;padding:0 6px;color:var(--tx)}.user-access-group>.mu{font-size:12px;line-height:1.45;margin:0 0 12px}.user-access-group .nx-check{align-items:flex-start;line-height:1.5;overflow-wrap:anywhere;margin:8px 0}
+@media(max-width:760px){.user-access-groups{grid-template-columns:1fr}.user-access-group{max-height:260px}}
