@@ -1,3 +1,4 @@
+import {companyDayVariables,renderDayVariables} from './day-period.js';
 import {deferBotEntry} from './bots/initial-delay.js';
 import {clientAgentHeading} from './user-identity.js';
 import {serviceEntry} from './service-entry.js';
@@ -24,7 +25,7 @@ export async function inbound(chId,m){
   await query('update jobs set done=true where conversation_id=$1 and not done and stop_on_reply',[cv.id]);
   const msg=(await query("insert into messages(conversation_id,dir,kind,body,media_url,ext_id,filename) values($1,'in',$2,$3,$4,$5,$6) returning *",[cv.id,m.kind||'text',m.body||null,m.file?'/media/'+m.file:null,m.ext_id||null,m.filename||null])).rows[0];
   const boards=fresh?await routingCard(query,cv,ch):[];cv=(await query('update conversations set unread=unread+1,last_at=now(),last_in_at=now() where id=$1 returning *',[cv.id])).rows[0];return {cv,msg,fresh,boards,ch,ct};
- });if(!saved)return;return processInbound(saved,{source:m});
+ });if(!saved)return;bus('conv',{id:saved.cv.id});return processInbound(saved,{source:m});
 }
 export async function processInbound(saved,{scheduled=false,source={}}={}){return withConversationLock(saved.cv.id,async()=>{let {msg,fresh}=saved;let cv=(await q('select * from conversations where id=$1',[saved.cv.id])).rows[0];
  refreshContactProfile(q,saved.ch,saved.ct,D,source).then(()=>bus('conv',{id:cv.id})).catch(()=>{});
@@ -42,6 +43,7 @@ export async function deliver(cid,{kind='text',body,file,filename,author_id,ai=f
  const cv=(await q('select c.*,ct.handle,ct.data contact_data,ch.driver,ch.config,ch.active channel_active,ch.id chid from conversations c join contacts ct on ct.id=c.contact_id join channels ch on ch.id=c.channel_id where c.id=$1',[cid])).rows[0];
  if(ai&&kind!=='note'&&(!automationAllowed(cv)||(epoch!==undefined&&cv.automation_epoch!==epoch)))return null;
  if(!cv)throw Error('Conversa não encontrada');if(kind!=='note'&&!cv.channel_active)throw Error('Inbox pausada ou removida. Habilite a inbox em Integrações para responder.');
+ if(kind!=='note'&&typeof body==='string'&&/\{\{\s*(despedida|periodo_dia|hora_local)\s*\}\}/.test(body))body=renderDayVariables(body,await companyDayVariables(q));
  if(identify&&author_id&&kind!=='note'&&kind!=='audio'){const u=(await q('select name,known_by,signature_text from users where id=$1',[author_id])).rows[0],team=(await q('select name from teams where id=$1',[cv.team_id])).rows[0];if(u)body=clientAgentHeading(u,team?.name,cv)+'\n\n'+(body||'')+(u.signature_text?'\n\n'+u.signature_text:'')}
  let ext=null,dir='out';
  if(kind==='note')dir='int';else{const last=(await q("select ext_id,kind from messages where conversation_id=$1 and dir='in' order by at desc limit 1",[cid])).rows[0];

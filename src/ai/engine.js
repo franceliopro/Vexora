@@ -1,3 +1,4 @@
+import {companyDayVariables,renderDayVariables} from '../day-period.js';
 import {aiChoices} from './choices.js';
 import {ensureAutomationProtocol} from '../service-protocol.js';
 import {beginPresence} from './presence.js';
@@ -25,7 +26,7 @@ async function rag(aid,text){const e=await emb(text).catch(()=>null);
  const w=text.split(/\s+/).filter(x=>x.length>3).slice(0,4);if(!w.length)return [];
  return (await q('select content from docs where (agent_id=$1 or agent_id is null) and content ilike any($2) limit 4',[aid,w.map(x=>'%'+x+'%')])).rows.map(r=>r.content)}
 async function respondWithPresence(cv,ag,extra='',wantAudio=false,depth=0,presence){const fresh=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(fresh)||fresh.automation_epoch!==cv.automation_epoch)return;
- const teams=(await q('select id,name from teams order by id')).rows,clock=localGreeting(new Date(),await companyTimeZone(q));
+ const teams=(await q('select id,name from teams order by id')).rows,clock={...localGreeting(new Date(),await companyTimeZone(q)),...await companyDayVariables(q)};
  let h=(await q("select dir,body from messages where conversation_id=$1 and kind<>'note' and dir<>'int' and body is not null order by at desc limit 20",[cv.id])).rows.reverse().map(m=>({role:m.dir==='in'?'user':'assistant',content:m.body}));
  h=h.reduce((a,m)=>{const l=a[a.length-1];l&&l.role===m.role?l.content+='\n'+m.content:a.push({...m});return a},[]);while(h[0]&&h[0].role!=='user')h.shift();if(!h.length)h=[{role:'user',content:'(início)'}];
  const lastU=[...h].reverse().find(m=>m.role==='user').content;
@@ -40,6 +41,7 @@ Protocolo deste atendimento: ${fresh.protocol||'(não disponível)'}. Informe es
 Chame o cliente pelo nome preferido: ${ct.rows[0].data?.preferred_name||ct.rows[0].name}. Não repita a apresentação nem as opções do bot se já estiverem no histórico.
 Contato: ${ct.rows[0].name}; ficha: ${JSON.stringify(ct.rows[0].data)}
 Agora: ${new Date().toISOString()} · ${clock.fuso} · ${clock.saudacao} (hora local: ${clock.hora})
+Despedida da empresa para este período (${clock.periodo_dia}): ${clock.despedida}. Ao concluir cordialmente, use esta frase. Variáveis disponíveis: {{despedida}}, {{periodo_dia}}, {{hora_local}}.
 Equipes disponíveis: ${JSON.stringify(teams)}
 BASE DE CONHECIMENTO (use só isto para fatos; se faltar, diga que vai confirmar):
 ${docs.join('\n---\n')||'(vazia)'}
@@ -55,7 +57,7 @@ Ações permitidas: ${(ag.tools||[]).join(',')}. Só use ações quando fizer se
  const crm=(ag.tools||[]).includes('crm_move')?(await q("select c.id,c.title,c.board_id,s.id stage_id,s.name stage_name,s.final from crm_cards c join crm_stages s on s.board_id=c.board_id where c.conversation_id=$1 and c.status='open'",[cv.id])).rows:[];
  const crmContext='CRM desta conversa: '+JSON.stringify(crm)+'. Se crm_move for permitido, use {t: \"crm_move\", card_id:N, stage_id:N} somente para etapas intermediárias; encerramento exige humano.';
  const raw=await llm(ag.llm,sys+"\n"+crmContext,h);let out;try{out=JSON.parse(raw.match(/\{[\s\S]*\}/)[0])}catch{out={reply:raw,actions:[]}}
- out.reply=guardDocumentReply(out.reply||'',lastU.split(/\r?\n/).at(-1)||'');let retry='';
+ out.reply=guardDocumentReply(renderDayVariables(out.reply||'',await companyDayVariables(q)),lastU.split(/\r?\n/).at(-1)||'');let retry='';
  for(const a of out.actions||[]){const current=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(current)||current.automation_epoch!==cv.automation_epoch||current.bot_entry_status==='pending')return;if(!(ag.tools||[]).includes(a.t))continue;
   try{
    const actionMessage=await extraAgentAction(q,cv,ag,a);if(actionMessage!==undefined){if(actionMessage)for(const body of financialChunks(actionMessage))await deliver(cv.id,{body,ai:true,epoch:cv.automation_epoch});if(actionMessage)out.reply=null;bus('conv',{id:cv.id});continue}

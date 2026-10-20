@@ -92,3 +92,8 @@
 
 .user-access-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:20px 0;align-items:stretch}.user-access-group{min-width:0;margin:0;padding:14px;border:1px solid var(--ln,#e6e8ef);border-radius:14px;max-height:330px;overflow:auto}.user-access-group legend{font-size:13px;font-weight:600;padding:0 6px;color:var(--tx)}.user-access-group>.mu{font-size:12px;line-height:1.45;margin:0 0 12px}.user-access-group .nx-check{align-items:flex-start;line-height:1.5;overflow-wrap:anywhere;margin:8px 0}
 @media(max-width:760px){.user-access-groups{grid-template-columns:1fr}.user-access-group{max-height:260px}}
+
+/* Non-modal conversation workspace: keep text, microphone and history usable. */
+.nx-dialog.conversation-tool-dock{position:fixed;inset:76px 16px auto auto;margin:0;width:min(390px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 310px);overflow:auto;border:1px solid var(--ln,#dce1eb);border-radius:20px;box-shadow:0 16px 52px #18223b26;padding:20px;z-index:80;background:var(--card,#fff);color:var(--tx,#18223b)}
+.conversation-tool-dock .nx-dialog-title{position:sticky;top:-20px;background:inherit;z-index:1;padding:12px 0;gap:8px}.conversation-tool-dock .nx-dialog-title h2{font-size:16px}.conversation-tool-dock input,.conversation-tool-dock select,.conversation-tool-dock textarea{max-width:100%}.conversation-tool-dock form{min-width:0}.conversation-tool-dock .nx-tabs{flex-wrap:wrap}.conversation-tool-dock .agenda-overlay{max-height:45dvh;overflow:auto}
+@media(max-width:760px){.nx-dialog.conversation-tool-dock{inset:65px 8px auto;width:calc(100vw - 16px);max-height:36dvh;padding:14px;border-radius:18px}.conversation-tool-dock .nx-dialog-title{top:-14px}.conversation-tool-dock .nx-dialog-title h2{font-size:14px}}

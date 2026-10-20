@@ -34,7 +34,7 @@ async function onEnter(n,run,deps,ctx){const d=n.data||{},V=run.vars;
   case 'http':{const r=await deps.http(d,ctx);if(d.var)V[d.var]=r.ok?r.data:null;return {out:r.ok?'ok':'error'}}
   case 'asaas':return asaas(n,run,deps,null,true);
   case 'order':return order(run,deps,null,true);
-  case 'close':await deps.close({reason:d.reason||'Fluxo de atendimento concluído',outcome:d.outcome||'resolved',text:d.text});return {end:1};
+  case 'close':await deps.close({reason:d.reason||'Fluxo de atendimento concluído',outcome:d.outcome||'resolved',text:tpl(d.text,ctx)});return {end:1};
   case 'end':if(d.close)await deps.close({reason:d.reason||'Fluxo concluído',outcome:'resolved'});return {end:1};
   default:return {}}}
 
@@ -51,9 +51,10 @@ async function onInput(n,input,run,deps,ctx){const d=n.data||{},V=run.vars,t=Str
 // ---------- Cobranças Asaas: CPF/CNPJ → débitos (dados mascarados) → escolher débito → escolher forma de pagar
 const METHODS=['Boleto completo (link/PDF)','Código do boleto (linha digitável)','Pix copia e cola','Fatura completa (cartão e outros, conforme cobrança)'];
 const stTxt=(x,today)=>x.status==='OVERDUE'||String(x.dueDate)<today?'⚠️ vencido':'em aberto';
-async function asaas(n,run,deps,t,enter){const d=n.data||{},V=run.vars,A=V._a??={step:'doc',tries:0};
+async function asaas(n,run,deps,t,enter){const d=n.data||{},V=run.vars;if(enter)delete V._a;const A=V._a??={step:'doc',tries:0};
  const today=new Date().toISOString().slice(0,10);
  const lookup=async doc=>{let r;try{r=await deps.asaasDebts(doc,{platform:d.platform||V.plataforma,verifyPhone:!!d.verifyPhone})}catch(e){await deps.send('Não consegui consultar agora. Tente novamente em instantes ou fale com um atendente.');return {out:'error'}}
+  if(r.found===false){await deps.send('Não encontrei um cadastro com este CPF ou CNPJ na base financeira da empresa. Confira os números ou fale com um atendente.');return {out:'error'}}
   A.doc=doc;if(d.var)V[d.var]=digits(doc);
   if(!r.debts.length){await deps.send(`Não encontramos débitos em aberto para ${personType(doc)} ${maskDoc(doc)}. ✅`);return {out:'none'}}
   A.debts=r.debts;A.name=r.name;
@@ -69,6 +70,7 @@ async function asaas(n,run,deps,t,enter){const d=n.data||{},V=run.vars,A=V._a??=
  if(A.step==='pick'){const i=matchOpt(A.debts.map(x=>String(x.value)),t);if(i<0){await deps.send('Responda com o número do débito.');return {stay:1}}A.sel=i;return askMethod()}
  if(A.step==='method'){const i=matchOpt(METHODS,t);if(i<0){await deps.send(`Escolha uma opção:\n\n${lst(METHODS,x=>x)}`);return {stay:1}}
   const deb=A.debts[A.sel];let info;try{info=await deps.asaasPay(deb.id,{platform:d.platform||V.plataforma})}catch{await deps.send('Não consegui gerar o pagamento agora. Fale com um atendente.');return {out:'error'}}
+  if(info.customerId&&deb.customerId&&info.customerId!==deb.customerId){await deps.send('Não foi possível confirmar esta cobrança. Vou encaminhar ao financeiro.');return {out:'error'}}
   const head=`💳 ${money(deb.value)} — venc. ${fdate(deb.dueDate)}`;
   if(i===0){await deps.send(`${head}\nBoleto: ${info.bankSlipUrl||info.invoiceUrl||'indisponível'}`)}
   else if(i===1){if(info.identificationField){await deps.send(`${head}\nLinha digitável:`);await deps.send(info.identificationField)}else await deps.send(`${head}\nCódigo indisponível. Boleto: ${info.bankSlipUrl||info.invoiceUrl||''}`)}

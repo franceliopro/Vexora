@@ -1,3 +1,4 @@
+import {companyDayVariables} from '../day-period.js';
 import {customerName} from '../customer-name.js';
 import {ensureAutomationProtocol} from '../service-protocol.js';
 import {beginPresence} from '../ai/presence.js';
@@ -21,7 +22,7 @@ const mkDeps=cv=>({
  close:async d=>{if(d.text)await deliver(cv.id,{body:d.text,ai:true,executor:'bot',epoch:cv.automation_epoch});const closed=await tenantTransaction(als.getStore()?.tenant,query=>closeAutomated(query,cv,{...d,executor:'bot'}));if(closed)bus('conv',{id:cv.id});return closed},
  setStage:id=>setStage(cv.id,+id),
  builtins:async()=>{const ct=(await q('select name,handle,data from contacts where id=$1',[cv.contact_id])).rows[0]||{};const n=new Date(),zone=await companyTimeZone(q),clock=localGreeting(n,zone);
-  return {...clock,protocolo:cv.protocol||'',nome:String(ct.data?.preferred_name||ct.name||'').split(' ')[0],nome_completo:ct.data?.preferred_name||ct.name||'',telefone:'',dia_semana:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'short'}).format(n)),...(ct.data||{}),novo_nome:customerName(ct),telefone:financialPhone((await q('select * from channels where id=$1',[cv.channel_id])).rows[0],ct),...clock}},
+  return {...clock,protocolo:cv.protocol||'',nome:String(ct.data?.preferred_name||ct.name||'').split(' ')[0],nome_completo:ct.data?.preferred_name||ct.name||'',telefone:'',dia_semana:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'short'}).format(n)),...(ct.data||{}),novo_nome:customerName(ct),telefone:financialPhone((await q('select * from channels where id=$1',[cv.channel_id])).rows[0],ct),...clock,...await companyDayVariables(q)}},
  transfer:async d=>{const current=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!canBotRun(current)||current.automation_epoch!==cv.automation_epoch)throw Error('Automação pausada');const t=d.target||'queue';
   await q('delete from participants where conversation_id=$1',[cv.id]);await q('delete from conversation_team_participants where conversation_id=$1',[cv.id]);
   if(t==='ai'){const ag=d.agent_id?(await q('select id from agents where id=$1 and active',[d.agent_id])).rows[0]:(await q('select id from agents where active limit 1')).rows[0];await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='ai',automation_paused=false,ai_on=true,agent_id=$2,assignee_id=null where id=$1",[cv.id,ag?.id||null])}
@@ -29,7 +30,7 @@ const mkDeps=cv=>({
   else if(t==='team'){if(!(await q('select id from teams where id=$1 and archived_at is null',[d.team_id])).rows.length)throw Error('Setor indisponível');await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='human',automation_paused=true,ai_on=false,assignee_id=null,team_id=$2 where id=$1",[cv.id,d.team_id||null])}
   else await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='human',automation_paused=true,ai_on=false,assignee_id=null where id=$1",[cv.id]);
   await deliver(cv.id,{kind:'note',body:`🤖 Bot transferiu a conversa (${t})`,ai:true})},
- http:safeFetch,asaasDebts:async(doc,options)=>{const ch=(await q('select * from channels where id=$1',[cv.channel_id])).rows[0],phone=financialPhone(ch,{handle:cv.handle});if(options?.verifyPhone&&!phone)throw Error('Identidade do titular requer confirmação humana neste canal');return asaasDebts(doc,{...options,phone,conversation_id:cv.id})},asaasPay,menu:menuFor,
+ http:safeFetch,asaasDebts:async(doc,options)=>{const ch=(await q('select * from channels where id=$1',[cv.channel_id])).rows[0],phone=financialPhone(ch,{handle:cv.handle});if(options?.verifyPhone&&!phone)throw Error('Identidade do titular requer confirmação humana neste canal');try{return await asaasDebts(doc,{...options,phone,conversation_id:cv.id})}catch(e){await deliver(cv.id,{kind:'note',body:'Consulta Asaas do bot não concluída: '+e.message,ai:true,executor:'bot'});throw e}},asaasPay,menu:menuFor,
  createOrder:o=>createOrder({...o,source:'whatsapp',contact_id:cv.contact_id,customer_name:cv.cname,customer_phone:cv.handle})});
 // Retorna true se um bot "consumiu" a mensagem (a IA não deve responder).
 export async function handle(cv,msg,fresh){if(!canBotRun(cv))return false;let run=(await q("select * from bot_runs where conversation_id=$1 and status='active'",[cv.id])).rows[0],bot;
