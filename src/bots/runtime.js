@@ -28,7 +28,7 @@ const mkDeps=cv=>({
   else if(t==='team')await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='human',automation_paused=true,ai_on=false,assignee_id=null,team_id=$2 where id=$1",[cv.id,d.team_id||null]);
   else await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='human',automation_paused=true,ai_on=false,assignee_id=null where id=$1",[cv.id]);
   await deliver(cv.id,{kind:'note',body:`🤖 Bot transferiu a conversa (${t})`,ai:true})},
- http:safeFetch,asaasDebts:async(doc,options)=>{const ch=(await q('select * from channels where id=$1',[cv.channel_id])).rows[0],phone=financialPhone(ch,{handle:cv.handle});if(options?.verifyPhone&&!phone)throw Error('Identidade do titular requer confirmação humana neste canal');return asaasDebts(doc,{...options,phone})},asaasPay,menu:menuFor,
+ http:safeFetch,asaasDebts:async(doc,options)=>{const ch=(await q('select * from channels where id=$1',[cv.channel_id])).rows[0],phone=financialPhone(ch,{handle:cv.handle});if(options?.verifyPhone&&!phone)throw Error('Identidade do titular requer confirmação humana neste canal');return asaasDebts(doc,{...options,phone,conversation_id:cv.id})},asaasPay,menu:menuFor,
  createOrder:o=>createOrder({...o,source:'whatsapp',contact_id:cv.contact_id,customer_name:cv.cname,customer_phone:cv.handle})});
 // Retorna true se um bot "consumiu" a mensagem (a IA não deve responder).
 export async function handle(cv,msg,fresh){if(!canBotRun(cv))return false;let run=(await q("select * from bot_runs where conversation_id=$1 and status='active'",[cv.id])).rows[0],bot;

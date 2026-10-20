@@ -324,3 +324,14 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Respostas interativas nx:N viram número para o motor determinístico. IDs não conferem permissões; valem como resposta numérica na etapa corrente. Webhooks continuam assinados e isolados por conta. Pausa humana/epoch preservados.
 - Fontes consultadas: docs.zernio.com/messages/send-inbox-message.mdx; docs.x.ai/developers/migration/may-15-retirement; console.groq.com/docs/speech-to-text; ai.google.dev/gemini-api/docs/models; elevenlabs.io/docs; learn.microsoft.com/azure/ai-services/speech-service/rest-text-to-speech.
 - Validação local: npm test, contratos simulados de adapters/botões/retorno/fallback e navegador Chromium desktop/mobile. Teste real de APIs, botões e cobrança pendente após deploy, com credenciais do cliente. Nenhum envio real efetuado nesta alteração.
+
+## 27. Escolhas pela IA e confirmação ao cliente
+
+- Pesquisa detalhada e procedimento: `docs/BOTOES-PIX-E-CONFIRMACAO-PAGAMENTOS.md`. Postman consultado e comparado com documentação atual: WAHA sendButtons está depreciado; Baileys não recebeu fork/alteração experimental. Nenhuma promessa de botão Pix universal.
+- `src/ai/choices.js` valida opções geradas pela IA e monta histórico numerado + escolhas estruturadas para drivers existentes. Em escolha, prioriza texto clicável; perguntas abertas continuam com voz. IA usa histórico para números; não é ramificação determinística de bot.
+- Pix/linha digitável do atendimento humano agora são enviados como conteúdo isolado, com orientação anterior e fatura posterior.
+- Migração `024_payment_notifications.sql` adiciona fila de confirmação nos pagamentos existentes sem reativar pagamentos antigos. `settlePayment` agenda na mesma transação da baixa; webhook continua autenticado/isolado por tenant e ambiente.
+- `src/payment-notifications.js` envia a cada 30s via scheduler: CAS pending→sending antes do efeito, sent após gravação, blocked para canal/filing, check_required para erro ambíguo ou interrupção >5min. Mensagem transacional não retoma automação nem reabre atendimento. Valores/protocolo não são inventados por IA.
+- Consultas Asaas de bot/IA registram vínculo dos débitos à conversa; vínculos existentes são preservados; vínculos nulos podem ser preenchidos somente se o contato coincide. Cobranças externas desconhecidas não geram mensagens por adivinhação.
+- `/api/financial/notifications` e `/:id/retry` administrativos; tela em Pagamentos e Integrações com estados, orientações de webhook e reenvio explícito auditado após conferir não recebimento.
+- Testes: unitários/contratos, PGlite com migrações/RLS, evento duplicado, Stripe unpaid, ambiente incorreto, envio uma vez, inbox pausada, falha ambígua sem replay; teste navegador desktop/mobile. Sem teste real de canais/chaves nesta entrega.

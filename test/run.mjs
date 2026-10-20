@@ -66,6 +66,7 @@ await import('./workflow-graph.mjs');
 await import('./bot-entry-presence.mjs');
 await import('./agent-knowledge.mjs');
 await import('./text-providers.mjs');
+await import('./ai-choices.mjs');
 await import('./tracking.mjs');
 await import('./realtime.mjs');
 await import('./driver-contracts.mjs');

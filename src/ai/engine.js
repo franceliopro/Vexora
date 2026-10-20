@@ -1,3 +1,4 @@
+import {aiChoices} from './choices.js';
 import {ensureAutomationProtocol} from '../service-protocol.js';
 import {beginPresence} from './presence.js';
 import {transcribeAudio,synthesizeAudio} from './audio-providers.js';
@@ -44,7 +45,8 @@ ${docs.join('\n---\n')||'(vazia)'}
 Etapas do funil: ${st.rows.map(s=>s.name).join(', ')}
 Atendentes humanos: ${JSON.stringify(us.rows)}
 ${extra}
-Responda SOMENTE JSON: {"reply":"texto curto","actions":[{"t":"move_stage","stage":"nome"},{"t":"handoff","user_id":N,"why":""},{"t":"invite","user_id":N},{"t":"book","title":"","start":"ISO","minutes":30},{"t":"set","k":"campo","v":"valor"}]}
+Para perguntas de múltipla escolha, prefira opções curtas (até 20 caracteres) no campo options, com 2 a 6 itens. Não numere o reply: o sistema numera as opções e mostra botões quando o canal permite. Uma resposta numérica se refere às opções da última pergunta no histórico. Para perguntas abertas, omita options.
+Responda SOMENTE JSON: {"reply":"texto curto","options":["Suporte","Financeiro"],"actions":[{"t":"move_stage","stage":"nome"},{"t":"handoff","user_id":N,"why":""},{"t":"invite","user_id":N},{"t":"book","title":"","start":"ISO","minutes":30},{"t":"set","k":"campo","v":"valor"}]}
 Para rastreamento veicular, use {"t":"tracking_triage","sector":"suporte|financeiro|comercial|administrativo","platform":"ceeb_vision|link|rastreabem","payment":true|false,"person_type":"pf|pj"}. Só use depois de coletar os dados necessários. Comercial exige person_type pf ou pj; se faltar, pergunte com opções 1. Pessoa Física e 2. Pessoa Jurídica. Para pagamento, o fluxo seguro solicitará documento e verificará o telefone.
 Para concluir, somente se close estiver permitido e o cliente indicar que foi resolvido ou pedir encerramento, use {"t":"close","reason":"motivo objetivo","outcome":"resolved|question|other"}. Nunca conclua só porque enviou uma cobrança; envio não significa pagamento.
 Para etiquetas use {t:'labels',label_id:N,operation:'add|remove'}. Para consultar o cardápio use {t:'show_menu'}, e produtos {t:'show_products'}. Nunca invente produtos ou preços; a ação envia a lista cadastrada. Etiquetas disponíveis: ${JSON.stringify((await q('select id,name from labels where active')).rows)}. Ações de mensagem próprias: ${JSON.stringify((ag.custom_actions||[]).map(({key,name,description})=>({key,name,description})))}; use t igual à key quando necessário.
@@ -67,8 +69,8 @@ Ações permitidas: ${(ag.tools||[]).join(',')}. Só use ações quando fizer se
   }catch(e){if(a.t==='book')retry=`O horário ${a.start} falhou (${e.message}). Peça desculpas e ofereça outro horário.`;else console.error('action',a.t,e.message)}}
  if(retry&&depth<1)return respondWithPresence(cv,ag,retry,wantAudio,1,presence);
  const latest=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(latest)||latest.automation_epoch!==cv.automation_epoch||!out.reply)return;
- let file=null;if(wantAudio&&ag.tts){await presence.recording();file=await tts(ag.tts,out.reply).catch(e=>(console.error('tts',e.message),null));}
- await deliver(cv.id,file?{kind:'audio',body:out.reply,file,ai:true,epoch:cv.automation_epoch}:{body:out.reply,ai:true,epoch:cv.automation_epoch})}
+ const presentation=aiChoices(out.reply,out.options);let file=null;if(wantAudio&&ag.tts&&!presentation.choices){await presence.recording();file=await tts(ag.tts,out.reply).catch(e=>(console.error('tts',e.message),null));}
+ await deliver(cv.id,file?{kind:'audio',body:out.reply,file,ai:true,epoch:cv.automation_epoch}:{...presentation,ai:true,epoch:cv.automation_epoch})}
 export async function respond(cv,ag,extra='',wantAudio=false,depth=0){await ensureAutomationProtocol(q,cv,deliver,bus);const presence=await beginPresence(cv,{query:q,drivers:D}).catch(()=>({recording:async()=>{},stop:async()=>{}}));try{return await respondWithPresence(cv,ag,extra,wantAudio,depth,presence)}finally{await presence.stop()}}
 export async function onInbound(cv,msg){if(!cv.ai_on||!automationAllowed(cv))return;
  const ag=(cv.agent_id&&(await q('select * from agents where id=$1 and active',[cv.agent_id])).rows[0])||(await q('select * from agents where active and $1=any(channel_ids) limit 1',[cv.channel_id])).rows[0];if(!ag)return;
