@@ -1,3 +1,6 @@
+import {tpl} from '../lib.js';
+import {conversationVariables,renderFieldVariables} from '../customer-variables.js';
+import {contactAction} from '../automation-contact.js';
 import {companyDayVariables,renderDayVariables} from '../day-period.js';
 import {aiChoices} from './choices.js';
 import {ensureAutomationProtocol} from '../service-protocol.js';
@@ -31,14 +34,16 @@ async function respondWithPresence(cv,ag,extra='',wantAudio=false,depth=0,presen
  h=h.reduce((a,m)=>{const l=a[a.length-1];l&&l.role===m.role?l.content+='\n'+m.content:a.push({...m});return a},[]);while(h[0]&&h[0].role!=='user')h.shift();if(!h.length)h=[{role:'user',content:'(início)'}];
  const lastU=[...h].reverse().find(m=>m.role==='user').content;
  const [ct,st,us,docs]=await Promise.all([q('select * from contacts where id=$1',[cv.contact_id]),q('select id,name,kind from stages order by pos'),q("select id,name,role from users where not is_ai"),rag(ag.id,lastU)]);
- const sys=`Você é ${ag.name}, atendente virtual. ${ag.prompt}
+ const fieldContext=await conversationVariables(q,cv),variables={...fieldContext.values,...clock,nome:ct.rows[0].data?.preferred_name||ct.rows[0].name,novo_nome:ct.rows[0].data?.preferred_name||ct.rows[0].name};
+ const sys=`Você é ${ag.name}, atendente virtual. ${tpl(ag.prompt,variables)}
 Escreva em português do Brasil, com ortografia, acentuação e concordância corretas. Seja claro e natural. Preserve nomes próprios, documentos, valores, identificadores e URLs; nunca os corrija por suposição.
 TOM: ${ag.tone||'natural e cordial'}
-REGRAS: ${ag.rules||'-'}
+REGRAS: ${tpl(ag.rules||'-',variables)}
 Nunca converta CPF, CNPJ ou identificadores de redes sociais em telefone. Não invente números para ligação, cobranças ou resultados de consulta. Uma mensagem com CPF não prova que a consulta ao Asaas ocorreu.
 PROIBIDO (nunca faça): ${ag.forbidden||'-'}
 Protocolo deste atendimento: ${fresh.protocol||'(não disponível)'}. Informe este número quando solicitado; não invente protocolo.
 Chame o cliente pelo nome preferido: ${ct.rows[0].data?.preferred_name||ct.rows[0].name}. Não repita a apresentação nem as opções do bot se já estiverem no histórico.
+Campos personalizados integrados: ${JSON.stringify(fieldContext)}. Para salvar um campo do contato com set, use k="campo_ID", v=valor, respeitando tipo e opções. campos_crm só é resolvido automaticamente quando há exatamente uma oportunidade aberta; havendo várias, use crm.ID_DO_CARD.campos.ID_DO_CAMPO. Nunca adivinhe valores.
 Contato: ${ct.rows[0].name}; ficha: ${JSON.stringify(ct.rows[0].data)}
 Agora: ${new Date().toISOString()} · ${clock.fuso} · ${clock.saudacao} (hora local: ${clock.hora})
 Despedida da empresa para este período (${clock.periodo_dia}): ${clock.despedida}. Ao concluir cordialmente, use esta frase. Variáveis disponíveis: {{despedida}}, {{periodo_dia}}, {{hora_local}}.
@@ -57,7 +62,7 @@ Ações permitidas: ${(ag.tools||[]).join(',')}. Só use ações quando fizer se
  const crm=(ag.tools||[]).includes('crm_move')?(await q("select c.id,c.title,c.board_id,s.id stage_id,s.name stage_name,s.final from crm_cards c join crm_stages s on s.board_id=c.board_id where c.conversation_id=$1 and c.status='open'",[cv.id])).rows:[];
  const crmContext='CRM desta conversa: '+JSON.stringify(crm)+'. Se crm_move for permitido, use {t: \"crm_move\", card_id:N, stage_id:N} somente para etapas intermediárias; encerramento exige humano.';
  const raw=await llm(ag.llm,sys+"\n"+crmContext,h);let out;try{out=JSON.parse(raw.match(/\{[\s\S]*\}/)[0])}catch{out={reply:raw,actions:[]}}
- out.reply=guardDocumentReply(renderDayVariables(out.reply||'',await companyDayVariables(q)),lastU.split(/\r?\n/).at(-1)||'');let retry='';
+ out.reply=guardDocumentReply(renderFieldVariables(renderDayVariables(out.reply||'',await companyDayVariables(q)),fieldContext.values),lastU.split(/\r?\n/).at(-1)||'');let retry='';
  for(const a of out.actions||[]){const current=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(current)||current.automation_epoch!==cv.automation_epoch||current.bot_entry_status==='pending')return;if(!(ag.tools||[]).includes(a.t))continue;
   try{
    const actionMessage=await extraAgentAction(q,cv,ag,a);if(actionMessage!==undefined){if(actionMessage)for(const body of financialChunks(actionMessage))await deliver(cv.id,{body,ai:true,epoch:cv.automation_epoch});if(actionMessage)out.reply=null;bus('conv',{id:cv.id});continue}
@@ -67,7 +72,7 @@ Ações permitidas: ${(ag.tools||[]).join(',')}. Só use ações quando fizer se
    if(a.t==='tracking_triage'){const result=await routeTracking(q,cv,a,text=>deliver(cv.id,{body:text,ai:true,epoch:cv.automation_epoch}));if(result==='bot'){await (await import('../bots/runtime.js')).handle({...cv,automation_mode:'bot',ai_on:false},{body:'iniciar'},false)}out.reply=null;break}
    if(a.t==='handoff'){await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='human',automation_paused=true,ai_on=false,assignee_id=$1 where id=$2",[a.user_id||null,cv.id]);await deliver(cv.id,{kind:'note',body:`🤖 ${ag.name} transferiu${a.user_id?'':' (fila)'}: ${a.why||''}`,ai:true})}
    if(a.t==='invite'&&a.user_id){await q('insert into participants values($1,$2) on conflict do nothing',[cv.id,a.user_id]);await deliver(cv.id,{kind:'note',body:`🤖 ${ag.name} convidou o atendente #${a.user_id}`,ai:true})}
-   if(a.t==='set')await q('update contacts set data=data||$2 where id=$1',[cv.contact_id,JSON.stringify({[a.k]:a.v})]);
+   if(a.t==='set'&&/^campo_\d+$/.test(a.k))await contactAction(q,cv,'contact',{field:a.k,value:a.v});else if(a.t==='set')await q('update contacts set data=data||$2 where id=$1',[cv.contact_id,JSON.stringify({[a.k]:a.v})]);
    if(a.t==='book')await createAppt({contact_id:cv.contact_id,title:a.title||'Agendamento',start:a.start,minutes:a.minutes})
   }catch(e){if(a.t==='book')retry=`O horário ${a.start} falhou (${e.message}). Peça desculpas e ofereça outro horário.`;else console.error('action',a.t,e.message)}}
  if(retry&&depth<1)return respondWithPresence(cv,ag,retry,wantAudio,1,presence);

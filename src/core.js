@@ -1,3 +1,4 @@
+import {conversationVariables,renderFieldVariables} from './customer-variables.js';
 import {companyDayVariables,renderDayVariables} from './day-period.js';
 import {deferBotEntry} from './bots/initial-delay.js';
 import {clientAgentHeading} from './user-identity.js';
@@ -44,6 +45,7 @@ export async function deliver(cid,{kind='text',body,file,filename,author_id,ai=f
  if(ai&&kind!=='note'&&(!automationAllowed(cv)||(epoch!==undefined&&cv.automation_epoch!==epoch)))return null;
  if(!cv)throw Error('Conversa não encontrada');if(kind!=='note'&&!cv.channel_active)throw Error('Inbox pausada ou removida. Habilite a inbox em Integrações para responder.');
  if(kind!=='note'&&typeof body==='string'&&/\{\{\s*(despedida|periodo_dia|hora_local)\s*\}\}/.test(body))body=renderDayVariables(body,await companyDayVariables(q));
+ if(kind!=='note'&&typeof body==='string'&&/\{\{\s*(campos|campos_crm|crm)\./.test(body)){const user=author_id?(await q('select id,role,permissions from users where id=$1',[author_id])).rows[0]:undefined;body=renderFieldVariables(body,(await conversationVariables(q,cv,{user})).values)}
  if(identify&&author_id&&kind!=='note'&&kind!=='audio'){const u=(await q('select name,known_by,signature_text from users where id=$1',[author_id])).rows[0],team=(await q('select name from teams where id=$1',[cv.team_id])).rows[0];if(u)body=clientAgentHeading(u,team?.name,cv)+'\n\n'+(body||'')+(u.signature_text?'\n\n'+u.signature_text:'')}
  let ext=null,dir='out';
  if(kind==='note')dir='int';else{const last=(await q("select ext_id,kind from messages where conversation_id=$1 and dir='in' order by at desc limit 1",[cid])).rows[0];

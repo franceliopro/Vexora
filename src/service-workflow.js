@@ -1,5 +1,8 @@
+import {conversationVariables,variableCatalog} from './customer-variables.js';
 import {accessPredicate,conversationFor} from './conversation-policy.js';import {requireAction,requireParticipation,adminRole} from './governance.js';import {text} from './product.js';
 export function mountServiceWorkflow(app,{ah,q,deliver,bus=()=>{}}){
+ app.get('/api/variables',ah(async(req,res)=>res.json(await variableCatalog(q))));
+ app.get('/api/conversations/:id/variables',ah(async(req,res)=>{const c=await conversationFor(q,+req.params.id,req.u.id);res.json(await conversationVariables(q,c,{user:req.u}))}));
  app.get('/api/conversations/:id/internal-targets',ah(async(req,res)=>{await conversationFor(q,+req.params.id,req.u.id);res.json([...(await q("select id,name,'user' type from users where active and not is_ai order by name")).rows,...(await q("select id,name,'team' type from teams order by name")).rows])}));
  app.get('/api/internal-mentions',ah(async(req,res)=>res.json((await q(`select im.id,im.conversation_id,m.body,u.name author from internal_mentions im join messages m on m.id=im.message_id left join users u on u.id=m.author_id join conversations c on c.id=im.conversation_id where im.user_id=$1 and im.read_at is null and ${accessPredicate('c','$1')} order by im.id desc limit 50`,[req.u.id])).rows)));
  app.post('/api/internal-mentions/:id/read',ah(async(req,res)=>{await q('update internal_mentions set read_at=now() where id=$1 and user_id=$2',[+req.params.id,req.u.id]);res.json({ok:true})}));

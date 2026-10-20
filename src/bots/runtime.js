@@ -1,3 +1,4 @@
+import {conversationVariables} from '../customer-variables.js';
 import {companyDayVariables} from '../day-period.js';
 import {customerName} from '../customer-name.js';
 import {ensureAutomationProtocol} from '../service-protocol.js';
@@ -22,7 +23,7 @@ const mkDeps=cv=>({
  close:async d=>{if(d.text)await deliver(cv.id,{body:d.text,ai:true,executor:'bot',epoch:cv.automation_epoch});const closed=await tenantTransaction(als.getStore()?.tenant,query=>closeAutomated(query,cv,{...d,executor:'bot'}));if(closed)bus('conv',{id:cv.id});return closed},
  setStage:id=>setStage(cv.id,+id),
  builtins:async()=>{const ct=(await q('select name,handle,data from contacts where id=$1',[cv.contact_id])).rows[0]||{};const n=new Date(),zone=await companyTimeZone(q),clock=localGreeting(n,zone);
-  return {...clock,protocolo:cv.protocol||'',nome:String(ct.data?.preferred_name||ct.name||'').split(' ')[0],nome_completo:ct.data?.preferred_name||ct.name||'',telefone:'',dia_semana:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'short'}).format(n)),...(ct.data||{}),novo_nome:customerName(ct),telefone:financialPhone((await q('select * from channels where id=$1',[cv.channel_id])).rows[0],ct),...clock,...await companyDayVariables(q)}},
+  return {...clock,protocolo:cv.protocol||'',nome:String(ct.data?.preferred_name||ct.name||'').split(' ')[0],nome_completo:ct.data?.preferred_name||ct.name||'',telefone:'',dia_semana:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(new Intl.DateTimeFormat('en-US',{timeZone:zone,weekday:'short'}).format(n)),...(ct.data||{}),novo_nome:customerName(ct),telefone:financialPhone((await q('select * from channels where id=$1',[cv.channel_id])).rows[0],ct),...clock,...await companyDayVariables(q),...(await conversationVariables(q,cv)).values}},
  transfer:async d=>{const current=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!canBotRun(current)||current.automation_epoch!==cv.automation_epoch)throw Error('Automação pausada');const t=d.target||'queue';
   await q('delete from participants where conversation_id=$1',[cv.id]);await q('delete from conversation_team_participants where conversation_id=$1',[cv.id]);
   if(t==='ai'){const ag=d.agent_id?(await q('select id from agents where id=$1 and active',[d.agent_id])).rows[0]:(await q('select id from agents where active limit 1')).rows[0];await q("update conversations set routing_managed=false,routing_attempts='{}',routing_assigned_at=null,automation_mode='ai',automation_paused=false,ai_on=true,agent_id=$2,assignee_id=null where id=$1",[cv.id,ag?.id||null])}

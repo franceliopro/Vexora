@@ -14,4 +14,4 @@ export async function createTenant({name,slug,domain,owner,brand={},template_id,
  for(const [pos,stage]of ['Novo','Em conversa','Qualificado','Ganho','Perdido'].entries())await query('insert into stages(name,pos,kind) values($1,$2,$3)',[stage,pos,stage==='Ganho'?'won':stage==='Perdido'?'lost':'open']);
  if(user)await query("insert into users(name,email,pass,role) values($1,$2,$3,'owner')",[user.name,user.email,user.pass]);
  await saveTimeZone(query,time_zone);
- if(template_id)await installTemplate(query,template_id);return t})}
+ if(template_id)await installTemplate(query,template_id,{master:true});return t})}

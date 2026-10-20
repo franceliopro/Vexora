@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {aggregateService,reviewInput,reportRange} from '../src/service-reporting.js';
+import {taskInput} from '../src/service-tasks.js';
+const base={team_id:1,team:'Suporte',assignee_id:1,responsible:'Ana',contact_id:1,created_at:'2026-10-20T10:00:00Z',first_human:'2026-10-20T10:01:00Z',first_claim:'2026-10-20T10:00:30Z'};
+const report=aggregateService([{...base,id:1,status:'closed',closed_at:'2026-10-20T10:10:00Z',close_outcome:'won',quality_score:'4.5'},{...base,id:2,status:'open',quality_score:null},{...base,id:3,contact_id:2,assignee_id:2,responsible:'Bia',status:'closed',close_outcome:'lost',closed_at:'2026-10-20T10:02:00Z',quality_score:null}]);
+assert.equal(report.summary.total,3);assert.equal(report.summary.contacts,2);assert.equal(report.summary.closed,2);assert.equal(report.teams[0].quality_score,4.5);assert.equal(report.teams[0].reviews,1);assert.equal(report.agents.find(a=>a.name==='Bia').quality_score,null);assert.equal(report.agents.find(a=>a.name==='Ana').first_human_seconds,60);
+assert.throws(()=>reviewInput({clarity:6,cordiality:5,resolution:5,comment:'Inválido'}));assert.throws(()=>reportRange({from:'2026-02-30',to:'2026-10-20'}));assert.throws(()=>taskInput({title:'x',priority:'urgent'}));assert.throws(()=>taskInput({title:'x',due_at:'impossível'}));
+console.log('OK: métricas por equipe/pessoa, contatos distintos, qualidade sem avaliação não vira zero, e validação de tarefas/períodos.');
+const {previousRange,successRates}=await import('../src/service-reporting.js');
+assert.deepEqual(previousRange({from:'2026-10-01',to:'2026-10-31'},'month'),{from:'2026-09-01',to:'2026-09-30'});assert.deepEqual(previousRange({from:'2026-10-14',to:'2026-10-20'},'week'),{from:'2026-10-07',to:'2026-10-13'});assert.equal(successRates({closed:10,won:3,lost:2,resolved:4}).success_rate,70);assert.equal(successRates({closed:0,won:0,lost:0,resolved:0}).win_rate,null);
+const {customFieldValue}=await import('../src/customer-variables.js');assert.equal(customFieldValue({kind:'integer'},'42'),42);assert.equal(customFieldValue({kind:'boolean'},'false'),false);assert.throws(()=>customFieldValue({kind:'select',options:['A']},'B'));
+const {renderFieldVariables}=await import('../src/customer-variables.js');assert.equal(renderFieldVariables('Placa {{campos.501}} · {{campos_crm.2}}',{campos:{501:'ABC1D23'},campos_crm:{}}),'Placa ABC1D23 · ');assert.equal(renderFieldVariables('{{crm.7.campos.2}}',{crm:{7:{campos:{2:'Veículo pesado'}}}}),'Veículo pesado');
