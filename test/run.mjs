@@ -59,6 +59,7 @@ const G=(nodes,edges)=>({nodes:nodes.map(([id,type,data])=>({id,type,data:data||
  const c=mk(g);await c.say(null);await c.say('1');await c.say('cancelar');eq([c.done,c.out.at(-1).includes('cancelado')],[true,true],'cancelar');
  const d=mk(g);await d.say(null);await d.say('2');await d.say('1');await d.say('3');eq(d.out.at(-1).includes('Subtotal: R$ 21,00'),true,'sem variantes');await d.say('2');await d.say('1');await d.say('1');eq(d.out.at(-1).includes('mínimo para Centro é R$ 30,00'),true,'pedido mínimo');
 }
+await import('./financial-identity.mjs');
 await import('./product.mjs');
 await import('./tracking.mjs');
 await import('./realtime.mjs');

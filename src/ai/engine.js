@@ -1,3 +1,4 @@
+import {guardDocumentReply} from '../financial-identity.js';
 import {moveCRMFromConversation} from '../crm.js';
 import {companyTimeZone} from '../timezone.js';
 import {automationAllowed} from '../conversation-policy.js';import {localGreeting} from '../tracking-template.js';import {routeTracking} from '../tracking-routing.js';
@@ -27,6 +28,7 @@ export async function respond(cv,ag,extra='',wantAudio=false,depth=0){const fres
  const sys=`Você é ${ag.name}, atendente virtual. ${ag.prompt}
 TOM: ${ag.tone||'natural e cordial'}
 REGRAS: ${ag.rules||'-'}
+Nunca converta CPF, CNPJ ou identificadores de redes sociais em telefone. Não invente números para ligação, cobranças ou resultados de consulta. Uma mensagem com CPF não prova que a consulta ao Asaas ocorreu.
 PROIBIDO (nunca faça): ${ag.forbidden||'-'}
 Contato: ${ct.rows[0].name}; ficha: ${JSON.stringify(ct.rows[0].data)}
 Agora: ${new Date().toISOString()} · ${clock.fuso} · ${clock.saudacao} (hora local: ${clock.hora})
@@ -42,7 +44,7 @@ Ações permitidas: ${(ag.tools||[]).join(',')}. Só use ações quando fizer se
  const crm=(ag.tools||[]).includes('crm_move')?(await q("select c.id,c.title,c.board_id,s.id stage_id,s.name stage_name,s.final from crm_cards c join crm_stages s on s.board_id=c.board_id where c.conversation_id=$1 and c.status='open'",[cv.id])).rows:[];
  const crmContext='CRM desta conversa: '+JSON.stringify(crm)+'. Se crm_move for permitido, use {t: \"crm_move\", card_id:N, stage_id:N} somente para etapas intermediárias; encerramento exige humano.';
  const raw=await llm(ag.llm,sys+"\n"+crmContext,h);let out;try{out=JSON.parse(raw.match(/\{[\s\S]*\}/)[0])}catch{out={reply:raw,actions:[]}}
- let retry='';
+ out.reply=guardDocumentReply(out.reply||'',lastU.split(/\r?\n/).at(-1)||'');let retry='';
  for(const a of out.actions||[]){const current=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(current)||current.automation_epoch!==cv.automation_epoch)return;if(!(ag.tools||[]).includes(a.t))continue;
   try{
    if(a.t==='crm_move'){const bid=await tenantTransaction(cv.tenant_id,query=>moveCRMFromConversation(query,cv,a));(await import('../bus.js')).bus('crm',{board_id:bid})}
