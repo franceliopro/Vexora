@@ -1,3 +1,4 @@
+import {transcribeAudio,synthesizeAudio} from './audio-providers.js';
 import {textModel} from './providers.js';
 import {financialChunks} from '../debt-presentation.js';
 import {extraAgentAction} from './actions.js';
@@ -11,9 +12,8 @@ import fs from 'fs';import {q,tenantTransaction} from '../db.js';import {deliver
 const post=async(u,h,b)=>{const r=await fetch(u,{method:'POST',headers:{'content-type':'application/json',...h},body:JSON.stringify(b)});if(!r.ok)throw new Error(u+' '+r.status+' '+(await r.text()).slice(0,200));return r};
 const chain=async(c,fn)=>{let err;for(const x of [].concat(c||[])){try{return await fn(x)}catch(e){err=e;console.error('fallback:',e.message)}}throw err||new Error('provedor não configurado')}; // vários provedores por agente: cai pro próximo
 const llm=(cfg,system,msgs)=>chain(cfg,c=>textModel(c,system,msgs));
-const stt=(cfg,file)=>chain(cfg,async c=>{const fd=new FormData();fd.append('file',new Blob([readMedia(file)]),file);fd.append('model',c.model||'whisper-1');
- const r=await fetch((c.base_url||'https://api.openai.com/v1')+'/audio/transcriptions',{method:'POST',headers:{authorization:'Bearer '+c.key},body:fd});if(!r.ok)throw new Error('stt '+r.status);return (await r.json()).text});
-const tts=(cfg,text)=>chain(cfg,async c=>{const r=await post((c.base_url||'https://api.openai.com/v1')+'/audio/speech',{authorization:'Bearer '+c.key},{model:c.model||'tts-1',voice:c.voice||'alloy',input:text,response_format:'opus'});return saveMedia(Buffer.from(await r.arrayBuffer()),'ogg')});
+const stt=(cfg,file)=>chain(cfg,c=>transcribeAudio(c,readMedia(file),file));
+const tts=(cfg,text)=>chain(cfg,async c=>{const audio=await synthesizeAudio(c,text);return saveMedia(audio.buffer,audio.extension)});
 const emb=async t=>{const s=(await q("select value from settings where key='embed'")).rows[0]?.value;if(!s?.key)return null;
  return (await(await post((s.base_url||'https://api.openai.com/v1')+'/embeddings',{authorization:'Bearer '+s.key},{model:s.model||'text-embedding-3-small',input:t})).json()).data[0].embedding};
 export async function ragAdd(agent_id,title,content,{query=q,source_id=null}={}){const parts=[];for(let i=0;i<content.length;i+=850)parts.push(content.slice(i,i+1000));let n=0;for(const p of parts){const e=await emb(p).catch(()=>null);await query('insert into docs(agent_id,title,content,emb,source_id) values($1,$2,$3,$4,$5)',[agent_id||null,title,p,e?'['+e+']':null,source_id]);n++}return n}

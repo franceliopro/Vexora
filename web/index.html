@@ -53,7 +53,7 @@ async function boot(){const tq=new URLSearchParams(location.search).get('t');if(
  ws?.close();let noticeTimer;
  ws=NexoraRealtime.connect({url:()=>(location.protocol==='https:'?'wss':'ws')+'://'+location.host+'/?t='+encodeURIComponent(T),
   onmessage:m=>{if(m.t==='channel_state'&&typeof refreshInboxes==='function')refreshInboxes();if(m.t==='brand')GB().then(brand);if(m.t==='crm_win'&&typeof celebrateWin==='function')celebrateWin(m.d);evt(m.t,m.d)},
-  onstate:state=>{clearTimeout(noticeTimer);connectionNotice.hidden=state==='connecting';connectionNotice.textContent=({offline:'Sem conexão com a internet. Seu painel permanece aberto.',reconnecting:'Reconectando atualizações em tempo real…',connected:'Conexão em tempo real restabelecida.'})[state]||'';if(state==='connected')noticeTimer=setTimeout(()=>connectionNotice.hidden=true,2500)},
+  onstate:state=>{document.documentElement.dataset.realtime=state;connectionNotice.hidden=true},
   checkSession:async()=>{const response=await fetch('/api/me',{headers:{authorization:'Bearer '+T}});return response.status!==401&&response.status!==403},
   onexpired:()=>{localStorage.removeItem('nx');T=null;connectionNotice.hidden=true;gate()},
   onreconnect:()=>{if(document.querySelector('dialog[open]')||document.querySelector('#ti')?.value.trim()||document.activeElement?.matches('input,textarea,[contenteditable]'))return;evt('conv',{})}

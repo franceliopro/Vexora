@@ -1,7 +1,7 @@
 // One reconnecting socket per page. A transport failure must never reload the application.
 (function(root){
- function connectRealtime(options){let socket=null,timer=null,heartbeat=null,attempt=0,stopped=false,connectedBefore=false,generation=0;
-  const clear=()=>{clearTimeout(timer);clearInterval(heartbeat);timer=heartbeat=null};
+ function connectRealtime(options){let socket=null,timer=null,heartbeat=null,stableTimer=null,recoveryTimer=null,attempt=0,stopped=false,connectedBefore=false,generation=0;
+  const clear=()=>{clearTimeout(timer);clearInterval(heartbeat);clearTimeout(stableTimer);clearTimeout(recoveryTimer);timer=heartbeat=stableTimer=recoveryTimer=null};
   const state=(name)=>options.onstate?.(name);
   async function retry(current){if(stopped||current!==generation)return;clear();state(navigator.onLine===false?'offline':'reconnecting');
    try{if(options.checkSession&&await options.checkSession()===false){stop();options.onexpired?.();return}}catch{}
@@ -9,7 +9,7 @@
   }
   function open(){if(stopped)return;clear();const current=++generation;state(navigator.onLine===false?'offline':connectedBefore?'reconnecting':'connecting');
    try{socket=new WebSocket(options.url())}catch{retry(current);return}
-   socket.onopen=()=>{if(stopped||current!==generation){socket.close();return}attempt=0;state('connected');if(connectedBefore)options.onreconnect?.();connectedBefore=true;heartbeat=setInterval(()=>{if(socket?.readyState===1)socket.send(JSON.stringify({type:'ping'}))},25000)};
+   socket.onopen=()=>{if(stopped||current!==generation){socket.close();return}stableTimer=setTimeout(()=>{attempt=0},30000);state('connected');if(connectedBefore)recoveryTimer=setTimeout(()=>options.onreconnect?.(),3000);connectedBefore=true;heartbeat=setInterval(()=>{if(socket?.readyState===1)socket.send(JSON.stringify({type:'ping'}))},25000)};
    socket.onmessage=event=>{if(stopped||current!==generation)return;try{const message=JSON.parse(event.data);if(message.t!=='pong')options.onmessage?.(message)}catch(error){options.onerror?.(error)}};
    socket.onerror=()=>{if(!stopped&&current===generation)state('reconnecting')};
    socket.onclose=()=>retry(current);
