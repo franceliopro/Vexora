@@ -225,3 +225,7 @@ Validação adicional: `test/workflows-postgres.mjs` em PostgreSQL/WASM verifica
 Fontes adicionais: https://developer.mozilla.org/en-US/docs/Web/API/MediaRecorder/isTypeSupported_static ; https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia ; https://docs.zernio.com/platforms/ .
 
 Teste adicional de codec: áudio AAC/MP4 sintético convertido com os mesmos parâmetros do servidor; ffprobe confirmou Opus, 48 kHz, mono. Isso não comprova entrega em rede real. Gravações têm limite de cinco minutos.
+
+## 17. Acabamento de etiquetas e Kanban
+
+Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto, ponto colorido, contador circular e rodapé com subtotal alinhado. Mantida a estrutura Néxora, com fotos, etiquetas, ações e integração à conversa. Etiquetas `.nx-tag` passam a compartilhar o acabamento das etiquetas do atendimento: borda suave, fundo leve, texto legível e ponto da própria cor. Cards também têm um ponto da etapa e avatar circular. Hover/foco da borda e do título e destaque da coluna receptora usam `--stage`, não a cor global da marca. A área de cards rola dentro da coluna; cabeçalho e rodapé permanecem no conjunto. Validar em desktop/celular e claro/escuro, sem alterações de banco ou das regras do CRM.
