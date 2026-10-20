@@ -1,3 +1,5 @@
+import {financialChunks} from '../debt-presentation.js';
+import {extraAgentAction} from './actions.js';
 import {closeAutomated} from '../automation-close.js';
 import {bus} from '../bus.js';
 import {guardDocumentReply} from '../financial-identity.js';
@@ -15,8 +17,7 @@ const stt=(cfg,file)=>chain(cfg,async c=>{const fd=new FormData();fd.append('fil
 const tts=(cfg,text)=>chain(cfg,async c=>{const r=await post((c.base_url||'https://api.openai.com/v1')+'/audio/speech',{authorization:'Bearer '+c.key},{model:c.model||'tts-1',voice:c.voice||'alloy',input:text,response_format:'opus'});return saveMedia(Buffer.from(await r.arrayBuffer()),'ogg')});
 const emb=async t=>{const s=(await q("select value from settings where key='embed'")).rows[0]?.value;if(!s?.key)return null;
  return (await(await post((s.base_url||'https://api.openai.com/v1')+'/embeddings',{authorization:'Bearer '+s.key},{model:s.model||'text-embedding-3-small',input:t})).json()).data[0].embedding};
-export async function ragAdd(agent_id,title,content){const parts=content.match(/[\s\S]{1,900}(\n|$)/g)||[content];let n=0;
- for(const p of parts){const e=await emb(p).catch(()=>null);await q('insert into docs(agent_id,title,content,emb) values($1,$2,$3,$4)',[agent_id||null,title,p,e?'['+e+']':null]);n++}return n}
+export async function ragAdd(agent_id,title,content,{query=q,source_id=null}={}){const parts=[];for(let i=0;i<content.length;i+=850)parts.push(content.slice(i,i+1000));let n=0;for(const p of parts){const e=await emb(p).catch(()=>null);await query('insert into docs(agent_id,title,content,emb,source_id) values($1,$2,$3,$4,$5)',[agent_id||null,title,p,e?'['+e+']':null,source_id]);n++}return n}
 async function rag(aid,text){const e=await emb(text).catch(()=>null);
  if(e)return (await q('select content from docs where (agent_id=$1 or agent_id is null) and emb is not null order by emb <=> $2::vector limit 4',[aid,'['+e+']'])).rows.map(r=>r.content);
  const w=text.split(/\s+/).filter(x=>x.length>3).slice(0,4);if(!w.length)return [];
@@ -43,6 +44,7 @@ ${extra}
 Responda SOMENTE JSON: {"reply":"texto curto","actions":[{"t":"move_stage","stage":"nome"},{"t":"handoff","user_id":N,"why":""},{"t":"invite","user_id":N},{"t":"book","title":"","start":"ISO","minutes":30},{"t":"set","k":"campo","v":"valor"}]}
 Para rastreamento veicular, use {"t":"tracking_triage","sector":"suporte|financeiro|comercial|administrativo","platform":"ceeb_vision|link|rastreabem","payment":true|false}. Só use depois de coletar os dados necessários. Para pagamento, o fluxo seguro solicitará documento e verificará o telefone.
 Para concluir, somente se close estiver permitido e o cliente indicar que foi resolvido ou pedir encerramento, use {"t":"close","reason":"motivo objetivo","outcome":"resolved|question|other"}. Nunca conclua só porque enviou uma cobrança; envio não significa pagamento.
+Para etiquetas use {t:'labels',label_id:N,operation:'add|remove'}. Para consultar o cardápio use {t:'show_menu'}, e produtos {t:'show_products'}. Nunca invente produtos ou preços; a ação envia a lista cadastrada. Etiquetas disponíveis: ${JSON.stringify((await q('select id,name from labels where active')).rows)}. Ações de mensagem próprias: ${JSON.stringify((ag.custom_actions||[]).map(({key,name,description})=>({key,name,description})))}; use t igual à key quando necessário.
 Ações permitidas: ${(ag.tools||[]).join(',')}. Só use ações quando fizer sentido. Atualize a ficha (set) quando descobrir dados do cliente.`;
  const crm=(ag.tools||[]).includes('crm_move')?(await q("select c.id,c.title,c.board_id,s.id stage_id,s.name stage_name,s.final from crm_cards c join crm_stages s on s.board_id=c.board_id where c.conversation_id=$1 and c.status='open'",[cv.id])).rows:[];
  const crmContext='CRM desta conversa: '+JSON.stringify(crm)+'. Se crm_move for permitido, use {t: \"crm_move\", card_id:N, stage_id:N} somente para etapas intermediárias; encerramento exige humano.';
@@ -50,6 +52,7 @@ Ações permitidas: ${(ag.tools||[]).join(',')}. Só use ações quando fizer se
  out.reply=guardDocumentReply(out.reply||'',lastU.split(/\r?\n/).at(-1)||'');let retry='';
  for(const a of out.actions||[]){const current=(await q('select * from conversations where id=$1',[cv.id])).rows[0];if(!automationAllowed(current)||current.automation_epoch!==cv.automation_epoch)return;if(!(ag.tools||[]).includes(a.t))continue;
   try{
+   const actionMessage=await extraAgentAction(q,cv,ag,a);if(actionMessage!==undefined){if(actionMessage)for(const body of financialChunks(actionMessage))await deliver(cv.id,{body,ai:true,epoch:cv.automation_epoch});if(actionMessage)out.reply=null;bus('conv',{id:cv.id});continue}
    if(a.t==='close'){if(out.reply)await deliver(cv.id,{body:out.reply,ai:true,epoch:cv.automation_epoch});const closed=await tenantTransaction(cv.tenant_id,query=>closeAutomated(query,cv,{reason:a.reason,outcome:a.outcome||'resolved',executor:'ai'}));if(closed)bus('conv',{id:cv.id});out.reply=null;break}
    if(a.t==='crm_move'){const bid=await tenantTransaction(cv.tenant_id,query=>moveCRMFromConversation(query,cv,a));(await import('../bus.js')).bus('crm',{board_id:bid})}
    if(a.t==='move_stage'){const s=st.rows.find(x=>x.name.toLowerCase()===String(a.stage).toLowerCase());if(s)await setStage(cv.id,s.id)}

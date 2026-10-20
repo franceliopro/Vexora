@@ -253,3 +253,15 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Cabeçalho, barra de ferramentas e localização compactados para liberar altura do cenário, com adaptação ao celular.
 - Assinatura néxora SUITE by EFFE alinhada pela linha de base; ícone alinhado à base do grupo.
 - Início explica gatilhos e canais. Mensagens/palavras-chave funcionam nos canais conectados. Reações, comentários e outros eventos públicos ainda dependem de implementação específica; esta alteração não os ativa.
+
+
+## 20. Atendimento, menções e conhecimento dos agentes
+- Respostas rápidas usam ícone próprio de raio; chat interno mantém nota. Editor inclui emojis e variáveis nome, primeiro_nome, atendente, empresa, protocolo e saudacao; substituição ocorre ao inserir como rascunho para revisão antes de envio.
+- Chat interno inline sugere agentes humanos ativos e equipes com @. Seleção gera destinatários estruturados. Menções não concedem acesso: convidar pessoa/equipe antes se faltar permissão. Todos com acesso continuam podendo ler as notas internas. Tabela internal_mentions persiste destinatários e leitura; indicador @ no rodapé mostra pendências do usuário, atualizado a cada 15s.
+- Logo do rodapé centralizado verticalmente; textos continuam na mesma linha de base.
+- Ações da IA: habilitar/desabilitar predefinidas, criar/excluir ações de mensagem própria com instrução de uso. Não executam código nem geram integrações arbitrárias. Novas predefinidas labels, show_menu, show_products consultam etiquetas/cardápio/catálogo da empresa; somente ferramentas autorizadas executam.
+- Base aceita vários arquivos e URLs, sem limite fixo de quantidade na interface. Limites por base: 10 MB e 1 milhão de caracteres; PDF escaneado sem texto requer OCR prévio. Tipos PDF, DOC, DOCX, TXT, MD, CSV, JSON, HTML e RTF. Importações sequenciais com confirmação/erro; falhas preservam pendentes e agente já criado para retentativa sem duplicar cadastro. Bases persistidas podem ser excluídas com seus trechos.
+- Migração 022 adiciona custom_actions, knowledge_sources, docs.source_id e internal_mentions, com RLS e referências isoladas por empresa. Docker instala poppler-utils, antiword, unzip e unrtf para extração. Rebuild da imagem é necessário, feito pelo deploy normal; não exige credenciais no Dokploy.
+- Busca de URLs usa DNS validado e endereço fixado por conexão, bloqueio de IPs privados e validação em cada redirecionamento, limite de tamanho/tempo. Não executa JavaScript da página.
+- RAG mantém fallback textual sem embeddings. Chunking agora também preserva documentos longos sem quebras de linha. OCR, transcrição de vídeos e crawl automático do site não estão implementados.
+- Testes: npm test; migrações e governança PostgreSQL/WASM, importação/exclusão com extrator de persistência simulado, RLS, menções sem acesso bloqueadas e leitura por destinatário; extração real PDF/DOCX com ferramentas locais; navegador com APIs simuladas para múltiplos arquivos/URLs, ações, menções, emojis e variáveis. Sem envio real a clientes/provedores.
