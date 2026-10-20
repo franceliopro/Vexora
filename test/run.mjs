@@ -42,7 +42,7 @@ const G=(nodes,edges)=>({nodes:nodes.map(([id,type,data])=>({id,type,data:data||
  // boleto/linha digitável
  const b2=mk(g);await b2.say(null);await b2.say('2');await b2.say('52998224725');await b2.say('2');await b2.say('2');eq(b2.out.slice(-4,-2),['💳 R$ 99,90 — venc. 10/01/2099\nLinha digitável:','34191.79001 01043.510047'],'linha digitável');
  const b3=mk(g);await b3.say(null);await b3.say('1');eq(b3.st.transfer,[{target:'ai',agent_id:1}],'transfer IA');eq(b3.done,true,'fim');
- const b4=mk(g);await b4.say(null);await b4.say('xx');await b4.say('yy');eq(b4.out.at(-1).includes('Não entendi'),true,'inválido 1');
+ const b4=mk(g);await b4.say(null);await b4.say('xx');await b4.say('yy');eq(b4.out.at(-1).includes('Opção inválida'),true,'inválido 1');
  const b5=mk(g,{asaasDebts:async()=>({name:'X',debts:[]})});await b5.say(null);await b5.say('2');await b5.say('52998224725');eq(b5.out.at(-1).includes('Não encontramos débitos'),true,'sem débitos');
  const b6=mk(g,{asaasDebts:async()=>{throw new Error('x')}});await b6.say(null);await b6.say('2');await b6.say('11222333000181');eq(b6.out.at(-1).includes('Não consegui consultar'),true,'erro API');
  const b7=mk(g);await b7.say(null);await b7.say('2');for(const x of ['1','2','3'])await b7.say(x);eq([b7.out.at(-1),b7.done],['Não consegui validar o documento.',true],'3 docs inválidos encerram');
