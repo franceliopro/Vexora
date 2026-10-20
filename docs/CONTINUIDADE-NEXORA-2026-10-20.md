@@ -229,3 +229,20 @@ Teste adicional de codec: áudio AAC/MP4 sintético convertido com os mesmos par
 ## 17. Acabamento de etiquetas e Kanban
 
 Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto, ponto colorido, contador circular e rodapé com subtotal alinhado. Mantida a estrutura Néxora, com fotos, etiquetas, ações e integração à conversa. Etiquetas `.nx-tag` passam a compartilhar o acabamento das etiquetas do atendimento: borda suave, fundo leve, texto legível e ponto da própria cor. Cards também têm um ponto da etapa e avatar circular. Hover/foco da borda e do título e destaque da coluna receptora usam `--stage`, não a cor global da marca. A área de cards rola dentro da coluna; cabeçalho e rodapé permanecem no conjunto. Validar em desktop/celular e claro/escuro, sem alterações de banco ou das regras do CRM.
+
+
+## 18. Editor compartilhado de automações e ajustes do CRM (20/10)
+
+- Leads era uma página informativa, sem captura ou rastreamento próprio: saiu do menu. A rota antiga redireciona para Contatos. A etiqueta Novo Lead e a etapa dos painéis permanecem; não houve exclusão de dados.
+- Workflows agrupa Chatbots, Follow-up e Agendadas. Chatbot conduz a conversa; follow-up executa ações ao longo do tempo. Compartilham o novo `web/flow-editor.js`: blocos compactos, inspector lateral, conexões, arraste de blocos, arraste do cenário pelo botão esquerdo/central, zoom pela roda e botões, minimapa, organização e desfazer/refazer do grafo.
+- Follow-ups antigos continuam no motor linear. Ao abrir e salvar no editor, seus passos são convertidos em grafo. Novos grafos começam em rascunho. Os vínculos da inbox continuam limitando a execução.
+- Migração 020 adiciona grafo, cursor, variáveis, limite de passos, snapshot por execução e política de resposta aos jobs. Resposta pode cancelar ou continuar pelas saídas respondeu/não respondeu. Assumir por humano sempre interrompe: não reativar automaticamente.
+- Blocos de follow-up: mensagem, espera em segundos/minutos/horas/dias, aguardar resposta com timeout, verificar resposta, condição, variável, ciclo limitado, etiqueta, nota privada, nome/email do contato, etapa do atendimento, atribuição humana e resposta da IA configurada na conversa.
+- Bots recebem blocos etiqueta, nota, atualização de contato e ciclo limitado; gatilho de palavra-chave/hashtag em mensagens permite qualquer/todas e intervalo por contato. Opções numeradas existentes continuam funcionando.
+- Ciclos entre 1 e 20 repetições; validação rejeita laço sem espera/pergunta/ciclo. Workflow encerra após 500 passos totais, e o bot interrompe após 200 passos em uma chamada com nota interna. Não usar ciclos para mensagens repetitivas sem intervalo.
+- Cursor é salvo antes de ações externas para evitar reenvio cego depois de falha. Isso favorece ausência de duplicação; não promete entrega exatamente uma vez. Verificar provedor e histórico se houver falha ambígua.
+- Comentários públicos, Stories, likes e demais gatilhos sociais ainda NÃO iniciam esse motor. A interface informa essa limitação. Menus numerados não são botões nativos universais. Nenhum teste fez envio a provedores reais.
+- Migração 021 permite painel `support`. Formulário oferece Suporte técnico com Novo chamado → Triagem → Em diagnóstico → Aguardando cliente → Em resolução → Conclusão. Aplicar modelo pede confirmação e só altera etapas ainda não salvas; painéis existentes preservam seu fluxo.
+- “Chave” renomeada para “Prefixo dos cards”, com explicação e exemplo SUP-123; não é credencial. Etiquetas padrão no formulário usam as cores/ícones do produto.
+- Janela do card com fechar circular e resultados ganho/perda arredondados. Histórico e seleção de etiquetas têm rolagem interna; ações Salvar/Cancelar permanecem no rodapé. Configurações também limitam listas longas.
+- Verificação: npm test (inclui motor puro de grafos); PostgreSQL/WASM com todas as migrações, snapshot, retomada, ramo de resposta e bloqueio de mutação após humano assumir; teste Chromium com APIs simuladas para arraste/zoom, edição/salvamento de grafo, suporte, cores e histórico longo. Validar integrações reais separadamente.
