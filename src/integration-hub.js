@@ -1,10 +1,11 @@
+import {financeAccount} from './finance-provider.js';
 import crypto from 'node:crypto';
 import {als} from './ctx.js';
 import {seal,unseal} from './service-calendar.js';
 import {requestConnection} from './agent-connections.js';
 import {connectionInput} from './connection-policy.js';
-export const INTEGRATION_EVENTS=['attendance.created','message.created','crm.updated','external.query.completed'];
-export const INTEGRATION_SCOPES=['contacts:read','crm:read','conversations:read','external:query'];
+export const INTEGRATION_EVENTS=['attendance.created','message.created','crm.updated','external.query.completed','finance.overdue','finance.updated'];
+export const INTEGRATION_SCOPES=['contacts:read','crm:read','conversations:read','external:query','finance:read'];
 export const tokenHash=t=>crypto.createHash('sha256').update(t).digest('hex');
 export function hookInput(b){const c=connectionInput({name:b.name,url:b.url,method:'POST'});if(!Array.isArray(b.events)||!b.events.length||b.events.some(e=>!INTEGRATION_EVENTS.includes(e)))throw Error('Selecione eventos válidos');return {name:c.name,url:c.url,events:[...new Set(b.events)]}}
 export function signedEnvelope(secret,id,timestamp,body){return 'sha256='+crypto.createHmac('sha256',secret).update(timestamp+'.'+id+'.'+body).digest('hex')}
@@ -31,5 +32,6 @@ export function mountIntegrationPublic(app,{ah,q}){
  app.get('/api/v1/:slug/opportunities',auth,scope('crm:read'),ah(async(req,res)=>res.json({data:(await q('select id,board_id,stage_id,contact_id,conversation_id,title,status from crm_cards where id>$1 order by id limit 100',[Math.max(0,Number(req.query.after)||0)])).rows})));
  app.get('/api/v1/:slug/attendances/:id',auth,scope('conversations:read'),ah(async(req,res)=>{const c=(await q("select id,contact_id,channel_id,team_id,assignee_id,status,protocol from conversations where id=$1 and filing='active'",[req.params.id])).rows[0];if(!c)return res.status(404).json({error:'Atendimento não encontrado'});res.json({data:c})}));
  app.get('/api/v1/:slug/messages/:id',auth,scope('conversations:read'),ah(async(req,res)=>{const m=(await q("select m.id,m.conversation_id,m.dir,m.kind,m.body,m.at from messages m join conversations c on c.id=m.conversation_id where m.id=$1 and m.kind<>'note' and c.filing='active'",[req.params.id])).rows[0];if(!m)return res.status(404).json({error:'Mensagem não encontrada'});res.json({data:m})}));
+ app.get('/api/v1/:slug/finance/debtors',auth,scope('finance:read'),ah(async(req,res)=>{const {account}=await financeAccount(q,req.query.provider||'asaas'),rows=(await q("select c.id,c.name,c.document,i.id invoice_id,i.external_id,i.currency,i.balance,i.due_date from fin_invoices i join fin_customers c on c.account_id=i.account_id and c.external_id=i.customer_external_id where i.account_id=$1 and i.id>$2 and i.status in ('open','overdue','uncollectible') and i.balance>0 and i.due_date<(now() at time zone coalesce((select value->>'time_zone' from settings where key='operation'),'America/Sao_Paulo'))::date order by i.id limit 100",[account.id,Math.max(0,Number(req.query.after)||0)])).rows;res.json({data:rows,next:rows.length===100?rows.at(-1).invoice_id:null,provider:account.provider,environment:account.environment})}));
  app.post('/api/v1/:slug/query/:id',auth,scope('external:query'),ah(async(req,res)=>{const id=Number(req.params.id);if(!req.integrationKey.connection_ids.includes(id))return res.status(403).json({error:'Conexão não autorizada para esta chave'});const c=(await q("select * from agent_connections where id=$1 and active and method='GET'",[id])).rows[0];if(!c)throw Error('Conexão indisponível');const args=req.body||{};if(typeof args!=='object'||Array.isArray(args)||Object.keys(args).length>30||Object.entries(args).some(([k,v])=>!c.parameters.some(p=>p.name===k)||!['string','number','boolean'].includes(typeof v)||String(v).length>2000))throw Error('Parâmetros não autorizados');const data=await requestConnection(c,args);await queueIntegrationEvent(q,'external.query.completed',{connection_id:id,key_id:req.integrationKey.id});res.json({data})}));
 }

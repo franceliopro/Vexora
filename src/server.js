@@ -1,3 +1,7 @@
+import {mountFinanceHub,financeWebhook} from './finance-hub.js';
+import {tickFinance} from './finance-automation.js';
+import {providerRequest as financeProviderRequest} from './financial-provider.js';
+import {financeDate} from './finance-policy.js';
 import {mountSandboxFixtures} from './asaas-sandbox-fixtures.js';
 import {mountIntegrationHub,mountIntegrationPublic,tickIntegrationHooks} from './integration-hub.js';
 import {mountJourneys,tickJourneys} from './journeys.js';
@@ -64,7 +68,7 @@ app.post('/api/login',limit,ah(async(req,res)=>{const u=(await q('select * from 
 app.get('/api/brand',pub,ah(async(req,res)=>{const s=Object.fromEntries((await q("select * from settings where key in ('brand','modules')")).rows.map(r=>[r.key,r.value]));res.json({name:'Véxora',color:'#6254e8',font:'Inter',logo:'',logo_dark:'',favicon:'',...s.brand,labels:{contact:'Cliente',appt:'Agendamento',item:'Produto'},mods:s.modules||[],product_modules:PRODUCT_MODULES})}));
 // ---- webhooks: URL assinada (HMAC) ⇒ ninguém forja mensagem em canal alheio; a empresa vem do canal/assinatura
 const inT=(t,f)=>als.run({tenant:+t},f);
-app.post('/webhook/pay/:p/:tid/:sig',ah(async(req,res)=>{if(req.params.sig!==sign('pay:'+req.params.tid))return res.sendStatus(403);await inT(req.params.tid,async()=>{const all=(await q("select value from settings where key='pay'")).rows[0]?.value||{},cfg=all[req.params.p]||{};if(!verifyFinancialHook(req.params.p,cfg,req.rawBody,req.headers))return res.sendStatus(403);if(req.params.p==='stripe'&&typeof req.body.livemode==='boolean'&&req.body.livemode===(cfg.test!==false))return res.sendStatus(400);await payWebhook(req.params.p,req.body,req.params.p==='asaas'?(cfg.sandbox?'sandbox':'production'):(cfg.test!==false?'test':'live'));if(['asaas','stripe'].includes(req.params.p))await q("update settings set value=jsonb_set(value,array[$1],(value->$1)||jsonb_build_object('webhook_seen_at',now())) where key='pay'",[req.params.p]); res.sendStatus(200)})}));
+app.post('/webhook/pay/:p/:tid/:sig',ah(async(req,res)=>{if(req.params.sig!==sign('pay:'+req.params.tid))return res.sendStatus(403);await inT(req.params.tid,async()=>{const all=(await q("select value from settings where key='pay'")).rows[0]?.value||{},cfg=all[req.params.p]||{};if(!verifyFinancialHook(req.params.p,cfg,req.rawBody,req.headers))return res.sendStatus(403);if(req.params.p==='stripe'&&typeof req.body.livemode==='boolean'&&req.body.livemode===(cfg.test!==false))return res.sendStatus(400);await payWebhook(req.params.p,req.body,req.params.p==='asaas'?(cfg.sandbox?'sandbox':'production'):(cfg.test!==false?'test':'live'));if(['asaas','stripe'].includes(req.params.p))await financeWebhook({q,provider:req.params.p,config:cfg,body:req.body,environment:req.params.p==='asaas'?(cfg.sandbox?'sandbox':'production'):(cfg.test!==false?'test':'live'),today:financeDate(new Date(),await companyTimeZone(q)).date,request:financeProviderRequest});if(['asaas','stripe'].includes(req.params.p))await q("update settings set value=jsonb_set(value,array[$1],(value->$1)||jsonb_build_object('webhook_seen_at',now())) where key='pay'",[req.params.p]); res.sendStatus(200)})}));
 // pedidos externos (iFood/Keeta/99Food via parceiro ou n8n): {handle,name,items:[],total,ext_id}
 app.post('/webhook/order/:source/:tid/:sig',ah(async(req,res)=>{if(req.params.sig!==sign('order:'+req.params.tid))return res.sendStatus(403);
  res.json(await inT(req.params.tid,async()=>{const b=req.body,ch=(await q('select id from channels where active order by id limit 1')).rows[0];let ct=(await q('select * from contacts where handle=$1',[b.handle])).rows[0];
@@ -97,6 +101,7 @@ mountLeadPublic(app,{ah,limit,tenantTransaction,bus});
 app.use('/api',auth);
 mountBotStrategies(app,{ah,adm,q,tenantTransaction});
 mountCampaigns(app,{ah,adm,q,tenantTransaction,graph:D.meta.graph,bus});
+mountFinanceHub(app,{ah,adm,q,tenantTransaction,lock:withConversationLock,graph:D.meta.graph});
 mountSandboxFixtures(app,{ah,adm,q,lock:withConversationLock});
 mountIntegrationHub(app,{ah,adm,q});
 mountJourneys(app,{ah,adm,q,tenantTransaction,graph:D.meta.graph,bus});
@@ -184,3 +189,5 @@ let campaignsBusy=false;setInterval(async()=>{if(campaignsBusy)return;campaignsB
 let journeysBusy=false;setInterval(async()=>{if(journeysBusy)return;journeysBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickJourneys({q,tenantTransaction,tenant:t.id,bus})).catch(e=>console.error('journey tick',t.id,e.message))}catch(e){console.error('journey scheduler',e.message)}finally{journeysBusy=false}},1000);
 
 let integrationBusy=false;setInterval(async()=>{if(integrationBusy)return;integrationBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickIntegrationHooks({q,tenantTransaction,tenant:t.id})).catch(e=>console.error('integration webhook',t.id,e.message))}catch(e){console.error('integration scheduler',e.message)}finally{integrationBusy=false}},5000);
+
+let financeBusy=false;setInterval(async()=>{if(financeBusy)return;financeBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickFinance({q,tenantTransaction,tenant:t.id,deliver,lock:withConversationLock})).catch(e=>console.error('finance worker',t.id,e.message))}catch(e){console.error('finance scheduler',e.message)}finally{financeBusy=false}},5000);

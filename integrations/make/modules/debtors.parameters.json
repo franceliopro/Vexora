@@ -1,0 +1,1 @@
+[{"name":"provider","type":"select","label":"Provedor financeiro","required":true,"default":"asaas","options":[{"label":"Asaas","value":"asaas"},{"label":"Stripe","value":"stripe"}]},{"name":"after","type":"number","label":"Após o ID da cobrança","default":0}]

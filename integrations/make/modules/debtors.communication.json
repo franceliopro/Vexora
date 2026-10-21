@@ -1,0 +1,1 @@
+{"url":"/finance/debtors","method":"GET","qs":{"after":"{{parameters.after}}","provider":"{{parameters.provider}}"},"response":{"iterate":"{{body.data}}","output":"{{item}}"}}

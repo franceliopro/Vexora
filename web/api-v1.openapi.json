@@ -199,6 +199,42 @@
           }
         }
       }
+    },
+    "/finance/debtors": {
+      "get": {
+        "summary": "Consultar cobranças vencidas para gestão financeira",
+        "description": "Requer finance:read. Cliente e documento mascarado, saldo, moeda e vencimento. Página de até 100 registros, segregada pela conta e ambiente conectados.",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asaas",
+                "stripe"
+              ],
+              "default": "asaas"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "data, next, provider e environment"
+          },
+          "403": {
+            "description": "Permissão financeira ausente"
+          }
+        }
+      }
     }
   },
   "components": {
