@@ -38,7 +38,7 @@ Testes locais com PostgreSQL/WASM e navegador cobrem isolamento, rotação, carg
 
 ## Protocolo e conexões
 
-Novos atendimentos recebem um protocolo imutável `NX-ANO-EMPRESA-NÚMERO`, sem telefone ou CPF. O recebimento inicial envia esse protocolo ao cliente antes da triagem. O estado de envio é salvo: falhas ou resultado incerto exigem conferência antes do reenvio. Conversas existentes recebem protocolo na migração, mas não disparam mensagens em massa: o atendente pode usar Informar protocolo.
+Novos atendimentos recebem um protocolo imutável `VX-ANO-EMPRESA-NÚMERO`, sem telefone ou CPF. O recebimento inicial envia esse protocolo ao cliente antes da triagem. O estado de envio é salvo: falhas ou resultado incerto exigem conferência antes do reenvio. Conversas existentes recebem protocolo na migração, mas não disparam mensagens em massa: o atendente pode usar Informar protocolo.
 
 A tela abre em Meus. O filtro é um popover junto à busca, sem modal ou escurecimento. A ficha oferece seleção direta do painel e botões de etapas intermediárias para vincular ou mover o cliente.
 

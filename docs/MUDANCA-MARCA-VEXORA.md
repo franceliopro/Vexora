@@ -26,3 +26,6 @@ A marca passa a ser Véxora; identificadores técnicos e repositório usam Vexor
 As únicas referências operacionais ao nome antigo servem à migração: reconhecimento do papel antigo do banco, valores padrão de conexão do Compose para instalações existentes, migração 034 e aceitação temporária dos cabeçalhos assinados `x-nexora-*`. Integrações novas exibem `x-vexora-*`. Remover esses caminhos antes da transição quebraria conexões existentes.
 
 Não houve alteração do domínio real, da configuração Dokploy ou do nome remoto do repositório por esta sessão. Os links no código já apontam para o nome futuro.
+
+## Protocolos VX-
+A migração 035 altera somente o prefixo dos protocolos existentes de NX- para VX-, mantendo ano, empresa e número. Novos atendimentos usam VX-. A busca de atendimentos aceita o protocolo antigo e o novo. Mensagens já enviadas permanecem no histórico; a mudança não dispara reenvio automático.

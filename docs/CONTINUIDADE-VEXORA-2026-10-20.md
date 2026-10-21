@@ -67,7 +67,7 @@ Filas, filtros e contagens com regras compartilhadas; busca por contato, mensage
 
 ### Protocolo
 
-`src/service-protocol.js` e migração 016: número próprio no formato NX-ANO-EMPRESA-ID, imutável, visível e copiável; tentativa de aviso ao cliente na primeira entrada. Estados de entrega distinguem pendente, enviando, enviado e necessidade de conferência. Não repetir cegamente após falha ambígua. Conversas antigas recebem número sem disparo em massa.
+`src/service-protocol.js` e migração 016: número próprio no formato VX-ANO-EMPRESA-ID, imutável, visível e copiável; tentativa de aviso ao cliente na primeira entrada. Estados de entrega distinguem pendente, enviando, enviado e necessidade de conferência. Não repetir cegamente após falha ambígua. Conversas antigas recebem número sem disparo em massa.
 
 ### Identificação de bot/IA e origem
 
