@@ -24,7 +24,7 @@ import {automationAllowed} from '../conversation-policy.js';import {localGreetin
 import fs from 'fs';import {q,tenantTransaction} from '../db.js';import {deliver,setStage,D} from '../core.js';import {saveMedia,MEDIA,readMedia} from '../media.js';import {createAppt} from '../gcal.js';
 const post=async(u,h,b)=>{const r=await fetch(u,{method:'POST',headers:{'content-type':'application/json',...h},body:JSON.stringify(b)});if(!r.ok)throw new Error(u+' '+r.status+' '+(await r.text()).slice(0,200));return r};
 const chain=async(c,fn)=>{let err;for(const x of [].concat(c||[])){try{return await fn(x)}catch(e){err=e;console.error('fallback:',e.message)}}throw err||new Error('provedor não configurado')}; // vários provedores por agente: cai pro próximo
-const llm=(cfg,system,msgs)=>chain(cfg,c=>textModel(c,system,msgs));
+const llm=(cfg,system,msgs)=>chain(cfg,c=>textModel({...c,json_mode:true},system,msgs));
 const stt=(cfg,file)=>chain(cfg,c=>transcribeAudio(c,readMedia(file),file));
 const tts=(cfg,text)=>chain(cfg,async c=>{const audio=await synthesizeAudio(c,text);const file=saveMedia(audio.buffer,audio.extension);if(audio.extension==='ogg')return file;const target=file.replace(/\.[^.]+$/,'.ogg');try{await promisify(execFile)('ffmpeg',['-y','-i',MEDIA+'/'+file,'-vn','-ac','1','-ar','48000','-c:a','libopus',MEDIA+'/'+target],{timeout:30000});return target}finally{fs.rmSync(MEDIA+'/'+file,{force:true})}});
 const emb=async t=>{const s=(await q("select value from settings where key='embed'")).rows[0]?.value;if(!s?.key)return null;

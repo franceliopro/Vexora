@@ -11,3 +11,5 @@ for(const text of ['x','zz','abc','  abc  ','0','99','sup'])assert.equal(shouldU
 assert.equal(fallbackReady(null,{kind:'audio'}),false);assert.equal(fallbackReady({llm:[{key:'test',model:'model'}]},{kind:'text'}),true);assert.equal(fallbackReady({llm:[{key:'test',model:'model'}],stt:[]},{kind:'audio'}),false);assert.equal(fallbackReady({llm:[{key:'test',model:'model'}],stt:[{key:'test',model:'speech'}]},{kind:'audio'}),true);
 
 for(const type of ['input','asaas','choice'])assert.equal(shouldUseAI({type,data:{}},{kind:'audio'}),true);
+
+assert.equal(shouldUseAI({type:'asaas',data:{}},{body:'Quero entender a minha cobrança'}),true);assert.equal(shouldUseAI({type:'asaas',data:{}},{body:'52998224725'}),false);assert.equal(shouldUseAI({type:'asaas',data:{}},{body:'52998224724'}),false);assert.equal(shouldUseAI({type:'asaas',data:{}},{body:'cancelar'}),false);

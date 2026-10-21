@@ -125,6 +125,6 @@ async function order(run,deps,t,enter){const V=run.vars,M=await deps.menu(),cats
 
 // Text fallback is opt-in for menus; audio hands off from any live block.
 export function choiceOption(options,text){const t=norm(String(text||'').replace('🔟','10').replace(/\uFE0F|\u20E3/g,'').trim());if(/^\d{1,2}$/.test(t)){const i=Number(t)-1;return i>=0&&i<options.length?i:-1}return options.findIndex(o=>norm(o)===t)}
-export function shouldUseAI(node,msg){if(msg.kind==='audio')return !!node&&!['close','end'].includes(node.type);if(node?.type!=='choice'||node.data?.aiFallback!=='on')return false;const text=String(msg.body||'').trim();return [...text].length>3&&choiceOption(node.data.options||[],text)<0}
+export function shouldUseAI(node,msg){if(msg.kind==='audio')return !!node&&!['close','end'].includes(node.type);const text=String(msg.body||'').trim();if([...text].length<=3||CANCEL(text))return false;if(node?.type==='asaas')return /[\p{L}]/u.test(text)&&!validDoc(text)&&matchOpt(METHODS,text)<0;if(node?.type==='input'&&['doc','number'].includes(node.data?.validate))return /[\p{L}]/u.test(text)&&!validDoc(text);if(node?.type!=='choice'||node.data?.aiFallback!=='on')return false;return choiceOption(node.data.options||[],text)<0}
 
 export const fallbackReady=(agent,msg)=>!!agent&&[].concat(agent.llm||[]).some(c=>c?.key&&c.model)&&(msg.kind!=='audio'||[].concat(agent.stt||[]).some(c=>c?.key&&c.model));

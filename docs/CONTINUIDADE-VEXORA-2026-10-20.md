@@ -582,3 +582,11 @@ Financeiro ganhou hierarquia visual consistente, abas com ícones, cartões clic
 
 ## Continuidade — regras atualizadas em 21/10
 Ver `REGRAS-DE-OPERACAO.md`. Migrações 042/043: CPF por representante, bot/áudio/IA, vendedor online, continuidade humana, permissões de áreas e painéis departamentais. Dados e credenciais existentes preservados.
+
+## Interrupção do bot e estúdio criativo — 21/10
+- Interrupção passa a recuperar agente autorizado quando o agente antigo está desativado, libera reserva do bot e mantém a mensagem recebida. Falhas da IA têm aviso e nota interna em vez de ficarem somente no log.
+- Contexto da etapa e variáveis coletadas entram no atendimento da IA. Áudio tem MIME correto na transcrição; respostas MP3 são convertidas para Opus antes do transporte WhatsApp. Bot permanece pausado.
+- Texto livre durante coleta financeira também pode interromper; CPF/CNPJ numérico continua no bloco Asaas.
+- Migração 044: referências, grades e trabalhos criativos, RLS e ligação com social_publications. Postagens → Estúdio IA. Ver ESTUDIO-CRIATIVO.md para configuração, formatos e limites reais.
+- Testes novos: bot-ai-handoff-postgres.mjs, social-creative-postgres.mjs e creative-policy.mjs; teste de interface social ampliado. APIs/transporte simulados, nenhuma postagem real.
+- Observação do usuário sobre busca Financeiro “cliente ou descrição” ficou incompleta; aguardar complemento, sem presumir alteração desejada.
