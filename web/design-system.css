@@ -1,0 +1,142 @@
+/* Véxora: shared geometry and density. Loaded after feature styles.
+   Brand colors remain tenant-owned; the conversation canvas keeps its own layout. */
+:root{--ui-gap:10px;--ui-gutter:18px;--ui-radius:16px;--ui-control-radius:14px;--ui-control-height:36px;--ui-shadow:0 3px 16px #17213a06}
+nav[aria-label="Navegação principal"]{height:58px;min-height:58px;padding:0 var(--ui-gutter);gap:18px}
+nav[aria-label="Navegação principal"] .nav-links{gap:4px}
+nav[aria-label="Navegação principal"] a[data-k]{min-height:36px;padding:8px 11px;border-radius:14px;font-size:12px}
+nav[aria-label="Navegação principal"] .nav-tools{gap:8px}
+nav.suite-section-nav{height:auto;min-height:44px;width:calc(100% - 36px);margin:10px 18px 0;padding:4px 6px;gap:4px;border-radius:16px;box-shadow:var(--ui-shadow)}
+nav.suite-section-nav .suite-section-name{font-size:10px;padding:0 10px 0 6px}
+nav.suite-section-nav .suite-section-tab{padding:8px 12px;min-height:34px;border-radius:12px;font-size:12px;line-height:18px;flex:none}
+.suite-section-content{min-width:0;width:100%;box-sizing:border-box}
+/* Compact, predictable actions. Wrap the action group, never an action label. */
+:is(main:not(:has(>.inbox)),dialog,.platform-shell) .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:var(--ui-control-height);padding:8px 13px;border-radius:var(--ui-control-radius);font-size:12px;font-weight:600;line-height:18px;white-space:nowrap;flex-shrink:0;text-decoration:none;box-sizing:border-box;max-width:100%}
+:is(main:not(:has(>.inbox)),dialog,.platform-shell) .btn.s{min-height:30px;padding:5px 10px;border-radius:11px;font-size:11px;line-height:18px}
+:is(main:not(:has(>.inbox)),dialog,.platform-shell) .btn.g{background:var(--card);border:1px solid var(--ln);color:var(--tx)}
+:is(main:not(:has(>.inbox)),dialog,.platform-shell) .btn.g:hover{background:var(--ac-s);border-color:color-mix(in srgb,var(--ac) 28%,var(--ln));color:var(--ac)}
+:is(main:not(:has(>.inbox)),dialog,.platform-shell) .btn.selected{color:var(--ac);background:var(--ac-s);border-color:color-mix(in srgb,var(--ac) 24%,var(--ln))}
+:is(main:not(:has(>.inbox)),dialog,.platform-shell) :is(button,a,input,select,textarea):focus-visible{outline:2px solid var(--ac);outline-offset:3px}
+:is(main:not(:has(>.inbox)),dialog,.platform-shell) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea){border-radius:12px;border-color:var(--ln);font-size:13px}
+:is(main:not(:has(>.inbox)),dialog,.platform-shell) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select){min-height:36px}
+.suite-section-content>.top,main:not(:has(>.inbox))>.top,.admin-workspace>.top{padding:12px var(--ui-gutter);min-height:58px;gap:12px;flex-wrap:wrap}
+.top>h2{margin:0;font-size:18px;line-height:1.4}
+.top>.row{gap:8px;flex-wrap:wrap;flex-shrink:0}
+.suite-section-content>.pad,main:not(:has(>.inbox))>.pad,.admin-workspace>.pad{padding:16px var(--ui-gutter)}
+:is(main:not(:has(>.inbox)),dialog) .card{padding:18px;border-radius:var(--ui-radius);border:1px solid var(--ln);box-shadow:var(--ui-shadow);min-width:0}
+:is(main:not(:has(>.inbox))) :is(.nx-tabs,.finance-tabs,.bot-strategy-tabs){gap:4px}
+:is(main:not(:has(>.inbox))) .nx-tabs{border-radius:14px;padding:4px}
+:is(main:not(:has(>.inbox))) .nx-tabs .btn{min-height:32px;padding:6px 11px;border-radius:10px}
+/* CRM: keep the board itself in the foreground, with two deliberate toolbar rows. */
+.crm-workspace>.crm-toolbar{display:grid;grid-template-columns:minmax(180px,1fr) auto;padding:12px var(--ui-gutter);gap:10px 14px}
+.crm-toolbar .crm-panel-title{width:auto;max-width:100%;min-width:0}
+.crm-toolbar .crm-panel-title select{font-size:15px;max-width:380px;min-width:0}
+.crm-toolbar>.nx-tabs{justify-self:end}
+.crm-toolbar>.crm-toolbar-actions{width:100%;grid-column:1/-1;margin:0;gap:6px;display:flex;flex-wrap:wrap}
+.crm-toolbar-actions input{flex:1 1 180px;width:auto;max-width:420px;min-width:120px}
+.crm-body .crm-kanban{padding:14px var(--ui-gutter);gap:12px}
+.crm-column .crm-column-head{min-height:46px;padding:10px 12px}
+.crm-column .crm-column-footer{min-height:76px;padding:8px 10px;gap:6px}
+.crm-column .crm-card{border-radius:14px;padding:12px}
+.crm-card h3{font-size:14px}
+/* Bots and journeys share the same content inset and compact action groups. */
+.bot-strategy-tabs{padding:8px var(--ui-gutter) 0;flex-wrap:wrap}
+.bot-strategy-grid{gap:12px}
+.bot-strategy-card-title{gap:8px}
+.bot-strategy-card-title h3{font-size:15px;line-height:1.5}
+.bot-strategy-actions,.bot-strategy-chips{gap:6px;margin-top:12px}
+.workflow-heading{padding:8px var(--ui-gutter);gap:12px;min-height:48px;flex-wrap:wrap}
+.workflow-heading>button{white-space:nowrap}
+.cg-toolbar{padding:8px 12px;gap:8px}
+.journey-help{margin:0 var(--ui-gutter) 12px;padding:12px 16px;border-radius:16px}
+/* Feature shells use one page gutter, not stacked indents or edge-to-edge blocks. */
+.social-shell,.finance-shell,.ads-shell{width:100%;max-width:1640px;box-sizing:border-box;padding:16px var(--ui-gutter);margin:0 auto}
+.social-hero,.ads-hero,.admin-overview,.admin-report-intro{padding:18px;border-radius:18px;gap:14px;margin-bottom:14px}
+.social-hero h2,.ads-hero h2,.finance-head h2{font-size:23px;margin:4px 0 7px;line-height:1.3}
+.social-hero p,.ads-hero p{font-size:12px;line-height:1.6;margin:0}
+.social-toolbar{gap:8px;margin:12px 0;align-items:center}
+/* A local tab bar must not inherit the main navigation's width, height or margins. */
+nav.social-view-switch{display:flex;flex:0 0 auto;flex-direction:row;width:auto;max-width:100%;height:auto;min-height:0;gap:3px;padding:4px;margin:0;overflow-x:auto;background:var(--surface);border:1px solid var(--ln);border-radius:15px;z-index:auto}
+nav.social-view-switch .btn{flex:0 0 auto;min-height:32px;padding:6px 13px;border-radius:11px;border:1px solid transparent;box-shadow:none;background:transparent;color:var(--mu)}
+nav.social-view-switch .btn[aria-pressed=true]{color:var(--ac);background:var(--card);border-color:var(--ln);box-shadow:var(--ui-shadow)}
+.social-toolbar>input{flex:1 1 200px;min-width:140px;width:auto}
+.social-toolbar>select{flex:0 1 190px;min-width:145px}
+.social-grid,.social-calendar{gap:12px}
+.social-card-content,.social-analytics,.social-preview{padding:16px}
+.social-post-card,.social-preview,.social-analytics,.creative-section{border-radius:18px}
+.social-card-actions{gap:6px;padding-top:10px}
+.creative-intro{padding:16px 0;gap:12px}
+.creative-intro h2{font-size:23px}
+.creative-section{padding:16px;margin:12px 0}
+.finance-head{margin-bottom:12px;gap:8px}
+.finance-tabs{padding:0 0 8px;margin-bottom:12px}
+.finance-filters,.ads-filters{padding:12px;gap:8px;margin:12px 0;border-radius:16px}
+.finance-kpis,.ads-kpis{gap:10px;margin:12px 0}
+.finance-kpi,.ads-kpi{padding:15px;border-radius:16px}
+.finance-charts{gap:12px;margin:14px 0}
+.finance-chart,.ads-chart{padding:16px;border-radius:18px}
+.platform-header{padding:10px var(--ui-gutter);gap:12px;min-height:58px}
+.platform-main{margin:18px auto;padding:0 var(--ui-gutter)}
+.platform-main .card{padding:18px;border-radius:18px;margin-bottom:14px}
+.platform-shell .btn{border-radius:14px;min-height:36px;padding:8px 13px}
+.platform-main h1{font-size:24px}
+/* Modals keep the same rounded controls and soft surfaces as the conversation tools. */
+dialog:not(.agent-editor-dialog){border-radius:20px;box-shadow:0 18px 65px #101a3529}
+@media(max-width:1100px){nav[aria-label="Navegação principal"]{gap:10px}nav[aria-label="Navegação principal"] a[data-k]{padding:8px;font-size:11px}nav[aria-label="Navegação principal"] .nav-tools{gap:4px}}
+@media(max-width:700px){
+ :root{--ui-gutter:12px}
+ nav[aria-label="Navegação principal"]{height:52px;min-height:52px;padding:0 10px;gap:8px}
+ nav[aria-label="Navegação principal"] a[data-k]{min-height:36px;padding:8px}
+ nav.suite-section-nav{width:calc(100% - 24px);margin:8px 12px 0;min-height:42px;padding:4px;gap:3px}
+ nav.suite-section-nav .suite-section-tab{font-size:11px;padding:7px 10px;min-height:32px}
+ .suite-section-content>.top,main:not(:has(>.inbox))>.top,.admin-workspace>.top{padding:10px 12px;gap:8px;min-height:52px}
+ .top>h2{font-size:17px}
+ .top>.row{max-width:100%;gap:6px}
+ :is(main:not(:has(>.inbox)),dialog) .card{padding:14px}
+ .crm-workspace>.crm-toolbar{grid-template-columns:minmax(0,1fr);padding:10px 12px;gap:8px}
+ .crm-toolbar>.nx-tabs{justify-self:start;max-width:100%}
+ .crm-toolbar>.crm-toolbar-actions{grid-column:1;gap:6px}
+ .crm-toolbar-actions input{flex-basis:100%;max-width:none}
+ .social-hero,.ads-hero,.admin-overview,.admin-report-intro{padding:16px;gap:12px}
+ .social-hero h2,.ads-hero h2,.finance-head h2{font-size:21px}
+ .social-toolbar{gap:8px}
+ nav.social-view-switch{width:100%;flex-basis:100%;justify-content:flex-start}
+ nav.social-view-switch .btn{flex:1 0 auto;padding:6px 11px;font-size:11px}
+ .social-toolbar>input{flex-basis:100%}
+ .social-toolbar>select{flex:1 1 160px}
+ .social-grid{grid-template-columns:minmax(0,1fr)}
+ .finance-kpi,.ads-kpi{padding:12px}
+ .platform-header{flex-wrap:wrap}
+ .platform-actions{gap:6px}
+ .platform-main h1{font-size:22px}
+}
+@media(prefers-reduced-motion:reduce){:is(main,dialog) .btn{transition:none;transform:none}}
+@media(min-width:1250px){
+ .crm-workspace>.crm-toolbar{display:flex;flex-wrap:nowrap;gap:12px;min-height:60px}
+ .crm-toolbar .crm-panel-title{flex:0 1 230px;min-width:150px}
+ .crm-toolbar>.nx-tabs{flex:none}
+ .crm-toolbar>.crm-toolbar-actions{flex:1;width:auto;margin-left:auto;flex-wrap:nowrap;justify-content:flex-end}
+ .crm-toolbar-actions input{flex:1 1 150px;max-width:240px;min-width:120px}
+ .crm-toolbar .btn{font-size:11px;padding-inline:10px}
+}
+/* Header extensions (templates/help) align as a single action cluster. */
+.suite-section-content>.top,main:not(:has(>.inbox))>.top,.admin-workspace>.top{justify-content:flex-start}
+.top>h2{margin-right:auto}
+.crm-action-content{display:inline-flex;align-items:center;gap:6px}
+.crm-action-content svg{width:15px;height:15px;flex:none}
+.campaign-intro{padding:16px var(--ui-gutter) 8px}
+.campaign-intro h2{font-size:23px;margin:0 0 8px}
+.campaign-intro p{margin:8px 0;font-size:13px}
+.campaign-toolbar{margin:0 var(--ui-gutter);gap:8px}
+.campaign-toolbar input,.campaign-toolbar select{padding:8px 12px;min-height:36px}
+.campaign-workspace>p{padding:0 var(--ui-gutter)}
+.campaign-grid{padding:10px var(--ui-gutter) 18px;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))}
+.campaign-card{padding:18px;border-radius:18px}
+@media(max-width:700px){.crm-toolbar-actions .crm-action-label{display:none}.crm-toolbar-actions .btn:has(.crm-action-content){width:36px;min-width:36px;padding:8px}.crm-toolbar-actions{align-items:center}.crm-toolbar-actions input{margin:0}}
+:is(main:not(:has(>.inbox)),dialog,.platform-shell) .row>.btn{flex:0 0 auto}
+nav.finance-tabs{display:flex;flex-direction:row;flex-wrap:nowrap;width:100%;height:auto;min-height:44px;padding:4px;gap:4px;margin:0 0 12px;border-radius:16px;overflow-x:auto;z-index:2}
+nav.finance-tabs .btn{min-height:34px;padding:7px 12px;flex:0 0 auto;border-radius:12px}
+.finance-head{padding:18px;border-radius:18px}
+.finance-filters label{margin-top:4px}
+.finance-filters input,.finance-filters select,.finance-filters .btn{height:36px;min-height:36px}
+:is(main:not(:has(>.inbox)),dialog) label{margin-top:12px}
+@media(max-width:700px){nav.finance-tabs{display:flex;grid-template-columns:none;grid-template-rows:none;min-height:44px;position:sticky;top:0}.finance-head{padding:14px}.top>.row{width:auto}}

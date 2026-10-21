@@ -600,3 +600,7 @@ Foto/assinatura e troca de senha agora acessíveis a todos no menu do avatar; en
 Menus reduzidos a Atendimento, CRM, Automação, Marketing, Financeiro e Configurações. Campanhas de mensagens/Sequências/Chatbots/Agentes dentro de Automação; Postagens/Anúncios em Marketing; Contatos/Origem/Relatórios no CRM. Permissões individuais e URLs antigas preservadas, incluindo follow-up avançado. Nenhuma exclusão de módulos/dados.
 
 Migração 046 cria contas, campanhas, métricas e auditoria de anúncios com RLS e cofre cifrado. Meta v26.0 tráfego/imagem e Google Ads v26 Pesquisa com estrutura pausada. OAuth configurável no painel; Meta também aceita token administrativo. Google requer developer token e aprovação externa. Ativação confirma nome e consulta orçamento remoto para impedir ativação com orçamento alterado. Dados de conversão/ROAS só são reais quando reportados e configurados na rede. Sem teste ou gasto em conta real. Ver AUTOMACAO-MARKETING-ANUNCIOS.md.
+
+## 21/10/2026 — Consistência visual da suíte
+
+Camada comum `web/design-system.css` aplicada ao painel e à administração de empresas. Menu principal reduzido, controles arredondados, recuos e superfícies unificados, navegações locais de Marketing/Financeiro isoladas das regras do menu principal. CRM com toolbar compacta e ações secundárias por ícones no celular; botões de Governança não dividem largura de modo a sobrepor textos. Abas de postagens com estado acessível. Sem migração de dados ou alteração de credenciais. Detalhes e critérios em `docs/PADRAO-VISUAL-VEXORA.md`.
