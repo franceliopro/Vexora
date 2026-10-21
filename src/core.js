@@ -39,6 +39,7 @@ export async function inbound(chId,m){
  });if(!saved)return;bus('conv',{id:saved.cv.id});return processInbound(saved,{source:m});
 }
 export async function processInbound(saved,{scheduled=false,source={}}={}){return withConversationLock(saved.cv.id,async()=>{let {msg,fresh}=saved;let cv=(await q('select * from conversations where id=$1',[saved.cv.id])).rows[0];
+ if(cv.bot_restart_pending)fresh=true;
  refreshContactProfile(q,saved.ch,saved.ct,D,source).then(()=>bus('conv',{id:cv.id})).catch(()=>{});
  if(!scheduled)bus('msg',{conversation_id:cv.id,message:msg});if(saved.campaign?.optout){await deliver(cv.id,{body:'Tudo certo. Você não receberá novas campanhas por este canal. O atendimento continua disponível quando precisar.',system:true});return}for(const board_id of saved.boards||[])bus('crm',{board_id});if(await deferBotEntry({q,cv,msg,fresh,channel:saved.ch,scheduled}))return;if(fresh)await notifyProtocol(q,cv.id,deliver,bus);
  if(await continuityReply({q,cv,msg,deliver,bus}))return;

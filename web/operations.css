@@ -151,3 +151,18 @@
 .lead-context-event{padding:10px 0;border-bottom:1px solid var(--ln);overflow-wrap:anywhere}
 .lead-context-event small{display:block;color:var(--mu)}
 .lead-payload-example{white-space:pre-wrap;overflow-wrap:anywhere;padding:14px;border-radius:14px;background:var(--bg)}
+/* Tonal surfaces: incoming and outgoing remain distinct in every theme. */
+[data-background="whatsapp"],[data-background="sand"]{--bubble-in:#fffaf0;--bubble-in-text:#423521;--bubble-out:#51412b;--bubble-out-text:#fffaf0;--bubble-edge:#aa94716b}
+[data-background="mint"]{--bubble-in:#f1fcf4;--bubble-in-text:#163e2a;--bubble-out:#20543b;--bubble-out-text:#f2fff5;--bubble-edge:#5b927469}
+[data-background="instagram"],[data-background="lavender"]{--bubble-in:#fcf7ff;--bubble-in-text:#422b57;--bubble-out:#583870;--bubble-out-text:#fff7ff;--bubble-edge:#9d7db56b}
+[data-background="sunset"]{--bubble-in:#fff8f4;--bubble-in-text:#622e3d;--bubble-out:#773d50;--bubble-out-text:#fff8f2;--bubble-edge:#b97b8c69}
+[data-background="ocean"]{--bubble-in:#f2fbff;--bubble-in-text:#203f53;--bubble-out:#244e68;--bubble-out-text:#f3fbff;--bubble-edge:#638fa869}
+[data-background="slate"]{--bubble-in:#dfe7ef;--bubble-in-text:#263444;--bubble-out:#40556b;--bubble-out-text:#f6faff;--bubble-edge:#8095ac69}
+[data-background="night"]{--bubble-in:#dce6f1;--bubble-in-text:#192e43;--bubble-out:#304962;--bubble-out-text:#f5faff;--bubble-edge:#7d9bbb69}
+.clean-message-stream[data-background]:not([data-background="default"]) .m{background:var(--bubble-in);color:var(--bubble-in-text);border:1px solid var(--bubble-edge);box-shadow:0 2px 8px #10201908}
+.clean-message-stream[data-background]:not([data-background="default"]) .m.out{background:var(--bubble-out);color:var(--bubble-out-text);border-color:var(--bubble-edge)}
+.clean-message-stream[data-background]:not([data-background="default"]) .m a{color:inherit;text-decoration:underline;text-underline-offset:3px}
+.clean-message-stream[data-background]:not([data-background="default"]) .m small,.clean-message-stream[data-background]:not([data-background="default"]) .m .mu{color:inherit;opacity:.85}
+.clean-message-stream[data-background]:not([data-background="default"]) .m audio{max-width:100%;border-radius:12px}
+.background-preview[data-background]:not([data-background="default"])>span{background:var(--bubble-out);color:var(--bubble-out-text);border:1px solid var(--bubble-edge)}
+.clean-message-stream[data-background]:not([data-background="default"]) .m.int{background:#fff3cd;color:#513d0c;border:1px dashed #bd9c53}.clean-message-stream[data-background]:not([data-background="default"]) .m.int small{color:inherit}.clean-message-stream[data-background]:not([data-background="default"]) .m .message-meta{color:inherit;opacity:.85}

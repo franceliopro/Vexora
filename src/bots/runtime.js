@@ -42,10 +42,10 @@ export async function handle(cv,msg,fresh){if(!canBotRun(cv))return false;let ru
  if(run&&run.waiting&&msg.at&&new Date(msg.at)<=new Date(run.updated_at))return true;
  if(run){bot=(await q('select * from bots where id=$1',[run.bot_id])).rows[0];if(!bot||!bot.active&&!run.invoked){await q("update bot_runs set status='encerrado' where id=$1",[run.id]);run=null}}
  if(!run){if(!msg.body&&msg.kind!=='audio')return false;
-  const routing=(await q('select config from channels where id=$1',[cv.channel_id])).rows[0]?.config?.routing;const prior=(await q('select id from bot_runs where conversation_id=$1 limit 1',[cv.id])).rows[0];bot=entryBot((await q('select * from bots where active order by id')).rows,routing,cv.channel_id,msg,fresh||!prior,{hoursOpen:await companyBusinessOpen(q)});if(!bot)return false;
+  const routing=(await q('select config from channels where id=$1',[cv.channel_id])).rows[0]?.config?.routing;const prior=(await q('select id from bot_runs where conversation_id=$1 limit 1',[cv.id])).rows[0];bot=entryBot((await q('select * from bots where active order by id')).rows,routing,cv.channel_id,msg,fresh||cv.bot_restart_pending||!prior,{hoursOpen:await companyBusinessOpen(q)});if(!bot)return false;
   if(!fresh&&Number(bot.trigger?.cooldownHours)>0){const last=(await q('select max(br.updated_at) at from bot_runs br join conversations c on c.id=br.conversation_id where br.bot_id=$1 and c.contact_id=$2',[bot.id,cv.contact_id])).rows[0]?.at;if(last&&Date.now()-new Date(last)<Math.min(8760,Number(bot.trigger.cooldownHours))*36e5)return false}
   const st=(bot.graph.nodes||[]).find(n=>n.type==='start');if(!st)return false;
-  run=(await q("insert into bot_runs(bot_id,conversation_id,node) values($1,$2,$3) returning *",[bot.id,cv.id,st.id])).rows[0];await q('update bots set runs=runs+1 where id=$1',[bot.id])}
+  run=(await q("insert into bot_runs(bot_id,conversation_id,node) values($1,$2,$3) returning *",[bot.id,cv.id,st.id])).rows[0];await q('update bots set runs=runs+1 where id=$1',[bot.id]);await q('update conversations set bot_restart_pending=false where id=$1',[cv.id])}
  if(run.graph_snapshot)bot={...bot,graph:run.graph_snapshot};
  const waitingNode=(bot.graph.nodes||[]).find(n=>n.id===run.node);
  if((run.waiting||msg.kind==='audio')&&shouldUseAI(waitingNode,msg)){

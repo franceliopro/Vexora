@@ -590,3 +590,8 @@ Ver `REGRAS-DE-OPERACAO.md`. Migrações 042/043: CPF por representante, bot/áu
 - Migração 044: referências, grades e trabalhos criativos, RLS e ligação com social_publications. Postagens → Estúdio IA. Ver ESTUDIO-CRIATIVO.md para configuração, formatos e limites reais.
 - Testes novos: bot-ai-handoff-postgres.mjs, social-creative-postgres.mjs e creative-policy.mjs; teste de interface social ampliado. APIs/transporte simulados, nenhuma postagem real.
 - Observação do usuário sobre busca Financeiro “cliente ou descrição” ficou incompleta; aguardar complemento, sem presumir alteração desejada.
+
+## Retorno do bot, superfícies tonais, busca e perfil — 21/10
+Migração 045 adiciona rearme do bot e índice HMAC de documento financeiro. Configuração em Governança → Bot · retorno por inatividade: padrão 30 minutos, sem disparo espontâneo ao cliente, preserva histórico e protocolo, libera responsável e convites. Aceite humano reinicia a contagem. Próxima mensagem inicia nova triagem; execuções antigas recebem status idle_reset.
+
+Foto/assinatura e troca de senha agora acessíveis a todos no menu do avatar; endpoints /api/me/profile e /api/me/password limitados ao próprio usuário. Busca financeira alcança documentos (após sincronizar), placas/campos do contato vinculado, nomes sem acentos, telefones, e-mails e descrição. Documentos permanecem mascarados. Fundos usam balões tonais e notas internas distintas. Ajuda contextual atualizada e exemplos práticos por seção. Ver USO-ATENDIMENTO-PERFIL-E-BUSCA.md. Nenhum módulo removido sem avaliação com o dono.

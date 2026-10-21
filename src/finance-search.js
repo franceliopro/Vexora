@@ -1,0 +1,5 @@
+import crypto from 'node:crypto';
+export function documentSearchToken(value){const v=String(value||'').replace(/\D/g,'');return [11,14].includes(v.length)?crypto.createHmac('sha256',process.env.JWT_SECRET||'dev-secret').update('finance-document:'+v).digest('hex'):null}
+// Normalization accepts names with accents and plates with/without punctuation.
+const normalized=sql=>`regexp_replace(translate(lower(${sql}),'áàâãäéèêëíìîïóòôõöúùûüç','aaaaaeeeeiiiiooooouuuuc'),'[^a-z0-9]','','g')`;
+export function financeSearchSQL(customer,extra,search,token){const contact=`(select concat_ws(' ',ct.name,ct.handle,ct.custom_fields::text,ct.data::text) from contacts ct where ct.id=${customer}.contact_id)`,haystack=`concat_ws(' ',${customer}.name,${customer}.document,${customer}.phone,${customer}.email,${customer}.external_id,${contact},${extra})`;return `(${search}='' or (${token}::text is not null and ${customer}.document_token=${token}) or (${normalized(search)}<>'' and ${normalized(haystack)} like '%'||${normalized(search)}||'%'))`}

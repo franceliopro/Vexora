@@ -1,3 +1,5 @@
+import {mountBotIdle,tickBotIdle} from './bot-idle.js';
+import {mountSelfProfile} from './self-profile.js';
 import {mountSocialCreative,tickCreative} from './social-creative.js';
 import {mountDepartmentPipelines} from './department-pipelines.js';
 import {mountRoleTemplates} from './ai/role-templates.js';
@@ -116,7 +118,7 @@ mountServiceCalendar(app,{ah,q,tenantTransaction,deliver,bus,credentials:googleV
 mountAttendanceManagement(app,{ah,q,tenantTransaction,bus});mountServiceProtocol(app,{ah,q,tenantTransaction,deliver,bus});mountServiceRouting(app,{ah,adm,q,tenantTransaction,bus});mountGoogleDrive(app,{ah,q,deliver,saveMedia,credentials:googleVault.credentials});
 mountIntegrations(app,{ah,adm,q,tenantTransaction,bus,managed:managedDenied,managedKey:()=>socialVault.key()});
 mountConversationActions(app,{ah,q,tenantTransaction,bus,deliver,createPayment});
-mountMessageReceipts(app,{ah,q});mountFinancial(app,{ah,adm,q,tenantTransaction,deliver,asaasDebts,asaasPay});mountSocialStudio(app,{ah,adm,q,lock:withConversationLock});mountSocialCreative(app,{ah,adm,q});mountContinuity(app,{ah,adm,q});mountDepartmentPipelines(app,{ah,adm,q});mountModuleAccess(app,{ah,adm,q});mountRoleTemplates(app,{ah,adm});mountAgentConnections(app,{ah,adm,q});
+mountMessageReceipts(app,{ah,q});mountFinancial(app,{ah,adm,q,tenantTransaction,deliver,asaasDebts,asaasPay});mountSocialStudio(app,{ah,adm,q,lock:withConversationLock});mountSocialCreative(app,{ah,adm,q});mountContinuity(app,{ah,adm,q});mountBotIdle(app,{ah,adm,q});mountSelfProfile(app,{ah,q,limit});mountDepartmentPipelines(app,{ah,adm,q});mountModuleAccess(app,{ah,adm,q});mountRoleTemplates(app,{ah,adm});mountAgentConnections(app,{ah,adm,q});
 mountKnowledge(app,{ah,q,transaction:tenantTransaction,ragAdd});
 mountServiceWorkflow(app,{ah,q,deliver,bus});
 mountOperations(app,{ah,adm,q,tenantTransaction,bus});
@@ -203,3 +205,5 @@ let socialBusy=false;setInterval(async()=>{if(socialBusy)return;socialBusy=true;
 let continuityBusy=false;setInterval(async()=>{if(continuityBusy)return;continuityBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickContinuity({q,tenantTransaction,tenant:t.id,lock:withConversationLock,deliver,bus})).catch(e=>console.error('continuity',t.id,e.message))}catch(e){console.error('continuity scheduler',e.message)}finally{continuityBusy=false}},10000);
 
 let creativeBusy=false;setInterval(async()=>{if(creativeBusy)return;creativeBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickCreative({q,lock:withConversationLock})).catch(e=>console.error('creative',t.id,e.message))}catch(e){console.error('creative scheduler',e.message)}finally{creativeBusy=false}},20000);
+
+let botIdleBusy=false;setInterval(async()=>{if(botIdleBusy)return;botIdleBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickBotIdle({q,tenantTransaction,tenant:t.id,lock:withConversationLock,deliver,bus})).catch(e=>console.error('bot idle',t.id,e.message))}catch(e){console.error('bot idle scheduler',e.message)}finally{botIdleBusy=false}},15000);
