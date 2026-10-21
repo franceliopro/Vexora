@@ -1,7 +1,7 @@
 // Inbox adapter based on the official Zernio conversation/message contract; live credentials still require acceptance testing.
 import crypto from 'node:crypto';import {saveMedia,readMedia,mediaType} from '../media.js';
 const B=c=>(c.config.base_url||'https://zernio.com/api/v1').replace(/\/$/,'');
-async function providerKey(c){if(c.config.key)return c.config.key;const {adm}=await import('../db.js'),{createSocialVault}=await import('../managed-social.js');const key=await createSocialVault(adm).key();if(!key)throw Error('Conexão gerenciada indisponível. Contate a administração da Néxora.');return key}
+async function providerKey(c){if(c.config.key)return c.config.key;const {adm}=await import('../db.js'),{createSocialVault}=await import('../managed-social.js');const key=await createSocialVault(adm).key();if(!key)throw Error('Conexão gerenciada indisponível. Contate a administração da Véxora.');return key}
 const call=async(c,p,b)=>{const r=await fetch(B(c)+p,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+await providerKey(c)},body:JSON.stringify(b),signal:AbortSignal.timeout(20000)});if(!r.ok)throw Error('Serviço de mensagens '+r.status);return r.json()};
 export function verify(c,raw,headers){const secret=c.config.webhook_secret,sig=String(headers['x-zernio-signature']||'');if(!secret||!raw||!/^[a-f0-9]{64}$/.test(sig))return false;return crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(crypto.createHmac('sha256',secret).update(raw).digest('hex')))}
 export async function send(c,{to,kind,body,file,filename,externalConversation,choices}){

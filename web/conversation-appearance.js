@@ -1,6 +1,6 @@
 // Personal preference, scoped to this company and user; never changes message contents.
 function conversationAppearance(stream,tools){
- const key='nexora:chat-background:'+ME.tid+':'+ME.id;
+ const key='vexora:chat-background:'+ME.tid+':'+ME.id;
  const themes=[['default','Padrão'],['whatsapp','WhatsApp · areia'],['mint','WhatsApp · menta'],['instagram','Instagram · aurora'],['sunset','Instagram · pôr do sol'],['lavender','Lavanda'],['ocean','Oceano'],['sand','Areia'],['slate','Grafite'],['night','Noite']];
  let selected='default';try{const saved=localStorage.getItem(key);if(themes.some(x=>x[0]===saved))selected=saved}catch{}
  const apply=value=>{selected=value;stream.dataset.background=value;try{localStorage.setItem(key,value)}catch{}};

@@ -1,16 +1,16 @@
-# Néxora Suite — registro de continuidade
+# Véxora Suite — registro de continuidade
 
 Atualizado em 20/10/2026. Documento técnico e de produto para retomar o trabalho sem depender do histórico do chat. Leia também `docs/PROMPT-MESTRE.md`, `docs/PROCESSO-ATENDIMENTO.md`, `docs/ATENDIMENTO-CRM-OPERACAO.md`, `docs/INTEGRACOES-GUIADAS.md` e `docs/RASTREAMENTO-VEICULAR.md`. Havendo divergência, confronte os requisitos abaixo com o código e com o comportamento real. Este registro não substitui uma homologação em produção.
 
 ## 1. Projeto, publicação e decisões de negócio
 
-- Repositório correto: https://github.com/franceliopro/Nexora. Não usar Nexora2.
-- Aplicação informada pelo usuário: https://nexora.effe.site/. Painel master: `/platform.html`. Atendimento: `/#inbox`; integrações: `/#integrations`; CRM: `/#pipeline`.
+- Repositório correto: https://github.com/franceliopro/Vexora. Não usar Vexora2.
+- Aplicação informada pelo usuário: https://vexora.effe.site/. Painel master: `/platform.html`. Atendimento: `/#inbox`; integrações: `/#integrations`; CRM: `/#pipeline`.
 - O usuário autorizou commits incrementais em `main`; seu Dokploy/Aiodeploy acompanha as alterações. Commit publicado não comprova que o novo contêiner está saudável.
-- Nesta sessão, a pasta local `Nexora` não possui checkout Git. A publicação foi feita pela API do GitHub: ler HEAD, criar árvore baseada na árvore atual, criar commit filho e atualizar a referência com `expected_sha`. Nunca sobrescrever mudanças concorrentes.
-- A Néxora é vendida ao cliente final: empresas, clínicas, escritórios etc. Não é plataforma de revenda para os clientes. Personalização de marca/domínio por empresa não concede poder de revenda.
+- Nesta sessão, a pasta local `Vexora` não possui checkout Git. A publicação foi feita pela API do GitHub: ler HEAD, criar árvore baseada na árvore atual, criar commit filho e atualizar a referência com `expected_sha`. Nunca sobrescrever mudanças concorrentes.
+- A Véxora é vendida ao cliente final: empresas, clínicas, escritórios etc. Não é plataforma de revenda para os clientes. Personalização de marca/domínio por empresa não concede poder de revenda.
 - O dono da plataforma é master; somente ele e poderes equivalentes ativam módulos e fazem a gestão central de redes sociais. Administrador de uma empresa não é superadministrador da plataforma.
-- O provedor social gerenciado não deve aparecer para a empresa contratante. A conta central e o custo são administrados pelo dono da Néxora. O cliente vê Instagram, Messenger e suas inboxes, sem a marca Zernio ou sua chave.
+- O provedor social gerenciado não deve aparecer para a empresa contratante. A conta central e o custo são administrados pelo dono da Véxora. O cliente vê Instagram, Messenger e suas inboxes, sem a marca Zernio ou sua chave.
 - Cada empresa usa suas próprias credenciais financeiras e suas próprias autorizações Google. Não colocar segredos em código, documentação, capturas ou respostas de API ao navegador.
 
 ### Organização do produto
@@ -35,7 +35,7 @@ Prioridade: estabilizar atendimento e CRM, validar conversas reais e financeiro,
 
 Interface em português, simples, fluida, limpa, responsiva, utilizável no celular, com cantos arredondados, cores sutis, claro/escuro e identidade própria. HelenaCRM é referência funcional, sem copiar sua marca. As imagens enviadas são referências; as duas últimas mostram colunas arredondadas e uma coluna destacada ao receber um card.
 
-Logo da empresa no topo com acesso ao atendimento. Logotipo claro, logotipo escuro e favicon são arquivos distintos. Rodapé Néxora Suite by EFFE. Marca, fontes e cor por empresa. Ajuda contextual deve explicar o que é, para que serve e como usar cada recurso, sem despejar termos técnicos no atendimento.
+Logo da empresa no topo com acesso ao atendimento. Logotipo claro, logotipo escuro e favicon são arquivos distintos. Rodapé Véxora Suite by EFFE. Marca, fontes e cor por empresa. Ajuda contextual deve explicar o que é, para que serve e como usar cada recurso, sem despejar termos técnicos no atendimento.
 
 Na fila: Meus selecionado ao abrir; Novos/Meus/Outros com contagens; concluídos como ícone; arquivados/lixeira/todos em lista nos três pontos. Filtro junto à busca, em lista flutuante leve, não modal grande. Não repor botões de Agenda/Inboxes/Passo a passo na barra lateral da fila.
 
@@ -202,7 +202,7 @@ Capturas e runtimes em `/tmp` são transitórios. O código/testes/documentaçã
 
 ## 15. Prompt curto de retomada
 
-> Trabalhe em franceliopro/Nexora, nunca Nexora2. Leia este documento e o código atual. Priorize atendimento/CRM e homologação real antes de ampliar módulos. O dono autoriza commits incrementais em main com autodeploy; preserve alterações concorrentes. Não exponha o provedor social central aos clientes. Atribuir e convidar são ações diferentes; humano pausa bot/IA. CPF não é telefone nem comprovação de identidade. Não repita segredos do chat. Inspecione HEAD e todos os imports/migrações antes de publicar. Informe com precisão o que passou em teste simulado e o que foi validado ao vivo. Não apague banco, histórico ou sessões para contornar problemas. Continue a partir das pendências, sem reconstruir a aplicação do zero.
+> Trabalhe em franceliopro/Vexora, nunca Vexora2. Leia este documento e o código atual. Priorize atendimento/CRM e homologação real antes de ampliar módulos. O dono autoriza commits incrementais em main com autodeploy; preserve alterações concorrentes. Não exponha o provedor social central aos clientes. Atribuir e convidar são ações diferentes; humano pausa bot/IA. CPF não é telefone nem comprovação de identidade. Não repita segredos do chat. Inspecione HEAD e todos os imports/migrações antes de publicar. Informe com precisão o que passou em teste simulado e o que foi validado ao vivo. Não apague banco, histórico ou sessões para contornar problemas. Continue a partir das pendências, sem reconstruir a aplicação do zero.
 
 ## 16. Atualização posterior: mobile, Novo Lead e Workflows
 
@@ -228,7 +228,7 @@ Teste adicional de codec: áudio AAC/MP4 sintético convertido com os mesmos par
 
 ## 17. Acabamento de etiquetas e Kanban
 
-Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto, ponto colorido, contador circular e rodapé com subtotal alinhado. Mantida a estrutura Néxora, com fotos, etiquetas, ações e integração à conversa. Etiquetas `.nx-tag` passam a compartilhar o acabamento das etiquetas do atendimento: borda suave, fundo leve, texto legível e ponto da própria cor. Cards também têm um ponto da etapa e avatar circular. Hover/foco da borda e do título e destaque da coluna receptora usam `--stage`, não a cor global da marca. A área de cards rola dentro da coluna; cabeçalho e rodapé permanecem no conjunto. Validar em desktop/celular e claro/escuro, sem alterações de banco ou das regras do CRM.
+Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto, ponto colorido, contador circular e rodapé com subtotal alinhado. Mantida a estrutura Véxora, com fotos, etiquetas, ações e integração à conversa. Etiquetas `.nx-tag` passam a compartilhar o acabamento das etiquetas do atendimento: borda suave, fundo leve, texto legível e ponto da própria cor. Cards também têm um ponto da etapa e avatar circular. Hover/foco da borda e do título e destaque da coluna receptora usam `--stage`, não a cor global da marca. A área de cards rola dentro da coluna; cabeçalho e rodapé permanecem no conjunto. Validar em desktop/celular e claro/escuro, sem alterações de banco ou das regras do CRM.
 
 
 ## 18. Editor compartilhado de automações e ajustes do CRM (20/10)
@@ -251,7 +251,7 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 ## 19. Espaço do editor e assinatura
 - Workflows agora tem título, Conversação e Follow-up na mesma linha; removidas as abas informativas Redes sociais e Agendadas. As rotas antigas abrem Conversação. Agenda e lembretes do atendimento não mudaram.
 - Cabeçalho, barra de ferramentas e localização compactados para liberar altura do cenário, com adaptação ao celular.
-- Assinatura néxora SUITE by EFFE alinhada pela linha de base; ícone alinhado à base do grupo.
+- Assinatura véxora SUITE by EFFE alinhada pela linha de base; ícone alinhado à base do grupo.
 - Início explica gatilhos e canais. Mensagens/palavras-chave funcionam nos canais conectados. Reações, comentários e outros eventos públicos ainda dependem de implementação específica; esta alteração não os ativa.
 
 
@@ -389,7 +389,7 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Configuração em trigger.initialDelay; API valida valor/unidade. Migração 028 persiste prazo, bot, primeira mensagem e epoch na conversa. Contagem parte da chegada da primeira mensagem; outras mensagens não reiniciam prazo. Protocolo e identificação inicial do bot aguardam o prazo; eventos de interface/CRM continuam imediatos.
 - Scheduler de 1s retoma pendências após reinício, usando o mesmo lock de conversa e CAS pending→started. A IA não atua enquanto o bot está aguardando. Confere canal, bot ativo, vínculos e epoch antes de executar. Depois do primeiro envio, não aplica nova espera a cada menu ou confirmação de nome.
 - Trigger de banco cancela espera ao concluir, pausar, assumir ou mudar epoch/modo de controle. Acionamento humano explícito de bot/fluxo não usa a espera de primeira mensagem. Falha depois de iniciada não gera reenvio cego; check_required se o processamento lançar erro. Aceite real em réplicas/reinícios continua pendente.
-- Nome do agente em negrito nas mensagens WhatsApp, com setor em texto normal: *Raiane* · Suporte Rastreabem. Formatação por canal; outras redes recebem texto simples. Tamanho de fonte dos aplicativos externos não é controlado pela Néxora.
+- Nome do agente em negrito nas mensagens WhatsApp, com setor em texto normal: *Raiane* · Suporte Rastreabem. Formatação por canal; outras redes recebem texto simples. Tamanho de fonte dos aplicativos externos não é controlado pela Véxora.
 - Testes de unidades/calendário/rajada/execução única, migrações e cancelamento por assunção em PGlite, campo padrão e salvamento de meses no navegador; suíte anterior preservada.
 
 ## 34. Apresentação humana com nome escolhido do cliente
@@ -442,7 +442,7 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 
 - Migration 031 cria message_receipts com RLS/FK de inbox e preserva os IDs das mensagens da criação de cobrança. Aceitação pelo canal não é prova de entrega. Estados: sem confirmação, enviado ao canal, entregue, lido e falha. Leituras/entregas confirmadas não regridem com ACK atrasado.
 - Baileys usa messages.update (status 2 servidor, 3 entrega, 4/5 leitura/reprodução). WAHA usa message.ack (1 servidor, 2 dispositivo, 3/4 leitura/reprodução). A sessão WAHA precisa estar configurada para assinar message.ack: a conexão/reconfiguração pelo painel passa a assinar esse evento. Sessões antigas que só assinam message precisam ser reconfiguradas pelo painel para receber confirmações.
-- Outros canais continuam mostrando aceitação ou ausência de confirmação; não interpretar envio aceito como entrega ao cliente. Meta/Zernio não receberam novo adaptador de confirmação nesta alteração. Sem ACK, a Néxora não inventa entrega nem leitura.
+- Outros canais continuam mostrando aceitação ou ausência de confirmação; não interpretar envio aceito como entrega ao cliente. Meta/Zernio não receberam novo adaptador de confirmação nesta alteração. Sem ACK, a Véxora não inventa entrega nem leitura.
 - Endpoint de entrega exige acesso à conversa e limita consulta a 30 IDs de mensagens de saída. Push message_delivery passa pela ACL do atendimento. Há consulta inicial de estado e confirmação persistida junto do histórico paginado, sem polling periódico nem F5. Boletos/resumos com várias mensagens mostram progresso parcial e só indicam entrega completa quando todas foram confirmadas.
 - Painel financeiro mostra envio em andamento, resultado e confirmação disponível em destaque; mantém texto e áudio acessíveis. Desabilita ações financeiras concorrentes e evita reenvio automático depois de falha ambígua. Histórico de pagamento não é confundido com entrega de mensagem. Setas navegam por controles e acompanham rolagem; inputs preservam comportamento nativo, Alt+setas muda de campo. Enter/Ctrl+Enter confirma a ação do grupo em foco, sem submissão HTML que recarregue a aplicação.
 - Menu @@/$$ rola até a opção selecionada pelas setas. Ícones mostram os atalhos no title; adicionados Alt+C Kanban, Alt+L anexo, Alt+E emojis e Alt+M gravação/parada de áudio.
@@ -469,7 +469,7 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 
 
 ## 42. Editor de agentes reorganizado conforme referências visuais
-- Quatro seções: Perfil, Comportamento, Conhecimento, Configurações; navegação lateral no desktop, abas no mobile, conteúdo com rolagem independente e salvar/cancelar fixos. Mantidos os tokens visuais da Néxora.
+- Quatro seções: Perfil, Comportamento, Conhecimento, Configurações; navegação lateral no desktop, abas no mobile, conteúdo com rolagem independente e salvar/cancelar fixos. Mantidos os tokens visuais da Véxora.
 - Reutilizados controles e endpoints existentes; nenhum dado migrado ou agente substituído. Edição usa cópia local até salvar. Estado ativo não vira rascunho por um salvamento parcial. Cancelar descarta apenas alterações não salvas.
 - Preservados prompt/regras/tom/proibições, credenciais, provedores existentes, opções extras dos modelos, habilidades/destinos e bases de conhecimento. Campos vazios existentes não recebem presets automaticamente.
 - Sugestões de tom atuam apenas quando escolhidas explicitamente. Revisão do agente verifica preenchimento; não simula uso real de provedor.
@@ -490,7 +490,7 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Follow-up: bloco start_bot encerra a sequência e solicita chatbot pela fila. IA também encaminha à fila usando os vínculos autorizados.
 - Worker 1s, até 20 itens por empresa, bloqueio de conversa, epoch, status pré-efeito check_required e grafo congelado. Sem repetição automática ambígua. Controle humano cancelando pendência validado.
 - Coleta pode persistir diretamente um campo do contato. Novos blocos crm_create/crm_move reutilizam o CRM vinculado à conversa e preservam restrição de conclusão final. HTTP do bot agora usa HTTPS público com DNS fixado e limites.
-- UI lista Atendimento/Automação, chips de horário, fontes autorizadas, calendário, histórico e palco com pontos/realce sutis. Mantido editor movível/zoomável e personalidade Néxora.
+- UI lista Atendimento/Automação, chips de horário, fontes autorizadas, calendário, histórico e palco com pontos/realce sutis. Mantido editor movível/zoomável e personalidade Véxora.
 - Ajustes de robustez do editor de agente: rótulos acessíveis independentes das interrogações, fechamento bloqueado durante salvamento e alteração posterior ao início do save não perde marca de edição.
 - Validação executada: npm test; test/agent-editor-browser.mjs; test/bot-strategies-browser.mjs; test/attendance-browser.mjs; test/bot-strategies-postgres.mjs; test/attendance-tools-postgres.mjs. Chromium com APIs simuladas; PGlite com todas as migrações até 033, incluindo cenários antes pendentes de 031/032. Nenhum envio real nem chave real utilizada.
 - Guia: docs/CHATBOTS-ESTRATEGIAS.md. Ainda não há recepção de evento público de comentário/Story como gatilho nativo; isso depende de adaptador e permissão de cada rede.
@@ -504,3 +504,6 @@ Referência visual enviada em 20/10: colunas contínuas com cabeçalho discreto,
 - Endpoint `/api/attendance/alerts` usa os mesmos predicados ACL/Meus (inclui convites). WebSocket dispara consulta coalescida; sem polling ou recarga. Baseline inicial/reconexão silenciosa, apenas entrada em Meus ou incremento do ID de mensagem recebida. Saídas/notas/recibos não disparam. Notificação nativa sem dados pessoais; ledger local e Web Locks evitam duplicação entre abas compatíveis.
 - Asaas: testes `asaas-shared-base` e `day-period` aprovados com API simulada: base única por empresa, CPF formatado, identificação ausente versus sem débitos, DDD/nono dígito e estado reiniciado no bloco do bot. Sem consulta real à conta nesta sessão.
 - Teste `attendance-alerts.mjs`: baseline, entrada, mensagem, erro de atualização, reconexão e deduplicação. Áudio real e permissão do SO dependem de teste do usuário no navegador.
+
+## 45. Mudança de marca para Véxora
+Revisão geral de código/documentação, identificadores, nomes de arquivos, package/lock, backups/exportações, ícone V e migração 034 para texto persistido da marca. O aplicativo usa `vexora_app`, com migração do papel anterior. Não reescrever históricos nem segredos. Leia `docs/MUDANCA-MARCA-VEXORA.md` antes da troca no Dokploy: manter projeto/volumes, atualizar a origem do GitHub após renomear para Vexora, ajustar domínio/webhooks/OAuth. Banco físico/volumes e nome do repositório remoto ainda dependem das ações externas descritas. Compatibilidade antiga é intencional até a manutenção.

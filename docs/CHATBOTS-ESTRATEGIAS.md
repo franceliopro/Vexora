@@ -1,4 +1,4 @@
-# Chatbots de atendimento e automação — Néxora
+# Chatbots de atendimento e automação — Véxora
 
 ## Onde configurar
 
@@ -64,8 +64,8 @@ Envie POST JSON para `/hooks/bots/TENANT_ID/BOT_ID`:
 Cabeçalhos:
 
 - `Content-Type: application/json`
-- `x-nexora-timestamp`: Unix em segundos.
-- `x-nexora-signature`: `sha256=` seguido do HMAC SHA256 hexadecimal de `timestamp + "." + corpo JSON exato`, usando a chave.
+- `x-vexora-timestamp`: Unix em segundos.
+- `x-vexora-signature`: `sha256=` seguido do HMAC SHA256 hexadecimal de `timestamp + "." + corpo JSON exato`, usando a chave.
 
 A assinatura aceita uma janela de cinco minutos. Guarde a chave no servidor da ferramenta, nunca em JavaScript público. `external_id` deve identificar o evento, repetido nas tentativas do mesmo evento. HTTP 202 confirma o registro na fila, não o envio ao cliente.
 

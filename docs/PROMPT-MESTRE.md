@@ -1,10 +1,10 @@
-# Néxora Suite — Prompt mestre consolidado (v6)
+# Véxora Suite — Prompt mestre consolidado (v6)
 > Atendimento detalhado em [PROCESSO-ATENDIMENTO.md](PROCESSO-ATENDIMENTO.md): governança de três perfis, Novos/Meus/Outros, ficha lateral, conclusão e métricas. O fuso é escolhido por empresa; para o cliente de rastreamento, Cuiabá (`America/Cuiaba`). A tabela de estado do documento distingue implementação de especificação.
 > Decisão vigente de 19/10/2026: o produto é organizado nos 11 módulos de `docs/ESTRUTURA-PRODUTO.md`. Segmentos que apenas trocam rótulos/funil foram removidos. Templates opcionais criam IA e bot em rascunho, sem conceder módulos, mudar etapas ou sobrescrever configurações. Esta decisão substitui o planejamento anterior de ERP por segmento. Venda direta às empresas finais, sem revenda.
 
-Modelo comercial corrigido em 19/10/2026: venda direta do proprietário da Néxora às empresas finais, sem revenda.
+Modelo comercial corrigido em 19/10/2026: venda direta do proprietário da Véxora às empresas finais, sem revenda.
 
-Consolidado em 19/10/2026 a partir do v2 e dos requisitos originais do proprietário. Repositório de trabalho: `franceliopro/Nexora`. O `nexora2` fica fora deste projeto. Este documento especifica o produto e suas entregas; não certifica funcionalidades implementadas.
+Consolidado em 19/10/2026 a partir do v2 e dos requisitos originais do proprietário. Repositório de trabalho: `franceliopro/Vexora`. O `vexora2` fica fora deste projeto. Este documento especifica o produto e suas entregas; não certifica funcionalidades implementadas.
 
 > Como usar: abra o Codex ou Claude Code na raiz do repositório e diga: **"Leia docs/PROMPT-MESTRE.md e execute a Fase N."** Uma fase por vez, cada uma em branch própria, com testes, e só vai para o `main` com tudo verde.
 
@@ -12,16 +12,16 @@ Consolidado em 19/10/2026 a partir do v2 e dos requisitos originais do propriet�
 
 ## 1. Papel e objetivo
 
-Você é engenheiro(a) sênior full-stack. Sua missão é evoluir o **Nexora** (repositório `franceliopro/Nexora`) para uma plataforma **omnichannel de atendimento + CRM + IA**, **multiempresa**, **com marca personalizada por empresa**, **organizada por módulos funcionais** e **auto-hospedada** (Dokploy/Portainer), cobrindo as capacidades dos CRMs de WhatsApp com agentes de IA (referência de mercado: HelenaCRM) **somadas** aos diferenciais do Nexora.
+Você é engenheiro(a) sênior full-stack. Sua missão é evoluir o **Vexora** (repositório `franceliopro/Vexora`) para uma plataforma **omnichannel de atendimento + CRM + IA**, **multiempresa**, **com marca personalizada por empresa**, **organizada por módulos funcionais** e **auto-hospedada** (Dokploy/Portainer), cobrindo as capacidades dos CRMs de WhatsApp com agentes de IA (referência de mercado: HelenaCRM) **somadas** aos diferenciais do Vexora.
 
 A interface deve ser limpa, rápida e totalmente personalizável (marca, cor, fonte, ícone, domínio). Inspire-se em padrões comuns de CRMs de conversa (caixa de entrada, funil kanban, construtor de fluxos), **sem copiar** marca, textos, ícones ou identidade visual de nenhum concorrente.
 
 ## 2. Estado relatado no v2 — verificar no repositório antes de implementar
 
-Os itens abaixo são relatos do documento anterior, não resultados de auditoria. Confirmar cada um por arquivos, migrações e execução no `franceliopro/Nexora`; classificar como existente e testado, existente sem teste, parcial ou ausente. Preservar código e dados existentes. Não reconstruir o sistema por suposição. Verificar a versão de Node e escolher uma LTS suportada compatível durante a auditoria, sem impor atualização sem testes.
+Os itens abaixo são relatos do documento anterior, não resultados de auditoria. Confirmar cada um por arquivos, migrações e execução no `franceliopro/Vexora`; classificar como existente e testado, existente sem teste, parcial ou ausente. Preservar código e dados existentes. Não reconstruir o sistema por suposição. Verificar a versão de Node e escolher uma LTS suportada compatível durante a auditoria, sem impor atualização sem testes.
 
 - **Stack:** Node 20 (ESM) + Express + `pg` + `ws`; Postgres 16 com pgvector; front em `web/index.html` + `web/modules.js` (JS puro, sem build); Docker Compose (app, db, waha, pgadmin, backup).
-- **Multiempresa:** todas as tabelas têm `tenant_id` com **Row Level Security** (`app.tenant`), usuário de banco sem superpoder (`nexora_app`), gatilho `fk_guard` contra referência entre empresas, webhooks assinados por HMAC, painel da plataforma (`/platform.html`), backup/restauração.
+- **Multiempresa:** todas as tabelas têm `tenant_id` com **Row Level Security** (`app.tenant`), usuário de banco sem superpoder (`vexora_app`), gatilho `fk_guard` contra referência entre empresas, webhooks assinados por HMAC, painel da plataforma (`/platform.html`), backup/restauração.
 - **Canais:** WAHA, Baileys, Zernio (endpoints presumidos, não verificados).
 - **Conversas:** bandeja, atribuição humano↔IA, convite de atendente, chat interno privado por conversa, kanban.
 - **IA:** vários agentes por canal, LLM/STT/TTS por agente (OpenAI/Anthropic/compatíveis, com fallback), RAG (texto), ações: mover etapa, transferir, convidar, agendar (Google Agenda), preencher ficha.
@@ -131,7 +131,7 @@ Os itens abaixo são relatos do documento anterior, não resultados de auditoria
 
 ### 5.11 SaaS de venda direta e personalização
 - **Planos e limites** por empresa: usuários por canal, canais, mensagens, créditos de IA, armazenamento; trial; suspensão e reativação automáticas.
-- **Venda direta:** o proprietário da Néxora vende planos às empresas finais. Cobrança das empresas (Asaas/Stripe), faturas e inadimplência. Não implementar revendedores, subrevendedores, comissões ou painel de parceiros. Marca própria do cliente não lhe concede direito técnico de revender ou criar outras empresas.
+- **Venda direta:** o proprietário da Véxora vende planos às empresas finais. Cobrança das empresas (Asaas/Stripe), faturas e inadimplência. Não implementar revendedores, subrevendedores, comissões ou painel de parceiros. Marca própria do cliente não lhe concede direito técnico de revender ou criar outras empresas.
 - **Domínio próprio por empresa** com certificado automático (integração com o proxy do Dokploy/Traefik ou Caddy), **e-mails e mensagens com a marca**, tela de login personalizada, modo escuro/claro.
 - **Onboarding guiado** (assistente de 5 passos: empresa, marca, canal, agente, primeira conversa ou template opcional) e **templates opcionais de atendimento** (IA e bots em rascunho).
 - **Aceite:** criar uma empresa completa pela API administrativa da plataforma sem tocar no servidor.
@@ -155,7 +155,7 @@ Os itens abaixo são relatos do documento anterior, não resultados de auditoria
 ### 5.14 Apps — módulo à parte (`apps/`)
 Decisão: **sim, como módulo separado**, com ciclo de lançamento próprio (revisão das lojas, assinatura, certificados), mas em duas etapas.
 - **Etapa A — PWA:** instalável, ícone e nome da marca da empresa, **notificações push (Web Push/VAPID)**, contador de não lidas, som, atalhos, cache offline da interface, câmera/microfone/anexos, fila de envio offline.
-- **Etapa B — apps nativos (Capacitor):** iOS e Android, push (APNs/FCM), links profundos, biometria. **Pipeline de build personalizado por empresa** (nome, ícone, splash, bundle id, cor, domínio) via CI/fastlane; a publicação usa **a conta de desenvolvedor da própria empresa** (recomendado) ou a conta do proprietário da Néxora quando adequado às regras das lojas.
+- **Etapa B — apps nativos (Capacitor):** iOS e Android, push (APNs/FCM), links profundos, biometria. **Pipeline de build personalizado por empresa** (nome, ícone, splash, bundle id, cor, domínio) via CI/fastlane; a publicação usa **a conta de desenvolvedor da própria empresa** (recomendado) ou a conta do proprietário da Véxora quando adequado às regras das lojas.
 - **Telas do app:** bandeja, conversa (texto, áudio, mídia, respostas rápidas), funil, tarefas, agenda, notificações, painel resumido, status de presença.
 - **Pré-requisitos no servidor:** tabela de dispositivos, API pública, tokens com refresh, fila de notificações.
 - **Aceite:** notificação chega em segundos com o app fechado (testes em aparelho real); build de um app de exemplo gerado pelo pipeline.
@@ -282,7 +282,7 @@ As três imagens anexadas foram examinadas como referência de organização, n�
 - Editor claro: canvas pontilhado, conexões entre blocos, catálogo lateral de ações, salvar rascunho/publicar, grupos, condições, webhooks e agentes com habilidades visíveis.
 - Editor escuro: entradas por canal ou manuais, condições com saídas distintas, mensagens, escolhas e transferências para setor, IA e humano, incluindo ramos de erro, indisponibilidade e timeout.
 
-Implementar identidade original da Néxora, temas claro/escuro, cantos arredondados, sombras discretas e semitransparência com contraste suficiente. Movimento sutil com respeito a redução de movimento. Desktop/tablet: navegação, lista e ficha lateral com expandir/recolher, preferências por usuário. Celular: uma área principal por vez, conversa em destaque e ficha/filtros em painel; ações de toque e alternativa ao arrastar para Kanban e editor. Não depender de hover.
+Implementar identidade original da Véxora, temas claro/escuro, cantos arredondados, sombras discretas e semitransparência com contraste suficiente. Movimento sutil com respeito a redução de movimento. Desktop/tablet: navegação, lista e ficha lateral com expandir/recolher, preferências por usuário. Celular: uma área principal por vez, conversa em destaque e ficha/filtros em painel; ações de toque e alternativa ao arrastar para Kanban e editor. Não depender de hover.
 
 Na inbox, diferenciar **origem do canal** (WhatsApp, Instagram, Messenger, webchat etc.) e **executor atual** (humano, bot, IA): IA não é rede de origem. WordPress recebe widget/plugin leve do módulo webchat, sem uma segunda base de atendimento. Notificações na tela bloqueada devem respeitar privacidade.
 
@@ -307,7 +307,7 @@ Esta seção exige a produção futura de arquivos e guias executáveis a partir
 
 ### 12.2 Guia passo a passo — Dokploy
 
-O guia deve mostrar: pré-requisitos e versões testadas; DNS e portas; conexão com GitHub; seleção do repositório `franceliopro/Nexora` e branch/tag; criação do serviço Compose; variáveis e segredos; Postgres com pgvector, volumes e redes; domínio/TLS no proxy; migrações; bootstrap seguro do master; conexão de canal; teste entre duas empresas; backup; atualização e recuperação. Verificar a documentação oficial vigente do Dokploy antes de descrever nomes de menus e opções. Não executar implantação real sem destino definido.
+O guia deve mostrar: pré-requisitos e versões testadas; DNS e portas; conexão com GitHub; seleção do repositório `franceliopro/Vexora` e branch/tag; criação do serviço Compose; variáveis e segredos; Postgres com pgvector, volumes e redes; domínio/TLS no proxy; migrações; bootstrap seguro do master; conexão de canal; teste entre duas empresas; backup; atualização e recuperação. Verificar a documentação oficial vigente do Dokploy antes de descrever nomes de menus e opções. Não executar implantação real sem destino definido.
 
 ### 12.3 Guia passo a passo — Portainer em Swarm
 

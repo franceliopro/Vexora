@@ -42,7 +42,7 @@ Relatórios administrativos mostram volume, estado, responsável/equipe/canal, p
 
 WAHA: cadastre canal `waha` com URL interna, chave e sessão; Baileys: canal `baileys`. Cada número/empresa deve ter sessão e credenciais adequadas; não reutilizar a mesma sessão entre empresas. Conforme a edição do WAHA, múltiplas sessões podem exigir licença. A conexão atualiza o webhook da sessão existente, preservando opções fornecidas em `session_config`.
 
-Zernio: o adaptador Inbox usa `config.key`, `account_id`, `platform` e `webhook_secret`. Cadastre o webhook indicado pela Néxora no Zernio e assine com o mesmo segredo. Verifica assinatura HMAC e conta antes de consumir o evento. A resposta usa o ID externo da conversa recebida, não tenta inferi-lo do telefone. Há contrato de texto e multipart/anexos; formatos e janelas dependem de cada rede. Contas devem estar conectadas/autorizadas no provedor; a Néxora não executa OAuth do Zernio nesta entrega. `mode: legacy` preserva o adaptador antigo de texto quando necessário, ainda exigindo assinatura. Não foi validado com credenciais reais.
+Zernio: o adaptador Inbox usa `config.key`, `account_id`, `platform` e `webhook_secret`. Cadastre o webhook indicado pela Véxora no Zernio e assine com o mesmo segredo. Verifica assinatura HMAC e conta antes de consumir o evento. A resposta usa o ID externo da conversa recebida, não tenta inferi-lo do telefone. Há contrato de texto e multipart/anexos; formatos e janelas dependem de cada rede. Contas devem estar conectadas/autorizadas no provedor; a Véxora não executa OAuth do Zernio nesta entrega. `mode: legacy` preserva o adaptador antigo de texto quando necessário, ainda exigindo assinatura. Não foi validado com credenciais reais.
 
 Asaas e modelos de IA continuam exigindo suas chaves, contas e modelos. Criar cobrança não confirma pagamento; webhooks financeiros legados ainda precisam de homologação/reconciliação com o provedor. Não foi feita cobrança real nesta entrega.
 
@@ -55,7 +55,7 @@ NOTIFICATION_WEBHOOK_URL=https://seu-relay-de-notificacoes/exclusao
 NOTIFICATION_WEBHOOK_SECRET=segredo-exclusivo-do-relay
 ```
 
-O relay é uma integração sua (por exemplo n8n) que envia o código pelo provedor de email, WhatsApp ou SMS. O app faz POST JSON com `id`, `channel`, `to`, `code`, `expires_in`, `action` e `board`. Header `x-nexora-signature`: HMAC-SHA256 hexadecimal do corpo bruto com `NOTIFICATION_WEBHOOK_SECRET`. O relay deve verificar a assinatura, não registrar o código em logs expostos e responder 2xx somente após aceitar o envio no provedor. Falha/timeout bloqueia a exclusão; ausência de integração também bloqueia. O código não volta ao navegador na solicitação, expira em dez minutos, permite até cinco tentativas e uso único.
+O relay é uma integração sua (por exemplo n8n) que envia o código pelo provedor de email, WhatsApp ou SMS. O app faz POST JSON com `id`, `channel`, `to`, `code`, `expires_in`, `action` e `board`. Header `x-vexora-signature`: HMAC-SHA256 hexadecimal do corpo bruto com `NOTIFICATION_WEBHOOK_SECRET`. O relay deve verificar a assinatura, não registrar o código em logs expostos e responder 2xx somente após aceitar o envio no provedor. Falha/timeout bloqueia a exclusão; ausência de integração também bloqueia. O código não volta ao navegador na solicitação, expira em dez minutos, permite até cinco tentativas e uso único.
 
 Email vai ao email do usuário autenticado. WhatsApp/SMS são destinos definidos pelo administrador em Integração e API → Confirmações externas:
 

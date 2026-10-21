@@ -1,7 +1,7 @@
 import pg from 'pg';import fs from 'fs';import {als} from './ctx.js';
 pg.types.setTypeParser(1082,x=>x); // DATE vem como 'YYYY-MM-DD' (sem fuso)
 const ADMIN=process.env.DATABASE_URL,au=new URL(ADMIN);const APPPW=process.env.APP_DB_PASSWORD||'troque-app';
-au.username='nexora_app';au.password=APPPW;
+au.username='vexora_app';au.password=APPPW;
 const admin=new pg.Pool({connectionString:ADMIN,max:4}),app=new pg.Pool({connectionString:au.toString(),max:20});
 export const adm=(t,p)=>admin.query(t,p); // superusuário: só migração, painel da plataforma e backup
 // q(): com tenant no contexto roda numa transação com app.tenant definido ⇒ RLS filtra tudo. Sem tenant ⇒ RLS não devolve nada (falha fechada).
@@ -10,16 +10,18 @@ export const q=async(t,p)=>{const s=als.getStore();if(!s?.tenant)return app.quer
  catch(e){await c.query('rollback').catch(()=>{});throw e}finally{c.release()}};
 let C={};export async function cols(t){if(C[t])return C[t];const r=await q("select column_name c,data_type d from information_schema.columns where table_schema='public' and table_name=$1",[t]);return C[t]=Object.fromEntries(r.rows.map(x=>[x.c,x.d]))}
 export async function migrate(){for(let i=0;i<40;i++){try{await adm('select 1');break}catch{await new Promise(r=>setTimeout(r,2000))}}
- await adm(`do $$ begin if not exists(select from pg_roles where rolname='nexora_app') then create role nexora_app login nosuperuser nobypassrls; end if; end $$`);
- await adm(`alter role nexora_app password '${APPPW.replace(/'/g,"''")}'`);
+ // Rename the previous internal role, preserving grants and ownership on upgrades.
+ await adm(`do $$ begin if exists(select from pg_roles where rolname='nexora_app') and not exists(select from pg_roles where rolname='vexora_app') then alter role nexora_app rename to vexora_app; end if; end $$`);
+ await adm(`do $$ begin if not exists(select from pg_roles where rolname='vexora_app') then create role vexora_app login nosuperuser nobypassrls; end if; end $$`);
+ await adm(`alter role vexora_app password '${APPPW.replace(/'/g,"''")}'`);
  await adm('create table if not exists _migrations(name text primary key,at timestamptz default now())');
  const dir=new URL('../db/migrations/',import.meta.url);
  for(const f of fs.readdirSync(dir).filter(x=>x.endsWith('.sql')).sort()){if((await adm('select 1 from _migrations where name=$1',[f])).rowCount)continue;
   const c=await admin.connect();try{await c.query('begin');await c.query(fs.readFileSync(new URL(f,dir),'utf8'));await c.query('insert into _migrations(name) values($1)',[f]);await c.query('commit')}catch(e){await c.query('rollback');throw e}finally{c.release()}}
- await adm(`grant usage on schema public to nexora_app;grant select,insert,update,delete on all tables in schema public to nexora_app;
-  revoke insert,update,delete on tenants from nexora_app;revoke all on _migrations from nexora_app;grant usage,select on all sequences in schema public to nexora_app;
-  grant execute on function resolve_tenant(text,text),login_lookup(text),channel_tenant(int) to nexora_app;`);
- await adm('revoke all on platform_provider_settings,managed_social_accounts from nexora_app');
+ await adm(`grant usage on schema public to vexora_app;grant select,insert,update,delete on all tables in schema public to vexora_app;
+  revoke insert,update,delete on tenants from vexora_app;revoke all on _migrations from vexora_app;grant usage,select on all sequences in schema public to vexora_app;
+  grant execute on function resolve_tenant(text,text),login_lookup(text),channel_tenant(int) to vexora_app;`);
+ await adm('revoke all on platform_provider_settings,managed_social_accounts from vexora_app');
  if(!(await adm('select 1 from tenants limit 1')).rowCount){const {createTenant}=await import('./tenants.js');await createTenant({name:'Principal',slug:'principal'})}}
 
 

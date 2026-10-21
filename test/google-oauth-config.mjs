@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {createGoogleVault,mountGoogleMaster} from '../src/google-oauth-config.js';
-process.env.PUBLIC_URL='https://nexora.test';process.env.JWT_SECRET='test-only-encryption-key';
+process.env.PUBLIC_URL='https://vexora.test';process.env.JWT_SECRET='test-only-encryption-key';
 let value;const vault=createGoogleVault(async(sql,p)=>sql.startsWith('select')?{rows:value?[{value}]:[]}:(value=JSON.parse(p[0]),{rows:[]}));
 await vault.save({client_id:'123.apps.googleusercontent.com',client_secret:'test-secret'});
 assert.notEqual(value.secret,'test-secret');assert.equal((await vault.credentials()).client_secret,'test-secret');
@@ -8,5 +8,5 @@ let status=await vault.status();assert.equal(status.configured,true);assert.equa
 await vault.save({client_id:'123.apps.googleusercontent.com',client_secret:''});assert.equal((await vault.credentials()).client_secret,'test-secret');
 await assert.rejects(()=>vault.save({client_id:'456.apps.googleusercontent.com'}));
 const routes=[];const guard=()=>{};mountGoogleMaster({get:(...a)=>routes.push(a),put:(...a)=>routes.push(a)},{pk:guard,ah:x=>x,vault});assert.ok(routes.every(r=>r[1]===guard));
-process.env.PUBLIC_URL='http://nexora.test';assert.equal((await vault.status()).configured,false);
+process.env.PUBLIC_URL='http://vexora.test';assert.equal((await vault.status()).configured,false);
 console.log('OK: aplicativo Google central, segredo criptografado/omitido, preservação segura, troca de cliente exige segredo, endpoints master e HTTPS.');

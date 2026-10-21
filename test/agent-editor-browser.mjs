@@ -7,11 +7,11 @@ const fixture={id:41,name:'Rastreabem · atendimento',active:true,prompt:'PROMPT
 let agents=[structuredClone(fixture),{id:42,name:'Especialista',active:false,channel_ids:[]}],writes=[],failSave=false;
 const root=path.resolve('web'),server=http.createServer(async(req,res)=>{
  const u=new URL(req.url,'http://localhost');
- if(u.pathname==='/realtime.js'){res.setHeader('content-type','application/javascript');return res.end('window.NexoraRealtime={connect:()=>({close(){}})}')}
+ if(u.pathname==='/realtime.js'){res.setHeader('content-type','application/javascript');return res.end('window.VexoraRealtime={connect:()=>({close(){}})}')}
  if(u.pathname.startsWith('/api/')){
   let raw='';for await(const chunk of req)raw+=chunk;const b=raw?JSON.parse(raw):{},p=u.pathname.slice(4);let data=[];
   if(p==='/me')data={id:1,tid:1,role:'owner',name:'Francélio'};
-  if(p==='/brand')data={name:'Néxora',color:'#6254e8',font:'Inter',labels:{contact:'Cliente'}};
+  if(p==='/brand')data={name:'Véxora',color:'#6254e8',font:'Inter',labels:{contact:'Cliente'}};
   if(p==='/operation')data={time_zone:'America/Cuiaba'};
   if(p==='/t/agents')data=agents;
   if(p==='/t/users')data=[{id:1,name:'Francélio',role:'owner'}];
@@ -35,7 +35,7 @@ try{
  page.setDefaultTimeout(7000);page.on('pageerror',e=>{errors.push(e.message);console.log('PAGE ERROR',e.message)});page.on('dialog',d=>d.accept());await page.route('https://fonts.**/**',r=>r.abort());await page.addInitScript(()=>localStorage.nx='test');
  await page.goto('http://127.0.0.1:'+server.address().port+'/#agent');await page.getByRole('button',{name:'Configurar agente',exact:true}).first().click();
  const dialog=page.locator('.agent-editor-dialog');await dialog.getByRole('tab',{name:'Perfil',exact:false}).waitFor();
- await page.evaluate(()=>Promise.all(document.getAnimations().filter(a=>a.effect.getComputedTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{}))));await page.screenshot({path:'/tmp/nexora-agent-debug.png'});assert.equal(await dialog.getByRole('tab').count(),4);assert.equal(await dialog.getByLabel('Nome do agente',{exact:true}).inputValue(),fixture.name);assert.equal(await dialog.getByLabel('Tom de fala',{exact:true}).inputValue(),fixture.tone);
+ await page.evaluate(()=>Promise.all(document.getAnimations().filter(a=>a.effect.getComputedTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{}))));await page.screenshot({path:'/tmp/vexora-agent-debug.png'});assert.equal(await dialog.getByRole('tab').count(),4);assert.equal(await dialog.getByLabel('Nome do agente',{exact:true}).inputValue(),fixture.name);assert.equal(await dialog.getByLabel('Tom de fala',{exact:true}).inputValue(),fixture.tone);
  await dialog.getByRole('tab',{name:'Comportamento',exact:false}).click();assert.equal(await dialog.getByLabel('Instruções / Prompt',{exact:true}).inputValue(),fixture.prompt);
  await dialog.getByRole('checkbox',{name:'Orientação original',exact:true}).waitFor();assert.ok(await dialog.getByRole('checkbox',{name:'Orientação original',exact:true}).isChecked());
  await dialog.getByRole('tab',{name:'Conhecimento',exact:false}).click();await dialog.getByText('Base original',{exact:false}).waitFor();
@@ -43,10 +43,10 @@ try{
  await dialog.getByRole('button',{name:'Revisar configuração',exact:true}).click();await dialog.getByText('Configuração preenchida.',{exact:false}).waitFor();
  await dialog.getByRole('tabpanel',{name:'Configurações',exact:false}).getByRole('button',{name:'Salvar alterações',exact:true}).click();await dialog.getByText('Configuração salva.',{exact:true}).waitFor();
  assert.equal(writes.length,1);for(const key of Object.keys(fixture).filter(k=>k!=='id'))assert.deepEqual(writes[0][key],fixture[key],'preserve '+key);
- await page.screenshot({path:'/tmp/nexora-agent-settings-desktop.png'});
- await dialog.getByRole('tab',{name:'Perfil',exact:false}).click();await page.screenshot({path:'/tmp/nexora-agent-profile-desktop.png'});
+ await page.screenshot({path:'/tmp/vexora-agent-settings-desktop.png'});
+ await dialog.getByRole('tab',{name:'Perfil',exact:false}).click();await page.screenshot({path:'/tmp/vexora-agent-profile-desktop.png'});
  await dialog.getByRole('tab',{name:'Perfil',exact:false}).focus();await page.keyboard.press('ArrowDown');assert.equal(await dialog.getByRole('tab',{selected:true}).innerText(),'Comportamento\nInstruções, habilidades e destinos');
- await page.setViewportSize({width:390,height:844});await dialog.getByRole('tab',{name:'Perfil',exact:false}).click();await page.screenshot({path:'/tmp/nexora-agent-profile-mobile.png'});
+ await page.setViewportSize({width:390,height:844});await dialog.getByRole('tab',{name:'Perfil',exact:false}).click();await page.screenshot({path:'/tmp/vexora-agent-profile-mobile.png'});
  const metrics=await dialog.evaluate(d=>({viewport:innerWidth,width:d.getBoundingClientRect().width,scroll:d.scrollWidth,footer:d.querySelector('form>.nx-dialog-actions').getBoundingClientRect().bottom,height:innerHeight}));assert.ok(metrics.width<=metrics.viewport+1);assert.ok(metrics.scroll<=metrics.width+1);assert.ok(metrics.footer<=metrics.height+1);
  await dialog.getByLabel('Nome do agente',{exact:true}).fill('Nome ainda não salvo');failSave=true;await dialog.getByRole('tabpanel',{name:'Perfil',exact:false}).getByRole('button',{name:'Salvar alterações',exact:true}).click();await dialog.getByText('Não foi possível salvar:',{exact:false}).waitFor();assert.equal(await dialog.getByLabel('Nome do agente',{exact:true}).inputValue(),'Nome ainda não salvo');failSave=false;
  await dialog.getByRole('button',{name:'Cancelar',exact:true}).click();assert.equal(await page.locator('.agent-editor-dialog').count(),0);

@@ -6,7 +6,7 @@ Pesquisa e implementação: 20/10/2026.
 
 O Postman é um catálogo de contratos e exemplos. A existência de um endpoint não demonstra entrega real no aplicativo WhatsApp nem compatibilidade com a biblioteca instalada.
 
-| Fonte | O que foi encontrado | Decisão para a Néxora |
+| Fonte | O que foi encontrado | Decisão para a Véxora |
 | --- | --- | --- |
 | Postman, API WhatsApp Baileys Lib / Cachesistemas | Rota `/message/templateButtons?key=...` de um servidor que encapsula Baileys. Não é um método da biblioteca que usamos diretamente. | Não tratar a rota como capacidade nativa do pacote `@whiskeysockets/baileys` 6.7.x. |
 | Postman, coleção WAHA 2024.11 | Endpoint `/api/sendButtons`. | Conferir documentação atual antes de habilitar. |
@@ -37,7 +37,7 @@ No envio financeiro humano, o código Pix ou a linha digitável agora ocupa uma 
 
 ## Automação interna padrão
 
-1. Cobranças criadas pela Néxora ou enviadas/consultadas na conversa são vinculadas ao atendimento. Consultas do bot/IA passam a registrar os débitos no controle de pagamentos; nenhuma confirmação é inventada pela IA.
+1. Cobranças criadas pela Véxora ou enviadas/consultadas na conversa são vinculadas ao atendimento. Consultas do bot/IA passam a registrar os débitos no controle de pagamentos; nenhuma confirmação é inventada pela IA.
 2. O webhook deve ser configurado no provedor, com endereço e segredo da empresa. Asaas: `PAYMENT_CONFIRMED` e `PAYMENT_RECEIVED`. Stripe Checkout: `checkout.session.completed` e `checkout.session.async_payment_succeeded`, com `payment_status=paid`.
 3. Depois da validação de autenticação e ambiente, uma transação marca o pagamento como pago, registra nota interna/evento e agenda a confirmação ao cliente.
 4. A fila é verificada a cada 30 segundos. O aviso informa confirmação, valor, referência e agradecimento; sandbox/test traz indicação explícita de teste.

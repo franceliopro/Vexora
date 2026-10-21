@@ -21,7 +21,7 @@ export async function send(ch,{to,kind,body,file,filename}){const s=socks[ch.id]
 export const qr=async ch=>qrs[ch.id]||null;
 export const connect=async ch=>{const tenant=als.getStore()?.tenant||ch.tenant_id,inb=(await import('../core.js')).inbound;clearTimeout(timers[ch.id]);if(states[ch.id]?.disconnect_code===401&&!socks[ch.id]){await fs.rm(authPath(ch),{recursive:true,force:true});delete states[ch.id]}return start({...ch,tenant_id:tenant},(id,m)=>als.run({tenant},()=>inb(id,m)))};
 
-export async function pause(ch){await starting[ch.id]?.catch(()=>{});clearTimeout(timers[ch.id]);const sock=socks[ch.id];delete socks[ch.id];delete qrs[ch.id];setState(ch,{state:'disconnected',detail:'Inbox pausada na Néxora'});try{sock?.end?.(new Error('Inbox pausada pelo administrador'))}catch{console.warn('baileys: socket já encerrado',ch.id)}}
+export async function pause(ch){await starting[ch.id]?.catch(()=>{});clearTimeout(timers[ch.id]);const sock=socks[ch.id];delete socks[ch.id];delete qrs[ch.id];setState(ch,{state:'disconnected',detail:'Inbox pausada na Véxora'});try{sock?.end?.(new Error('Inbox pausada pelo administrador'))}catch{console.warn('baileys: socket já encerrado',ch.id)}}
 export async function profile(ch,contact){const sock=socks[ch.id];if(!sock)return {};const jid=contact.handle.includes('@')?contact.handle:contact.handle+'@s.whatsapp.net';return {avatar:await sock.profilePictureUrl(jid,'image',5000)}}
 
 export async function presence(ch,to,state){const sock=socks[ch.id];if(!sock||states[ch.id]?.state!=='connected')return;const jid=to.includes('@')?to:to+'@s.whatsapp.net';await sock.sendPresenceUpdate(({typing:'composing',recording:'recording',paused:'paused'})[state]||'paused',jid)}

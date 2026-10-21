@@ -1,11 +1,12 @@
-# Nexora — 1 stack = N empresas isoladas (tenant_id + Row Level Security).
+# Compatibilidade de instalações existentes: defina POSTGRES_USER/POSTGRES_DB no .env.
+# Vexora — 1 stack = N empresas isoladas (tenant_id + Row Level Security).
 # Serve para Dokploy, Portainer (Repository) ou `docker compose up -d --build`.
 services:
   app:
     build: .
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgres://nexora:${POSTGRES_PASSWORD}@db:5432/nexora
+      DATABASE_URL: postgres://${POSTGRES_USER:-nexora}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-nexora}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       PLATFORM_KEY: ${PLATFORM_KEY}
@@ -22,9 +23,9 @@ services:
   db:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
-    environment: {POSTGRES_USER: nexora, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}", POSTGRES_DB: nexora}
+    environment: {POSTGRES_USER: "${POSTGRES_USER:-nexora}", POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}", POSTGRES_DB: "${POSTGRES_DB:-nexora}"}
     volumes: [pgdata:/var/lib/postgresql/data]
-    healthcheck: {test: ["CMD-SHELL","pg_isready -U nexora"], interval: 10s, retries: 10}
+    healthcheck: {test: ["CMD-SHELL","pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"], interval: 10s, retries: 10}
   waha:
     image: devlikeapro/waha:latest
     restart: unless-stopped
@@ -34,7 +35,7 @@ services:
     image: dpage/pgadmin4:latest
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@nexora.local}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@vexora.local}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
       PGADMIN_CONFIG_SERVER_MODE: "True"
       PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
@@ -44,7 +45,7 @@ services:
   backup:    # dump automático do banco todo dia (guarda 7 diários, 4 semanais, 3 mensais) no volume "backups"
     image: prodrigestivill/postgres-backup-local:16
     restart: unless-stopped
-    environment: {POSTGRES_HOST: db, POSTGRES_DB: nexora, POSTGRES_USER: nexora, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}", SCHEDULE: "@daily", BACKUP_KEEP_DAYS: "7", BACKUP_KEEP_WEEKS: "4", BACKUP_KEEP_MONTHS: "3"}
+    environment: {POSTGRES_HOST: db, POSTGRES_DB: "${POSTGRES_DB:-nexora}", POSTGRES_USER: "${POSTGRES_USER:-nexora}", POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}", SCHEDULE: "@daily", BACKUP_KEEP_DAYS: "7", BACKUP_KEEP_WEEKS: "4", BACKUP_KEEP_MONTHS: "3"}
     volumes: ["backups:/backups"]
     depends_on: [db]
 volumes: {appdata: {}, pgdata: {}, wahadata: {}, pgadmindata: {}, backups: {}}

@@ -1,4 +1,4 @@
-# Néxora: agentes, habilidades e origem dos leads
+# Véxora: agentes, habilidades e origem dos leads
 
 ## Atendimento
 No ícone ◐ da barra da conversa, escolha um dos dez fundos. É uma preferência por empresa e usuário no navegador, não um fundo enviado ao cliente.
@@ -47,8 +47,8 @@ O servidor da ferramenta envia POST JSON para:
 `/hooks/leads/TENANT_ID/SOURCE_ID`
 
 Cabeçalhos:
-- `x-nexora-timestamp`: Unix em segundos.
-- `x-nexora-signature`: `sha256=` + HMAC SHA256 hexadecimal de `timestamp + "." + corpo JSON exato`, usando a chave exibida.
+- `x-vexora-timestamp`: Unix em segundos.
+- `x-vexora-signature`: `sha256=` + HMAC SHA256 hexadecimal de `timestamp + "." + corpo JSON exato`, usando a chave exibida.
 - `Content-Type: application/json`.
 
 A assinatura vale por cinco minutos. Nunca coloque a chave em JavaScript público.

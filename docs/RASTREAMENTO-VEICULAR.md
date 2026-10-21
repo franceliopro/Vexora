@@ -46,7 +46,7 @@ Se cada plataforma tiver conta própria, acrescente `asaas.platforms.ceeb_vision
 
 Financeiro → plataforma → pagamento pede CPF/CNPJ válido. Para mostrar débitos abertos/vencidos, exige correspondência do telefone da conversa com `phone`/`mobilePhone` do cadastro Asaas. Divergência ou erro encaminha ao Financeiro correto. Esta verificação não equivale a autenticação forte de identidade. Nome/documento são mascarados.
 
-Boleto completo, linha digitável, Pix copia e cola e fatura dependem da disponibilidade na cobrança. Cada opção inclui o **link da fatura completa**. Não há PDF de fatura gerado/anexado pela Néxora. Sem fatura, encaminha ao Financeiro.
+Boleto completo, linha digitável, Pix copia e cola e fatura dependem da disponibilidade na cobrança. Cada opção inclui o **link da fatura completa**. Não há PDF de fatura gerado/anexado pela Véxora. Sem fatura, encaminha ao Financeiro.
 
 **Criar cobrança**, numa conversa assumida, usa documento, valor, descrição, vencimento e plataforma; cria cobrança real e envia a fatura. O identificador da tentativa impede repetir a criação na mesma tentativa. Falha ambígua exige conferir o Asaas antes de iniciar outra tentativa. Criar cobrança não confirma pagamento. Webhooks legados ainda exigem validação externa de autenticidade e reconciliação.
 

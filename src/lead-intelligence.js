@@ -20,7 +20,7 @@ export function mountLeadPublic(app,{ah,limit,tenantTransaction,bus}){
  const tid=Number(req.params.tenant),id=Number(req.params.source);if(!Number.isSafeInteger(tid)||!Number.isSafeInteger(id)||tid<1||id<1)return res.status(404).json({error:'Fonte indisponível'});
  const result=await tenantTransaction(tid,async query=>{
   const source=(await query('select s.* from lead_sources s join tenants t on t.id=s.tenant_id join channels c on c.id=s.channel_id where s.id=$1 and s.active and t.active and c.active for update of s',[id])).rows[0];
-  if(!source||!verifyLeadSignature(unseal(source.secret),req.rawBody||Buffer.alloc(0),req.headers['x-nexora-timestamp'],req.headers['x-nexora-signature']))throw Object.assign(Error('Assinatura inválida'),{status:401});
+  if(!source||!verifyLeadSignature(unseal(source.secret),req.rawBody||Buffer.alloc(0),(req.headers['x-vexora-timestamp']||req.headers['x-nexora-timestamp']),(req.headers['x-vexora-signature']||req.headers['x-nexora-signature'])))throw Object.assign(Error('Assinatura inválida'),{status:401});
   return ingestLead(query,source,req.body);
  });if(result.conversation_id)await als.run({tenant:tid},()=>bus('conv',{id:result.conversation_id}));res.json({ok:true,...result});
  }));

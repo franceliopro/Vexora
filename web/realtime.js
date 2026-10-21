@@ -19,5 +19,5 @@
   function stop(){if(stopped)return;stopped=true;generation++;clear();if(socket){socket.onclose=null;socket.close()}root.removeEventListener('online',online);root.removeEventListener('offline',offline);root.removeEventListener('pagehide',stop)}
   root.addEventListener('online',online);root.addEventListener('offline',offline);root.addEventListener('pagehide',stop,{once:true});open();return {close:stop,reconnect:online,get readyState(){return socket?.readyState??3}};
  }
- root.NexoraRealtime={connect:connectRealtime};
+ root.VexoraRealtime={connect:connectRealtime};
 })(window);

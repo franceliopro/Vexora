@@ -5,7 +5,7 @@ Na Central de Atendimento, escolha **Agenda** para ver os compromissos acessíve
 ## Organização
 
 - **Individual:** pertence ao usuário que cria. Administradores também podem acessar.
-- **Compartilhada:** criada por administrador, com participantes definidos na criação. Cada compromisso tem um responsável. A reserva bloqueia o horário daquele responsável em todas as agendas Néxora; outros responsáveis podem atender em paralelo.
+- **Compartilhada:** criada por administrador, com participantes definidos na criação. Cada compromisso tem um responsável. A reserva bloqueia o horário daquele responsável em todas as agendas Véxora; outros responsáveis podem atender em paralelo.
 - A visibilidade do compromisso também depende da permissão para a conversa vinculada. Compartilhar uma agenda não concede acesso aos atendimentos de colegas.
 - O fuso começa com o da empresa (por exemplo America/Cuiaba) e pode ser escolhido no agendamento.
 
@@ -22,9 +22,9 @@ JWT_SECRET=segredo-persistente-da-instalacao
 
 Cadastre o retorno OAuth exatamente como mostrado em **Agenda → Gerenciar agendas → Como conectar Google e Apple**: `https://seu-dominio/calendar/google/callback`.
 
-Crie a agenda e clique **Conectar Google**. Cada agenda tem autorização própria; uma agenda compartilhada pode apontar para o ID de uma agenda Google compartilhada, desde que a conta autorizadora tenha acesso de edição. Tokens de atualização são guardados criptografados com chave derivada de JWT_SECRET. Preserve essa variável ao atualizar a instalação. Desconectar remove a credencial da Néxora; revogue também o acesso na conta Google, se desejado.
+Crie a agenda e clique **Conectar Google**. Cada agenda tem autorização própria; uma agenda compartilhada pode apontar para o ID de uma agenda Google compartilhada, desde que a conta autorizadora tenha acesso de edição. Tokens de atualização são guardados criptografados com chave derivada de JWT_SECRET. Preserve essa variável ao atualizar a instalação. Desconectar remove a credencial da Véxora; revogue também o acesso na conta Google, se desejado.
 
-O fluxo consulta a disponibilidade Google e publica os compromissos criados pela Néxora. Cancelamentos exigem sincronização e envio da confirmação de cancelamento pelo painel. Não há importação contínua nem sincronização bidirecional de edições feitas fora da Néxora. A disponibilidade da agenda compartilhada Google considera todos os eventos dela; use agendas Google individuais caso queira disponibilidade independente por pessoa também no Google.
+O fluxo consulta a disponibilidade Google e publica os compromissos criados pela Véxora. Cancelamentos exigem sincronização e envio da confirmação de cancelamento pelo painel. Não há importação contínua nem sincronização bidirecional de edições feitas fora da Véxora. A disponibilidade da agenda compartilhada Google considera todos os eventos dela; use agendas Google individuais caso queira disponibilidade independente por pessoa também no Google.
 
 ## Apple Calendário
 
@@ -50,7 +50,7 @@ Os guias ficam em **Integração e API → Guias de conexão** e no botão **Pas
 
 Habilite Google Drive API no projeto OAuth. Cadastre também `https://seu-dominio/google/drive/callback` como retorno autorizado (copie o endereço exibido na janela). O Drive usa `GOOGLE_CLIENT_ID` e `GOOGLE_CLIENT_SECRET`; se ausentes, reutiliza `GCAL_CLIENT_ID` e `GCAL_CLIENT_SECRET`. Cada usuário autoriza sua própria conta. O escopo é `drive.readonly`; para publicação ampla, siga a verificação de aplicativo e de escopos exigida pelo Google. Em modo de testes, adicione as contas na lista de usuários de teste do consentimento.
 
-Não há compartilhamento público automático nem alteração de arquivos no Drive. O usuário seleciona, prepara e confirma o envio de uma cópia ao cliente. PDF, imagens, áudio, vídeo e documentos suportados respeitam o limite Néxora de 20 MB e as restrições de download do Google. Documentos/Apresentações Google são exportados em PDF; Planilhas Google, em XLSX. A autorização inicial abre uma janela Google; as buscas e os envios seguintes ficam sobre a conversa.
+Não há compartilhamento público automático nem alteração de arquivos no Drive. O usuário seleciona, prepara e confirma o envio de uma cópia ao cliente. PDF, imagens, áudio, vídeo e documentos suportados respeitam o limite Véxora de 20 MB e as restrições de download do Google. Documentos/Apresentações Google são exportados em PDF; Planilhas Google, em XLSX. A autorização inicial abre uma janela Google; as buscas e os envios seguintes ficam sobre a conversa.
 
 ## Filas, arquivamento e lixeira
 

@@ -24,9 +24,9 @@ Informe minutos antes do compromisso, por exemplo `1440, 60`, ou deixe vazio. O 
 
 Os lembretes são mensagens de texto explicitamente autorizadas, sem reativar IA/bot. Respeitam conta do atendente, participação na conversa, inbox ativa, agendamento em aberto e sincronização externa. Se o atendimento for encerrado, o usuário perder acesso ou a inbox for pausada, ficam bloqueados. Em Agenda → Lembretes, confira os estados e reconfigure quando necessário. Não há repetição automática de um envio incerto.
 
-## Redes fornecidas pela Néxora
+## Redes fornecidas pela Véxora
 
-O provedor Zernio é uma integração interna do proprietário da Néxora. Não aparece na tela da empresa nem pode ser configurado pelo administrador da empresa.
+O provedor Zernio é uma integração interna do proprietário da Véxora. Não aparece na tela da empresa nem pode ser configurado pelo administrador da empresa.
 
 No painel **Master → Gerenciar empresa → Redes sociais gerenciadas**, o proprietário valida a chave central, escolhe o perfil/rede e clica **Vincular e ativar nesta empresa**. O cadastro do webhook é feito para aquela inbox. A chave fica criptografada em configuração global, fora dos dados de configuração devolvidos à empresa. Contas já vinculadas a outra empresa são recusadas, evitando a importação geral de todas as contas da assinatura para cada cliente.
 

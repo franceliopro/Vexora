@@ -16,4 +16,5 @@ PGADMIN_PASSWORD=$(r 12)
 PGADMIN_PORT=$((P+1000))
 PGADMIN_BIND=127.0.0.1
 EOF
-docker compose -p nexora_$N --env-file clients/$N.env up -d --build; echo "Cliente $N no ar: porta $P"
+docker compose -p vexora_$N --env-file clients/$N.env up -d --build; echo "Cliente $N no ar: porta $P"
+

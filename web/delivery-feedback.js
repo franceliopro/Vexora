@@ -14,7 +14,7 @@ async function financialDeliveryFeedback(c,result,notice,title){
  notice.dataset.state=states.includes('failed')?'failed':read===ids.length?'read':delivered===ids.length?'delivered':'sent';
  list.replaceChildren(...ids.map((id,i)=>h('span',{},'Mensagem '+(i+1)+' · '+DELIVERY_TEXT[deliveryStates.get(id)||'unknown'])));};
  const changed=e=>{if(!notice.isConnected){cleanup();return}if(e.detail.conversation_id!==c.id||!ids.includes(String(e.detail.message_id)))return;markDelivery(e.detail.message_id,e.detail.status);draw()};
- const cleanup=()=>window.removeEventListener('nexora-delivery',changed);notice._deliveryCleanup=cleanup;notice.closest('dialog')?.addEventListener('close',cleanup,{once:true});window.addEventListener('nexora-delivery',changed);draw();notice.scrollIntoView({block:'nearest'});
+ const cleanup=()=>window.removeEventListener('vexora-delivery',changed);notice._deliveryCleanup=cleanup;notice.closest('dialog')?.addEventListener('close',cleanup,{once:true});window.addEventListener('vexora-delivery',changed);draw();notice.scrollIntoView({block:'nearest'});
  try{for(const m of await api('/conversations/'+c.id+'/delivery?ids='+ids.join(',')))markDelivery(m.id,m.status);if(notice.isConnected)draw()}catch{if(notice.isConnected)detail.textContent='O envio foi processado, mas não conseguimos consultar a confirmação agora. Confira o histórico; não reenvie automaticamente.'}
 }
 function financialPanelKeyboard(panel){

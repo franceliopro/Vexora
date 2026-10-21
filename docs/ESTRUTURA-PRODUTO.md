@@ -1,6 +1,6 @@
-# Néxora — estrutura do produto
+# Véxora — estrutura do produto
 
-Decisão de 19/10/2026. Venda direta do proprietário da Néxora às empresas finais. Personalização de marca não é revenda.
+Decisão de 19/10/2026. Venda direta do proprietário da Véxora às empresas finais. Personalização de marca não é revenda.
 
 | Módulo | Escopo e estado desta entrega |
 |---|---|
@@ -18,7 +18,7 @@ Decisão de 19/10/2026. Venda direta do proprietário da Néxora às empresas fi
 
 ## Como interpretar os 11 pontos
 
-Os 11 pontos representam a sequência de organização e evolução do produto. Não exigem uma tela independente para cada ponto. Os fluxos e as telas serão definidos a partir das explicações e referências do proprietário. A navegação mantém os acessos existentes em uma faixa única, com rolagem e controles quando faltar espaço, sem o agrupamento “Mais módulos”. Não ampliar o CRM antes de receber sua especificação. A referência visual deve preservar estrutura, proporções e comportamento solicitados, com marca, tipografia, cores e acabamento próprios da Néxora.
+Os 11 pontos representam a sequência de organização e evolução do produto. Não exigem uma tela independente para cada ponto. Os fluxos e as telas serão definidos a partir das explicações e referências do proprietário. A navegação mantém os acessos existentes em uma faixa única, com rolagem e controles quando faltar espaço, sem o agrupamento “Mais módulos”. Não ampliar o CRM antes de receber sua especificação. A referência visual deve preservar estrutura, proporções e comportamento solicitados, com marca, tipografia, cores e acabamento próprios da Véxora.
 
 ## Empresas e acesso master
 
