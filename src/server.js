@@ -1,3 +1,4 @@
+import {mountContacts} from './contacts-workspace.js';
 import {mountAdsHub,recoverAds} from './ads-hub.js';
 import {mountBotIdle,tickBotIdle} from './bot-idle.js';
 import {mountSelfProfile} from './self-profile.js';
@@ -122,7 +123,7 @@ mountConversationActions(app,{ah,q,tenantTransaction,bus,deliver,createPayment})
 mountMessageReceipts(app,{ah,q});mountFinancial(app,{ah,adm,q,tenantTransaction,deliver,asaasDebts,asaasPay});mountSocialStudio(app,{ah,adm,q,lock:withConversationLock});mountSocialCreative(app,{ah,adm,q});mountAdsHub(app,{ah,adm,q,tenantTransaction,lock:withConversationLock});mountContinuity(app,{ah,adm,q});mountBotIdle(app,{ah,adm,q});mountSelfProfile(app,{ah,q,limit});mountDepartmentPipelines(app,{ah,adm,q});mountModuleAccess(app,{ah,adm,q});mountRoleTemplates(app,{ah,adm});mountAgentConnections(app,{ah,adm,q});
 mountKnowledge(app,{ah,q,transaction:tenantTransaction,ragAdd});
 mountServiceWorkflow(app,{ah,q,deliver,bus});
-mountOperations(app,{ah,adm,q,tenantTransaction,bus});
+mountOperations(app,{ah,adm,q,tenantTransaction,bus});mountContacts(app,{ah,q,tenantTransaction,bus});
 mountCRM(app,{ah,adm,q,tenantTransaction,bus,deliver});mountInboxRouting(app,{ah,adm,q,tenantTransaction,bus});
 app.use((req,res,next)=>{if(req.path.startsWith('/api/')&&!adminRole(req.u)&&(/^\/api\/(billing|school|delivery|students|lessons|courses|posts|ads|stats|export|settings|templates)/.test(req.path)))return res.status(403).json({error:'Acesso administrativo'});next()});
 app.use('/api',ah(async(req,res,next)=>{if(/^\/settings\/zernio/i.test(req.path))return res.status(403).json({error:'Conexão gerenciada pela Véxora'});const m=req.path.match(/^\/(?:t\/channels|channels|inboxes)\/(\d+)/);if(m&&req.method!=='GET'){const c=(await q('select driver from channels where id=$1',[m[1]])).rows[0];if(c?.driver==='zernio')return res.status(403).json({error:'Solicite esta alteração à administração da Véxora'})}if(req.path==='/t/channels'&&['zernio','social'].includes(req.body?.driver))return res.status(403).json({error:'Conexão gerenciada pela Véxora'});if(m&&req.method==='GET'&&/\/(webhook|qr)$/.test(req.path)){const c=(await q('select driver from channels where id=$1',[m[1]])).rows[0];if(c?.driver==='zernio')return res.status(403).json({error:'Conexão gerenciada pela Véxora'})}next()}));
