@@ -1,0 +1,71 @@
+/* Deliberately omit preflight: migrating Postagens must not reset CRM effects. */
+@import "tailwindcss/theme.css" prefix(vx);
+@import "tailwindcss/utilities.css" prefix(vx);
+@import "preline/variants.css";
+@plugin "@tailwindcss/forms" { strategy: "class"; }
+@source "../../web/preline-ui.js";
+@source "../../web/social-studio.js";
+@source "../../web/social-creative.js";
+.vx-ui{color:var(--tx);font-family:var(--font);line-height:1.5}
+.vx-ui *{box-sizing:border-box}
+.vx-ui .hidden{display:none!important}
+.vx-ui h2,.vx-ui h3,.vx-ui p{margin:0}
+.vx-ui .vx-btn,.vx-dialog .btn{@apply vx:inline-flex vx:items-center vx:justify-center vx:gap-2 vx:rounded-xl vx:px-3 vx:py-2 vx:text-xs vx:font-semibold vx:transition-colors;min-height:36px;line-height:18px;white-space:nowrap;flex:0 0 auto;border:1px solid transparent;cursor:pointer;max-width:100%;text-decoration:none}
+.vx-ui .vx-btn-primary{background:var(--ac);color:var(--on)}
+.vx-ui .vx-btn-primary:hover{background:var(--ac-h)}
+.vx-ui .vx-btn-secondary{background:var(--card);color:var(--tx);border-color:var(--ln);box-shadow:0 1px 3px #17213a05}
+.vx-ui .vx-btn-secondary:hover{color:var(--ac);background:var(--ac-s);border-color:color-mix(in srgb,var(--ac) 30%,var(--ln))}
+.vx-ui .vx-btn-small{min-height:30px;padding:5px 10px;font-size:11px}
+.vx-ui :is(button,a,input,select,textarea):focus-visible{outline:2px solid var(--ac);outline-offset:3px}
+.vx-ui :is(button,a):disabled{opacity:.5;cursor:not-allowed}
+.vx-ui :is(input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea){@apply vx:rounded-xl vx:px-3 vx:py-2 vx:text-sm;border:1px solid var(--ln);background:var(--card);color:var(--tx);min-height:36px;width:100%;line-height:20px}
+.vx-ui label{font-size:12px;font-weight:500;color:var(--mu);margin:12px 0 5px}
+.vx-ui.social-shell{max-width:1560px;padding:16px 18px;margin:auto}
+.vx-ui .vx-social-head{@apply vx:flex vx:flex-wrap vx:items-center vx:justify-between vx:gap-4 vx:mb-4;min-height:76px}
+.vx-ui .vx-social-head h2{font-size:22px;font-weight:650;letter-spacing:-.04em;margin:4px 0}
+.vx-ui .vx-social-head p{font-size:12px;color:var(--mu);margin:0}
+.vx-ui .vx-social-toolbar{@apply vx:flex vx:flex-wrap vx:items-center vx:gap-2; margin:0 0 14px;padding-bottom:14px;border-bottom:1px solid var(--ln)}
+.vx-ui .vx-social-toolbar>input{flex:1 1 180px;width:auto;min-width:120px}
+.vx-ui .vx-social-toolbar>select{flex:0 1 190px;width:auto;min-width:150px}
+.vx-ui .vx-tablist{@apply vx:inline-flex vx:items-center vx:gap-1 vx:rounded-xl vx:p-1;max-width:100%;border:1px solid var(--ln);background:var(--card);overflow-x:auto;flex-shrink:0}
+.vx-ui .vx-tab{@apply vx:inline-flex vx:items-center vx:justify-center vx:gap-2 vx:rounded-lg vx:px-3 vx:py-2 vx:text-xs vx:font-medium;white-space:nowrap;border:0;background:transparent;color:var(--mu);cursor:pointer;min-height:32px;flex-shrink:0}
+.vx-ui .vx-tab:hover{color:var(--tx);background:var(--surface)}
+.vx-ui .vx-tab.active,.vx-ui .vx-tab[aria-selected=true]{color:var(--ac);background:var(--ac-s);font-weight:650}
+.vx-ui>.mu{font-size:12px;margin:0 0 14px;line-height:1.6}
+.vx-ui .vx-panels{min-width:0}
+.vx-ui .creative-intro{@apply vx:flex vx:flex-wrap vx:items-center vx:justify-between vx:gap-4; padding:20px;border:1px solid var(--ln);border-radius:18px;background:linear-gradient(115deg,var(--ac-s),var(--card));margin:0 0 12px}
+.vx-ui .creative-intro h2{font-size:22px;font-weight:650;letter-spacing:-.04em;margin:6px 0}
+.vx-ui .creative-intro p{color:var(--mu);font-size:12px;line-height:1.7}
+.vx-ui .creative-actions{@apply vx:flex vx:flex-wrap vx:items-center vx:gap-2}
+.vx-ui .vx-creative-grid{@apply vx:grid vx:grid-cols-2 vx:gap-3;align-items:start}
+.vx-ui .creative-section{padding:18px;border:1px solid var(--ln);border-radius:18px;margin:0;background:var(--card);min-width:0}
+.vx-ui .creative-section:last-child{grid-column:1/-1}
+.vx-ui .creative-section h3{font-size:14px;font-weight:650;letter-spacing:-.02em}
+.vx-ui .creative-section-title{@apply vx:flex vx:items-center vx:justify-between vx:gap-3;align-items:start;margin-bottom:14px}
+.vx-ui .creative-section p.mu{font-size:12px;margin:6px 0 14px;line-height:1.7}
+.vx-ui .creative-empty{padding:24px 18px;border:1px dashed var(--ln);border-radius:14px;background:var(--surface);color:var(--mu);font-size:12px;line-height:1.7;text-align:center}
+.vx-ui .creative-reference-grid{gap:10px}
+.vx-ui .creative-reference{border-color:var(--ln);border-radius:14px;background:var(--surface)}
+.vx-ui .creative-plan,.vx-ui .creative-job{padding:14px;border:1px solid var(--ln);border-radius:14px;margin:12px 0 0;background:var(--surface);gap:12px}
+.vx-ui .creative-plan p{font-size:12px;line-height:1.7}
+.vx-ui .creative-caption{padding:12px 0}
+.vx-ui .creative-job details{margin-top:10px;font-size:12px}
+.vx-ui .creative-job summary{cursor:pointer;color:var(--ac)}
+.vx-ui.creative-active>.vx-social-head,.vx-ui.creative-active>.mu{display:none}
+.vx-ui.creative-active>.vx-social-toolbar>input,.vx-ui.creative-active>.vx-social-toolbar>select,.vx-ui.creative-active>.vx-social-toolbar>.vx-btn{display:none}
+.vx-ui .social-grid{gap:14px}
+.vx-ui .social-post-card{border-radius:18px;box-shadow:0 2px 8px #17213a04}
+.vx-ui .social-card-content{padding:16px}
+.vx-ui .social-card-content h3{font-size:15px;margin:12px 0 7px}
+.vx-ui .social-card-content p{font-size:12px;margin:10px 0}
+.vx-ui .social-card-actions{gap:6px}
+.vx-ui .social-empty{padding:36px 18px;border-radius:18px;background:var(--card);line-height:1.7}
+.vx-ui .social-empty p{margin-top:8px;font-size:12px}
+.vx-dialog .nx-dialog-title{padding:18px 20px}
+.vx-dialog .social-editor-grid{gap:18px}
+.vx-dialog .social-preview{padding:16px;border-radius:16px;border:1px solid var(--ln);background:var(--surface)}
+.vx-dialog .social-preview h3{font-size:14px}
+.vx-dialog .social-preview p{margin:10px 0;font-size:13px}
+.vx-dialog .social-account-picker{padding:12px;border-radius:14px;margin:12px 0}
+@media(max-width:700px){.vx-ui.social-shell{padding:12px}.vx-ui .vx-social-head{gap:12px}.vx-ui .vx-social-toolbar{gap:8px}.vx-ui .vx-tablist{width:100%}.vx-ui .vx-tab{flex:1;padding:7px 10px;font-size:11px}.vx-ui .vx-social-toolbar>input{flex-basis:100%}.vx-ui .vx-social-toolbar>select{flex:1}.vx-ui .vx-creative-grid{grid-template-columns:minmax(0,1fr)}.vx-ui .creative-section{padding:14px}.vx-ui .creative-intro{padding:16px}.vx-ui .creative-intro h2{font-size:21px}.vx-ui .creative-section-title{flex-wrap:wrap}.vx-ui .creative-actions{gap:6px}}
+@media(prefers-reduced-motion:reduce){.vx-ui .vx-btn{transition:none}}

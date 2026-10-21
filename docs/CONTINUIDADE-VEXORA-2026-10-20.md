@@ -604,3 +604,7 @@ Migração 046 cria contas, campanhas, métricas e auditoria de anúncios com RL
 ## 21/10/2026 — Consistência visual da suíte
 
 Camada comum `web/design-system.css` aplicada ao painel e à administração de empresas. Menu principal reduzido, controles arredondados, recuos e superfícies unificados, navegações locais de Marketing/Financeiro isoladas das regras do menu principal. CRM com toolbar compacta e ações secundárias por ícones no celular; botões de Governança não dividem largura de modo a sobrepor textos. Abas de postagens com estado acessível. Sem migração de dados ou alteração de credenciais. Detalhes e critérios em `docs/PADRAO-VISUAL-VEXORA.md`.
+
+## 21/10/2026 — Primeira migração para Preline UI
+
+A pedido do proprietário, Postagens/Calendário/Estúdio IA passaram a usar Tailwind compilado + componentes Preline, com ferramentas isoladas em `tools/ui` e assets locais versionados. Nova hierarquia de cartões no Estúdio IA, abas com teclado e painéis acessíveis. Efeitos do CRM preservados sem alterações em seus arquivos CSS. A migração das outras seções permanece gradual. Ler `docs/PRELINE-UI.md` antes de continuar. Sem alterações em dados/credenciais e sem publicações reais.
