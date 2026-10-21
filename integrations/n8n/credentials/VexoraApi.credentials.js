@@ -1,0 +1,4 @@
+class VexoraApi {
+ constructor(){this.name='vexoraApi';this.displayName='Véxora API';this.documentationUrl='https://github.com/franceliopro/Vexora/blob/main/docs/INTEGRACOES-API.md';this.properties=[{displayName:'Endereço da API',name:'baseUrl',type:'string',default:'',placeholder:'https://seu-dominio/api/v1/sua-empresa',required:true},{displayName:'Chave da API',name:'apiKey',type:'string',typeOptions:{password:true},default:'',required:true}];this.properties.push({displayName:'Segredo do webhook (somente Trigger)',name:'webhookSecret',type:'string',typeOptions:{password:true},default:''});this.authenticate={type:'generic',properties:{headers:{Authorization:'=Bearer {{$credentials.apiKey}}'}}};this.test={request:{baseURL:'={{$credentials.baseUrl}}',url:'/connection',method:'GET'}};}
+}
+module.exports={VexoraApi};

@@ -1,0 +1,212 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Véxora Integration API",
+    "version": "1.0.0",
+    "description": "Chaves e permissões por empresa; listas paginadas em blocos de 100. Webhooks configurados no painel."
+  },
+  "servers": [
+    {
+      "url": "https://{host}/api/v1/{slug}",
+      "variables": {
+        "host": {
+          "default": "vexora.effe.site"
+        },
+        "slug": {
+          "default": "principal"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/connection": {
+      "get": {
+        "summary": "Verificar chave e conexão",
+        "description": "Permissão: chave ativa",
+        "responses": {
+          "200": {
+            "description": "JSON da operação"
+          },
+          "401": {
+            "description": "Chave inválida"
+          },
+          "403": {
+            "description": "Permissão ausente"
+          }
+        }
+      }
+    },
+    "/contacts": {
+      "get": {
+        "summary": "Listar até 100 contatos",
+        "description": "Permissão: contacts:read",
+        "responses": {
+          "200": {
+            "description": "JSON da operação"
+          },
+          "401": {
+            "description": "Chave inválida"
+          },
+          "403": {
+            "description": "Permissão ausente"
+          }
+        },
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ]
+      }
+    },
+    "/opportunities": {
+      "get": {
+        "summary": "Listar até 100 oportunidades",
+        "description": "Permissão: crm:read",
+        "responses": {
+          "200": {
+            "description": "JSON da operação"
+          },
+          "401": {
+            "description": "Chave inválida"
+          },
+          "403": {
+            "description": "Permissão ausente"
+          }
+        },
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ]
+      }
+    },
+    "/attendances/{id}": {
+      "get": {
+        "summary": "Consultar atendimento",
+        "description": "Permissão: conversations:read",
+        "responses": {
+          "200": {
+            "description": "JSON da operação"
+          },
+          "401": {
+            "description": "Chave inválida"
+          },
+          "403": {
+            "description": "Permissão ausente"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/messages/{id}": {
+      "get": {
+        "summary": "Consultar mensagem externa; não retorna nota interna",
+        "description": "Permissão: conversations:read",
+        "responses": {
+          "200": {
+            "description": "JSON da operação"
+          },
+          "401": {
+            "description": "Chave inválida"
+          },
+          "403": {
+            "description": "Permissão ausente"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/query/{id}": {
+      "post": {
+        "summary": "Consultar conexão GET autorizada",
+        "description": "Requer external:query e ID de conexão autorizado na chave. Não altera o método cadastrado.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado externo em data"
+          },
+          "403": {
+            "description": "Conexão não autorizada"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

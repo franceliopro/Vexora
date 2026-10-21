@@ -1,0 +1,1 @@
+[{"name":"baseUrl","type":"url","label":"Endereço da API Véxora (incluindo /api/v1/empresa)","required":true,"editable":true},{"name":"apiKey","type":"password","label":"Chave de API da empresa","required":true,"editable":true}]

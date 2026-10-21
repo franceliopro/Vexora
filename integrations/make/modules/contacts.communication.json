@@ -1,0 +1,1 @@
+{"url":"/contacts","method":"GET","qs":{"after":"{{parameters.after}}"},"response":{"iterate":"{{body.data}}","output":"{{item}}"}}

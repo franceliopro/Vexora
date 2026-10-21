@@ -1,3 +1,6 @@
+import {mountSandboxFixtures} from './asaas-sandbox-fixtures.js';
+import {mountIntegrationHub,mountIntegrationPublic,tickIntegrationHooks} from './integration-hub.js';
+import {mountJourneys,tickJourneys} from './journeys.js';
 import {mountCampaigns,tickCampaigns} from './campaigns.js';
 import {mountBotStrategies,mountBotStrategyPublic,tickBotInvocations} from './bot-strategies.js';
 import {validateBotStrategy} from './business-hours.js';
@@ -52,6 +55,7 @@ const slugOf=req=>String(req.headers['x-tenant']||req.query.t||'').toLowerCase()
 const tidOf=async req=>{try{return jwt.verify((req.headers.authorization||'').slice(7),SECRET).tid}catch{}
  const host=String(req.headers['x-forwarded-host']||req.headers.host||'').split(':')[0];return (await q('select resolve_tenant($1,$2) id',[host,slugOf(req)])).rows[0].id};
 const pub=ah(async(req,res,next)=>{const t=await tidOf(req);als.run({tenant:t},next)});
+mountIntegrationPublic(app,{ah,q});
 app.get('/api/status',pub,ah(async(req,res)=>{const t=als.getStore().tenant;res.json({tenant:!!t,setup:!!t&&!(await q('select 1 from users limit 1')).rowCount})}));
 app.post('/api/setup',limit,pub,ah(async(req,res)=>{if(!als.getStore().tenant)throw new Error('empresa não identificada');if((await q('select 1 from users limit 1')).rowCount)throw new Error('já configurado');const {name,email,pass,business}=req.body;
  if(!pass||pass.length<8)throw new Error('senha: mínimo 8 caracteres');const u=await ins('users',{name,email,pass:await bcrypt.hash(pass,10),role:'owner'});
@@ -93,6 +97,9 @@ mountLeadPublic(app,{ah,limit,tenantTransaction,bus});
 app.use('/api',auth);
 mountBotStrategies(app,{ah,adm,q,tenantTransaction});
 mountCampaigns(app,{ah,adm,q,tenantTransaction,graph:D.meta.graph,bus});
+mountSandboxFixtures(app,{ah,adm,q,lock:withConversationLock});
+mountIntegrationHub(app,{ah,adm,q});
+mountJourneys(app,{ah,adm,q,tenantTransaction,graph:D.meta.graph,bus});
 mountLeadIntelligence(app,{ah,adm,q,tenantTransaction});
 mountServiceCalendar(app,{ah,q,tenantTransaction,deliver,bus,credentials:googleVault.credentials});mountAppointmentReminders(app,{ah,q,tenantTransaction});
 mountAttendanceManagement(app,{ah,q,tenantTransaction,bus});mountServiceProtocol(app,{ah,q,tenantTransaction,deliver,bus});mountServiceRouting(app,{ah,adm,q,tenantTransaction,bus});mountGoogleDrive(app,{ah,q,deliver,saveMedia,credentials:googleVault.credentials});
@@ -173,3 +180,7 @@ let botStartsBusy=false;setInterval(async()=>{if(botStartsBusy)return;botStartsB
 let botInvocationsBusy=false;setInterval(async()=>{if(botInvocationsBusy)return;botInvocationsBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickBotInvocations({q,tenantTransaction,tenant:t.id,lock:withConversationLock,handle:(...args)=>import('./bots/runtime.js').then(m=>m.handle(...args)),bus,deliver})).catch(e=>console.error('bot dispatch',e.message))}catch(e){console.error('bot dispatch scheduler',e.message)}finally{botInvocationsBusy=false}},1000);
 
 let campaignsBusy=false;setInterval(async()=>{if(campaignsBusy)return;campaignsBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickCampaigns({q,tenantTransaction,tenant:t.id,deliver,bus,lock:withConversationLock})).catch(e=>console.error('campaign tick',t.id,e.message))}catch(e){console.error('campaign scheduler',e.message)}finally{campaignsBusy=false}},1000);
+
+let journeysBusy=false;setInterval(async()=>{if(journeysBusy)return;journeysBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickJourneys({q,tenantTransaction,tenant:t.id,bus})).catch(e=>console.error('journey tick',t.id,e.message))}catch(e){console.error('journey scheduler',e.message)}finally{journeysBusy=false}},1000);
+
+let integrationBusy=false;setInterval(async()=>{if(integrationBusy)return;integrationBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickIntegrationHooks({q,tenantTransaction,tenant:t.id})).catch(e=>console.error('integration webhook',t.id,e.message))}catch(e){console.error('integration scheduler',e.message)}finally{integrationBusy=false}},5000);

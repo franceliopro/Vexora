@@ -1,0 +1,1 @@
+[{"name":"connectionId","type":"number","label":"ID da conexão externa autorizada","required":true},{"name":"arguments","type":"text","label":"Parâmetros JSON","default":"{}","required":true}]

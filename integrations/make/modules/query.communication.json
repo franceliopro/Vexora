@@ -1,0 +1,1 @@
+{"url":"/query/{{parameters.connectionId}}","method":"POST","body":"{{parseJSON(parameters.arguments)}}","response":{"output":"{{body.data}}"}}

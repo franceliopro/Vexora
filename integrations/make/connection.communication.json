@@ -1,0 +1,23 @@
+{
+  "url": "{{parameters.baseUrl}}/connection",
+  "method": "GET",
+  "headers": {
+    "Authorization": "Bearer {{parameters.apiKey}}"
+  },
+  "response": {
+    "metadata": {
+      "type": "text",
+      "value": "{{body.name}}"
+    },
+    "data": {
+      "baseUrl": "{{parameters.baseUrl}}",
+      "apiKey": "{{parameters.apiKey}}"
+    },
+    "valid": "{{statusCode === 200 && body.connected}}"
+  },
+  "log": {
+    "sanitize": [
+      "request.headers.authorization"
+    ]
+  }
+}

@@ -520,3 +520,31 @@ Revisão geral de código/documentação, identificadores, nomes de arquivos, pa
 
 ## 47. Campanhas estruturadas
 Migração 037: campanhas, consentimentos, destinatários, eventos e relógio de inbox com RLS/FKs. Editor em quatro etapas, público por canal/etiqueta/seleção, consentimento explícito, prévia, texto/templates Meta aprovados, programação por fuso/calendário e cadência persistida. Templates limitados aos primeiros100 aprovados compatíveis, sem mídia ou variáveis em cabeçalho/botões. Fila revalida opt-out/janela/conversa e canal, preserva responsáveis humanos, pausa em ambiguidades e não repete sem conferência. Métricas por mensagem/recibos e atribuição de resposta até7dias, histórico paginado, pausa/cancelamento/duplicação. Recibos Meta WhatsApp diretos integrados ao webhook assinado. Atalho antigo de campanhas com chatbot preservado. Leia `docs/CAMPANHAS.md`. Testes de política, banco completo037 e Chromium desktop/mobile passaram com transportes simulados; sem mensagem real.
+
+## 48. Sequências individuais — 21/10/2026
+
+Workflows → Follow-up agora abre jornadas com etapas e inclusão/remoção manual. Editor gráfico antigo preservado em Fluxos avançados. Migração038, journey-policy/journeys no servidor e journeys.js no web. Uma inbox, calendários por etapa, espera após conclusão, snapshots por participante, consentimento, pausa/retomada/encerramento e histórico. Texto/template usa campanhas internas (ocultas da lista pública de campanhas); bot espera bot_runs.vars._invocation_id e status concluido. Não existe coluna bot_runs.invocation_id. Controle humano e janela oficial preservados. Caminho de revisão para envio ambíguo, sem retry cego. Ver docs/SEQUENCIAS.md.
+
+## 49. Hub de integrações e recibos financeiros — 21/10/2026
+
+Migração039: chaves com hash/escopos, hooks com segredo criptografado, fila persistida/RLS. API v1 por slug da empresa: connection, contacts, opportunities, attendances, messages (sem notas) e consulta de GET externo previamente autorizado. Painel Integração e API com criação/revogação, segredo exibido uma vez, eventos, teste e últimas50 tentativas. Eventos sem corpo de conversa: attendance.created, message.created, crm.updated, external.query.completed. Mensagens recebidas entram na mesma transação; CRM/saída têm janela documentada entre operação e enfileiramento. HMAC timestamp.ID.rawBody, ID estável entre retries, até5 tentativas; destino deve deduplicar. HTTPS público/DNS fixado/sem redirect, usa requestConnection accept_empty para aceitar 204/texto em hooks sem relaxar exigência JSON das consultas.
+
+Componentes privados (não publicados/aprovados): integrations/n8n com credential/node/trigger assinado; integrations/make com abas JSON do Custom App. Make recebe eventos via módulo Custom Webhook nativo. Não alegar sincronização universal/out-of-box de ERP/HubSpot. Documentação em docs/INTEGRACOES-API.md e web/api-v1.openapi.json.
+
+Cobranças: financialDeliveryFeedback e badges do histórico distinguem aceito/entregue/lido/falha, usando message_ids e recibos reais. WhatsApp Baileys/WAHA/Meta suportados; sem recibo social não afirmar entrega. Testes financeiros usam fixtures, não mensagem real.
+
+## 50. Lote Asaas Sandbox solicitado — 21/10/2026
+
+20 clientes fictícios, 10 assinaturas69,90 Moto/Utilitário e 10 de79,90 Caminhões/Camionete/Pesados, dias10/20/30. src/asaas-sandbox-fixtures.js + botão Base de testes · Sandbox em Integrações/Pagamentos. Somente admin e cfg.sandbox===true. CPF sintético válido, email.invalid, sem celular, notificationDisabled. Histórico de competências distribuído em seis meses, adimplentes e1/2/3 competências vencidas, confirmação e vencimento pelos endpoints exclusivos de Sandbox. Próxima assinatura mensal começa no próximo mês; histórico é cobrança avulsa com referência do plano/competência, pois assinatura não retrogera todo o histórico. Data real do cadastro continua atual, início anterior é simulado e explicitado.
+
+Lote persistido em settings.asaas_sandbox_fixtures, chave vinculada por hash; passos check_required antes de mutações; reconcilia externalReference antes de repetir; não repete escrita ambígua sem revisão. Reaproveita apenas registros desse lote; cadastros existentes de outras referências precisam revisão antes de marcar pagamentos, ainda pendente.
+
+Não foi executado na conta real até este registro: navegador Véxora estava sem sessão. Pedido seguro de login retornou declined/user_took_over e a tela continuou no login. Não afirmar20 clientes criados. Ferramenta local testada com API simulada, pronta para usuário autenticado executar. Ver docs/ASAAS-SANDBOX-BASE-TESTES.md.
+
+Revisão complementar do lote: agora há seleção de clientes existentes e competências com botões Simular como pago/Simular vencimento. Somente cobranças abertas do Sandbox; verifica cliente proprietário e estado atual antes/depois. Não houve execução real por falta de sessão autenticada.
+
+## 51. Validação da entrega de 21/10/2026
+
+Passaram npm test (imports/sintaxe e contratos), journeys-postgres (038, inclusão manual/cronograma/pausa/bot/RLS), integration-hub-postgres (039, hash/chave/escopos/tenant, consulta CRM/atendimentos/mensagens sem notas, fila/HMAC/retries), campaigns-postgres após038/039, attendance-tools-postgres e attendance-browser completo. journeys-browser verifica editor desktop/mobile, inclusão/pausa/remoção, chave com exibição única e geração Sandbox simulada. integration-components testa nós privados/assinatura e JSON do Make. Nenhum teste alterou conta externa.
+
+Fluxos avançados preserva seu retorno pelo hash bots?tab=followup&advanced=1; botões da aba Follow-up continuam abrindo o workspace de sequências. Ajustado teste gráfico para aguardar enquadramento do canvas antes de arrastar. Corrigida exibição do segredo na textarea (conteúdo, não atributo value).

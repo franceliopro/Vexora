@@ -1,0 +1,27 @@
+{
+  "name": "n8n-nodes-vexora",
+  "version": "0.1.0",
+  "description": "Conector privado da Véxora Suite",
+  "license": "MIT",
+  "keywords": [
+    "n8n-community-node-package"
+  ],
+  "main": "nodes/Vexora.node.js",
+  "files": [
+    "nodes",
+    "credentials"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "credentials/VexoraApi.credentials.js"
+    ],
+    "nodes": [
+      "nodes/Vexora.node.js",
+      "nodes/VexoraTrigger.node.js"
+    ]
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}

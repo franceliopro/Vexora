@@ -1,3 +1,5 @@
+import {queueIntegrationEvent} from './integration-hub.js';
+import {recordJourneyReply} from './journeys.js';
 import {recordCampaignReply} from './campaigns.js';
 import {recordNativeReferral} from './lead-intelligence.js';
 import {conversationVariables,renderFieldVariables} from './customer-variables.js';
@@ -27,8 +29,9 @@ export async function inbound(chId,m){
   if(m.externalConversation)await query("update contacts set data=coalesce(data,'{}'::jsonb)||$2 where id=$1",[ct.id,JSON.stringify({external_conversation_id:m.externalConversation,...(m.username?{sender_username:m.username}:{})})]);
   await query('update jobs set done=true where conversation_id=$1 and not done and stop_on_reply',[cv.id]);
   const msg=(await query("insert into messages(conversation_id,dir,kind,body,media_url,ext_id,filename) values($1,'in',$2,$3,$4,$5,$6) returning *",[cv.id,m.kind||'text',m.body||null,m.file?'/media/'+m.file:null,m.ext_id||null,m.filename||null])).rows[0];
+  if(fresh)await queueIntegrationEvent(query,'attendance.created',{conversation_id:cv.id,contact_id:ct.id,channel_id:ch.id});await queueIntegrationEvent(query,'message.created',{conversation_id:cv.id,message_id:msg.id,direction:'in',kind:msg.kind});
   await recordNativeReferral(query,ch,ct,cv,m);
-  const campaign=await recordCampaignReply(query,cv,ct,msg,fresh);
+  const campaign=await recordCampaignReply(query,cv,ct,msg,fresh);await recordJourneyReply(query,cv,ct,msg);
   const boards=fresh?await routingCard(query,cv,ch):[];cv=(await query('update conversations set unread=unread+1,last_at=now(),last_in_at=now() where id=$1 returning *',[cv.id])).rows[0];return {cv,msg,fresh,boards,ch,ct,campaign};
  });if(!saved)return;bus('conv',{id:saved.cv.id});return processInbound(saved,{source:m});
 }
@@ -48,6 +51,7 @@ export async function deliver(cid,{kind='text',body,file,filename,author_id,ai=f
  const cv=(await q('select c.*,ct.handle,ct.data contact_data,ch.driver,ch.config,ch.active channel_active,ch.id chid from conversations c join contacts ct on ct.id=c.contact_id join channels ch on ch.id=c.channel_id where c.id=$1',[cid])).rows[0];
  if(ai&&kind!=='note'&&(!automationAllowed(cv)||(epoch!==undefined&&cv.automation_epoch!==epoch)))return null;
  if(!cv)throw Error('Conversa não encontrada');if(kind!=='note'&&!cv.channel_active)throw Error('Inbox pausada ou removida. Habilite a inbox em Integrações para responder.');
+ if(ai&&executor==='bot'&&kind!=='note'&&['meta','zernio'].includes(cv.driver)&&(await q("select 1 from bot_runs br join bot_invocations bi on bi.id::text=br.vars->>'_invocation_id' where br.conversation_id=$1 and br.status='active' and bi.source='sequence' limit 1",[cid])).rows.length){const last=(await q('select max(last_in_at) at from conversations where contact_id=$1',[cv.contact_id])).rows[0]?.at;if(!last||Date.now()-new Date(last)>=86400000)throw Error('Janela do canal encerrada durante o chatbot da sequência; atendimento requer revisão.')}
  if(kind!=='note'&&typeof body==='string'&&/\{\{\s*(despedida|periodo_dia|hora_local)\s*\}\}/.test(body))body=renderDayVariables(body,await companyDayVariables(q));
  if(kind!=='note'&&typeof body==='string'&&/\{\{\s*(campos|campos_crm|crm)\./.test(body)){const user=author_id?(await q('select id,role,permissions from users where id=$1',[author_id])).rows[0]:undefined;body=renderFieldVariables(body,(await conversationVariables(q,cv,{user})).values)}
  if(identify&&author_id&&kind!=='note'&&kind!=='audio'){const u=(await q('select name,known_by,signature_text from users where id=$1',[author_id])).rows[0],team=(await q('select name from teams where id=$1',[cv.team_id])).rows[0];if(u)body=clientAgentHeading(u,team?.name,cv)+'\n\n'+(body||'')+(u.signature_text?'\n\n'+u.signature_text:'')}
@@ -56,6 +60,6 @@ export async function deliver(cid,{kind='text',body,file,filename,author_id,ai=f
   ext=await D[cv.driver].send({id:cv.chid,config:cv.config},{to:cv.handle,kind,body,file,filename,choices,template,externalConversation:cv.contact_data?.external_conversation_id,replyTo:last})}
  const msg=(await q('insert into messages(conversation_id,dir,kind,body,media_url,author_id,ai,ext_id,filename,executor) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning *',[cid,dir,kind,body||null,file?'/media/'+file:null,author_id||null,ai||system,ext,filename||null,executor||(system?'system':ai?'ai':author_id?'human':null)])).rows[0];
  if(kind!=='note')await q('update conversations set last_at=now() where id=$1',[cid]);
- bus('msg',{conversation_id:cid,message:msg});return msg}
+ if(kind!=='note')await queueIntegrationEvent(q,'message.created',{conversation_id:cid,message_id:msg.id,direction:'out',kind:msg.kind}).catch(e=>console.error('integration outbox',e.message));bus('msg',{conversation_id:cid,message:msg});return msg}
 export async function startAll(){for(const c of (await adm("select * from channels where active and driver='baileys'")).rows)baileys.start(c,(id,m)=>als.run({tenant:c.tenant_id},()=>inbound(id,m))).catch(e=>console.error('baileys',e.message))}
 
