@@ -1,3 +1,4 @@
+import {mountCampaigns,tickCampaigns} from './campaigns.js';
 import {mountBotStrategies,mountBotStrategyPublic,tickBotInvocations} from './bot-strategies.js';
 import {validateBotStrategy} from './business-hours.js';
 import {mountLeadPublic,mountLeadIntelligence} from './lead-intelligence.js';
@@ -19,7 +20,7 @@ import {mountGoogleDrive,mountDrivePublic} from './google-drive.js';
 import {mountAttendanceManagement,queuePredicate,extraQueueFilters,parseQueueFilters} from './attendance-management.js';
 import {mountServiceCalendar,mountCalendarPublic} from './service-calendar.js';
 import {mountServiceWorkflow} from './service-workflow.js';
-import {mountMessageReceipts} from './message-receipts.js';
+import {mountMessageReceipts,recordReceipt} from './message-receipts.js';
 import {mountFinancial,verifyFinancialHook} from './financial.js';
 import {mountIntegrations} from './integrations.js';
 import {mountOperations} from './operations.js';import {mountCRM,expireCards} from './crm.js';import {requireAction,requireParticipation,adminRole,normalizePermissions} from './governance.js';
@@ -66,7 +67,7 @@ app.post('/webhook/order/:source/:tid/:sig',ah(async(req,res)=>{if(req.params.si
   if(!ct)ct=(await q('insert into contacts(name,handle,channel_id) values($1,$2,$3) returning *',[b.name||b.handle,b.handle,ch?.id])).rows[0];
   return await createOrder({source:req.params.source,contact_id:ct.id,customer_name:b.name,customer_phone:b.handle,items:b.items||[],total:b.total,delivery_fee:b.delivery_fee,kind:b.kind||'entrega',address:b.address,payment_method:b.payment_method,paid:b.paid,ext_id:b.ext_id,notes:b.notes},{external:true})}))}));
 app.get('/webhook/meta/:id/:sig',ah(async(req,res)=>{const {id,sig}=req.params;if(sig!==sign('meta:'+id))return res.sendStatus(403);const t=(await q('select channel_tenant($1) t',[id])).rows[0]?.t;if(!t)return res.sendStatus(404);await inT(t,async()=>{const ch=(await q("select * from channels where id=$1 and driver='meta' and active",[id])).rows[0];const challenge=ch?D.meta.challenge(ch,req.query):null;challenge===null?res.sendStatus(403):res.type('text/plain').send(challenge)})}));
-app.post('/webhook/:drv/:id/:sig',ah(async(req,res)=>{const {drv,id,sig}=req.params;if(!D[drv]?.parse||sig!==sign(drv+':'+id))return res.sendStatus(403);const t=(await q('select channel_tenant($1) t',[id])).rows[0]?.t;if(!t)return res.sendStatus(404);await inT(t,async()=>{const ch=(await q('select * from channels where id=$1',[id])).rows[0];if(!ch||ch.driver!==drv)return res.sendStatus(404);if(D[drv].verify&&!D[drv].verify(ch,req.rawBody,req.headers))return res.sendStatus(403);if(!ch.active)return res.sendStatus(200);const result=await D[drv].parse(ch,req.body);for(const m of [].concat(result||[]))await inbound(ch.id,m);res.sendStatus(200)})}));
+app.post('/webhook/:drv/:id/:sig',ah(async(req,res)=>{const {drv,id,sig}=req.params;if(!D[drv]?.parse||sig!==sign(drv+':'+id))return res.sendStatus(403);const t=(await q('select channel_tenant($1) t',[id])).rows[0]?.t;if(!t)return res.sendStatus(404);await inT(t,async()=>{const ch=(await q('select * from channels where id=$1',[id])).rows[0];if(!ch||ch.driver!==drv)return res.sendStatus(404);if(D[drv].verify&&!D[drv].verify(ch,req.rawBody,req.headers))return res.sendStatus(403);if(!ch.active)return res.sendStatus(200);for(const receipt of D[drv].receipts?.(ch,req.body)||[])await recordReceipt(q,bus,ch.id,receipt.id,receipt.status);const result=await D[drv].parse(ch,req.body);for(const m of [].concat(result||[]))await inbound(ch.id,m);res.sendStatus(200)})}));
 mountPublic(app,{ah,limit});
 // ---- painel da plataforma (dono do SaaS): chave PLATFORM_KEY. Usa o superusuário, só aqui.
 const pk=(req,res,next)=>{const k=process.env.PLATFORM_KEY||'',g=String(req.headers['x-platform-key']||'');k.length>=12&&g.length===k.length&&crypto.timingSafeEqual(Buffer.from(g),Buffer.from(k))?next():res.status(403).json({error:'chave inválida (defina PLATFORM_KEY com 12+ caracteres)'})};
@@ -91,6 +92,7 @@ mountBotStrategyPublic(app,{ah,limit,tenantTransaction});
 mountLeadPublic(app,{ah,limit,tenantTransaction,bus});
 app.use('/api',auth);
 mountBotStrategies(app,{ah,adm,q,tenantTransaction});
+mountCampaigns(app,{ah,adm,q,tenantTransaction,graph:D.meta.graph,bus});
 mountLeadIntelligence(app,{ah,adm,q,tenantTransaction});
 mountServiceCalendar(app,{ah,q,tenantTransaction,deliver,bus,credentials:googleVault.credentials});mountAppointmentReminders(app,{ah,q,tenantTransaction});
 mountAttendanceManagement(app,{ah,q,tenantTransaction,bus});mountServiceProtocol(app,{ah,q,tenantTransaction,deliver,bus});mountServiceRouting(app,{ah,adm,q,tenantTransaction,bus});mountGoogleDrive(app,{ah,q,deliver,saveMedia,credentials:googleVault.credentials});
@@ -169,3 +171,5 @@ srv.listen(process.env.PORT||3000,()=>console.log('Vexora on :'+(process.env.POR
 let botStartsBusy=false;setInterval(async()=>{if(botStartsBusy)return;botStartsBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickBotStarts({q,process:processInbound})).catch(e=>console.error('bot start',e.message))}catch(e){console.error('bot start scheduler',e.message)}finally{botStartsBusy=false}},1000);
 
 let botInvocationsBusy=false;setInterval(async()=>{if(botInvocationsBusy)return;botInvocationsBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickBotInvocations({q,tenantTransaction,tenant:t.id,lock:withConversationLock,handle:(...args)=>import('./bots/runtime.js').then(m=>m.handle(...args)),bus,deliver})).catch(e=>console.error('bot dispatch',e.message))}catch(e){console.error('bot dispatch scheduler',e.message)}finally{botInvocationsBusy=false}},1000);
+
+let campaignsBusy=false;setInterval(async()=>{if(campaignsBusy)return;campaignsBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickCampaigns({q,tenantTransaction,tenant:t.id,deliver,bus,lock:withConversationLock})).catch(e=>console.error('campaign tick',t.id,e.message))}catch(e){console.error('campaign scheduler',e.message)}finally{campaignsBusy=false}},1000);
