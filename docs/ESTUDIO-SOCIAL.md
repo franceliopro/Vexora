@@ -1,6 +1,6 @@
 # Estúdio social — proposta para a próxima etapa
 
-Pedido de 21/10/2026. Este documento registra escopo e contratos pesquisados; não representa funcionalidade já implantada. Prioridade operacional atual: diagnosticar a consulta Asaas do bot.
+Pedido de 21/10/2026. Este documento registra o escopo amplo de criação e tráfego. A primeira etapa de postagens já foi implementada; leia POSTAGENS.md para o que está disponível. Pesquisa, geração de criativos e gestão de tráfego pago continuam planejadas.
 
 ## Jornada desejada
 
@@ -31,7 +31,7 @@ Migração de outbox/operadores/aprovações/assets/account bindings e RLS; esco
 
 ## Situação do código atual
 
-Há CRUD legado em #social e src/social.js. Não satisfaz este pedido: publicação passa payload antigo sem o accountId no formato oficial e marca publicado imediatamente. Não apresentar como estúdio pronto nem ampliar envios automáticos a partir desse código antes de substituir seu contrato e adicionar ledger. Integração de anúncios atual usa Meta diretamente; não há gestão de tráfego Zernio completa.
+O novo #social usa web/social-studio.js e src/social-studio.js: rascunhos, upload, revisão, agendamento, publicação e métricas orgânicas por post. Migração041 e outbox com estado incerto sem reenvio automático. O remetente legado em src/social.js foi bloqueado; os registros antigos permanecem no banco, sem migração automática para novos envios. Gestão de anúncios ainda usa o fluxo Meta legado, separado, e não constitui a gestão de tráfego planejada aqui.
 
 ## Fontes oficiais
 

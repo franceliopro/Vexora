@@ -1,4 +1,5 @@
 const HELP={
+ social:'Escolha Nova publicação, marque as contas, escreva a legenda e envie as mídias. Salvar cria somente um rascunho. Revise o conteúdo e confirme Publicar ou Agendar com o fuso desejado. Confira o resultado por rede; em caso de falta de confirmação, não repita o envio. Resultados mostra métricas orgânicas quando disponíveis na conexão.',
  inbox:'Novos: conversas disponíveis ainda sem responsável. Meus: suas conversas e as compartilhadas por convite. Outros: conversas de outros responsáveis, conforme sua permissão. Todos em aberto: reúne os atendimentos abertos aos quais você tem acesso. O ícone de concluído mostra os finalizados. Arquivados e Lixeira ficam nos três pontinhos e preservam o histórico. Os filtros ao lado da busca limitam resultados e totais. Assumir pausa a automação. Convidar compartilha; atribuir transfere a responsabilidade.',
  pipeline:'Crie um painel e etapas por equipe. Arraste oportunidades, abra a conversa pelo card e finalize obrigatoriamente como ganho ou perda. Finalizados aparecem na Lista; Relatório depende de acesso administrativo.',
  leads:'Consulte contatos e indicadores. Tracking de navegação e atribuição de campanha ainda estão em preparação.',
@@ -8,7 +9,7 @@ const HELP={
  campaigns:'Campanhas segmentadas estão em preparação. Verifique o estado apresentado nesta tela antes de planejar um envio.',
  sequences:'Escolha um gatilho e suas ações. Defina o que acontece quando o evento ocorre e teste em um atendimento controlado.',
  scheduled:'O agendamento pontual está em preparação. Confira os recursos liberados antes de programar mensagens.',
- pay:'Configure seu provedor nos Ajustes e crie cobranças dentro do atendimento. Confira destinatário, valor e vencimento antes de enviar. Follow-up segue a régua configurada.',
+ pay:'Conecte o Asaas ou Stripe em Integração e API. A base é importada do provedor. Use os indicadores para abrir as cobranças, filtre o período e gerencie clientes, assinaturas e produtos. Em Automações, escolha inbox, fuso e regras; salvar não envia cobranças imediatamente. O Histórico distingue fila, envio aceito, entrega e leitura.',
  personalization:'Configure marca, cores, fonte, logotipo claro, escuro e favicon separadamente. O fuso da empresa orienta a saudação e a exibição de horários.',
  governance:'Defina usuários, equipes e permissões. Administradores gerenciam a empresa; atendentes acessam o que sua governança permitir; restritos precisam de acesso explícito.',
  serviceReports:'Compare volume, primeira resposta, duração e motivos de conclusão para localizar gargalos. Os indicadores respeitam a empresa atual.',

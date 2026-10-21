@@ -1,3 +1,4 @@
+import {mountSocialStudio,tickSocialStudio} from './social-studio.js';
 import {mountFinanceHub,financeWebhook} from './finance-hub.js';
 import {tickFinance} from './finance-automation.js';
 import {providerRequest as financeProviderRequest} from './financial-provider.js';
@@ -110,7 +111,7 @@ mountServiceCalendar(app,{ah,q,tenantTransaction,deliver,bus,credentials:googleV
 mountAttendanceManagement(app,{ah,q,tenantTransaction,bus});mountServiceProtocol(app,{ah,q,tenantTransaction,deliver,bus});mountServiceRouting(app,{ah,adm,q,tenantTransaction,bus});mountGoogleDrive(app,{ah,q,deliver,saveMedia,credentials:googleVault.credentials});
 mountIntegrations(app,{ah,adm,q,tenantTransaction,bus,managed:managedDenied,managedKey:()=>socialVault.key()});
 mountConversationActions(app,{ah,q,tenantTransaction,bus,deliver,createPayment});
-mountMessageReceipts(app,{ah,q});mountFinancial(app,{ah,adm,q,tenantTransaction,deliver,asaasDebts,asaasPay});mountAgentConnections(app,{ah,adm,q});
+mountMessageReceipts(app,{ah,q});mountFinancial(app,{ah,adm,q,tenantTransaction,deliver,asaasDebts,asaasPay});mountSocialStudio(app,{ah,adm,q,lock:withConversationLock});mountAgentConnections(app,{ah,adm,q});
 mountKnowledge(app,{ah,q,transaction:tenantTransaction,ragAdd});
 mountServiceWorkflow(app,{ah,q,deliver,bus});
 mountOperations(app,{ah,adm,q,tenantTransaction,bus});
@@ -191,3 +192,5 @@ let journeysBusy=false;setInterval(async()=>{if(journeysBusy)return;journeysBusy
 let integrationBusy=false;setInterval(async()=>{if(integrationBusy)return;integrationBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickIntegrationHooks({q,tenantTransaction,tenant:t.id})).catch(e=>console.error('integration webhook',t.id,e.message))}catch(e){console.error('integration scheduler',e.message)}finally{integrationBusy=false}},5000);
 
 let financeBusy=false;setInterval(async()=>{if(financeBusy)return;financeBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickFinance({q,tenantTransaction,tenant:t.id,deliver,lock:withConversationLock})).catch(e=>console.error('finance worker',t.id,e.message))}catch(e){console.error('finance scheduler',e.message)}finally{financeBusy=false}},5000);
+
+let socialBusy=false;setInterval(async()=>{if(socialBusy)return;socialBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickSocialStudio({q,lock:withConversationLock})).catch(e=>console.error('social reconciliation',t.id,e.message))}catch(e){console.error('social scheduler',e.message)}finally{socialBusy=false}},30000);

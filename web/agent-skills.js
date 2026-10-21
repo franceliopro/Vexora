@@ -9,7 +9,7 @@ function agentSkillsEditor(host,a){
    const group=h('fieldset',{class:'agent-skill-group'},h('legend',{},label));if(!rows.length)group.append(h('p',{class:'mu'},'Nenhum cadastrado.'));
    for(const row of rows)group.append(h('label',{class:'nx-check'},h('input',{type:'checkbox',checked:sets[key].has(row.id),onchange:e=>e.target.checked?sets[key].add(row.id):sets[key].delete(row.id)}),row.name+(row.active===false?' · inativo':'')));
    host.append(group);
-  }ready=true;status.textContent='Os destinos selecionados ainda precisam da habilidade correspondente marcada em Ações permitidas.';
+  }ready=true;const overlaps=agents.filter(other=>other.id!==a.id&&other.active&&other.skills?.entry!=='specialist'&&(other.channel_ids||[]).some(id=>(a.channel_ids||[]).includes(id)));status.textContent=(overlaps.length?'Há outros agentes principais nestes canais: '+overlaps.map(x=>x.name).join(', ')+'. Defina o agente preferido em Integrações → Bot, IA e CRM ou use Especialista para os demais. ':'')+'Os destinos selecionados ainda precisam da habilidade correspondente marcada em Ações permitidas.';
  }).catch(e=>status.textContent='Não foi possível carregar os vínculos: '+e.message);
  return {role:()=>role.value,value:()=>{if(!ready)throw Error('Aguarde os vínculos de habilidades carregarem antes de salvar');return {...structuredClone(config),role:role.value,entry:entry.value,...Object.fromEntries(Object.entries(sets).map(([k,v])=>[k,[...v]]))}}};
 }

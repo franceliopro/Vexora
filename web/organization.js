@@ -35,5 +35,6 @@ async function guidedFollowups(m){if(!UX.admin()){m.append(h('div',{class:'pad'}
 
 V.campaigns=campaignsWorkspace;
 V.pay=financeWorkspace;
+V.social=socialStudioWorkspace;
 wrapHelpViews();
 boot();
