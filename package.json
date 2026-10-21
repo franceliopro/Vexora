@@ -5,7 +5,7 @@
  "private": true,
  "scripts": {
   "start": "node src/server.js",
-  "test": "node scripts/check-imports.mjs && node test/run.mjs && node test/day-period.mjs && node test/asaas-shared-base.mjs && node test/service-performance.mjs && node test/message-receipts.mjs && node test/agent-lead-policy.mjs && node test/business-hours.mjs"
+  "test": "node scripts/check-imports.mjs && node test/run.mjs && node test/day-period.mjs && node test/asaas-shared-base.mjs && node test/service-performance.mjs && node test/message-receipts.mjs && node test/agent-lead-policy.mjs && node test/business-hours.mjs && node test/connection-request.mjs && node test/attendance-alerts.mjs"
  },
  "engines": {
   "node": ">=20"

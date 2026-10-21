@@ -6,14 +6,15 @@ import {publicAddress} from './knowledge.js';
 import {seal,unseal} from './service-calendar.js';
 import {skillGuard} from './ai/skills.js';
 import {serviceEvent} from './operations.js';
-import {connectionInput} from './connection-policy.js';
+import {connectionInput,connectionHeaders,connectionBody} from './connection-policy.js';
 export async function requestConnection(c,args){
- const u=new URL(c.url),body=c.method==='POST'?JSON.stringify(args):null;
+ const u=new URL(c.url),body=c.method==='POST'?JSON.stringify(c.body_template==null?args:connectionBody(c.body_template,args,c.parameters)):null;
  if(c.method==='GET')for(const [k,v]of Object.entries(args))u.searchParams.set(k,String(v));
  const host=u.hostname.replace(/^\[|\]$/g,''),addresses=net.isIP(host)?[{address:host,family:net.isIP(host)}]:await dns.lookup(host,{all:true});
  if(!addresses.length||addresses.some(x=>!publicAddress(x.address)))throw Error('Destino privado bloqueado');
  return new Promise((resolve,reject)=>{
-  const headers={'accept':'application/json',...(body?{'content-type':'application/json','content-length':Buffer.byteLength(body)}:{}),...(c.secret?{authorization:'Bearer '+unseal(c.secret)}:{})};
+  const custom=c.request_headers_secret?connectionHeaders(JSON.parse(unseal(c.request_headers_secret))):{};if(c.secret&&custom.authorization)throw Error('Use Bearer ou Authorization nos headers, não ambos');
+  const headers={'accept':'application/json',...custom,...(body?{'content-type':'application/json','content-length':Buffer.byteLength(body)}:{}),...(c.secret?{authorization:'Bearer '+unseal(c.secret)}:{})};
   const req=https.request(u,{method:c.method,headers,lookup:(_host,options,cb)=>{const a=addresses[0];cb(null,options?.all?[a]:a.address,a.family)}},res=>{
    if(res.statusCode<200||res.statusCode>=300){res.resume();return reject(Error('Sistema externo respondeu HTTP '+res.statusCode))}
    let size=0,chunks=[];res.on('data',b=>{size+=b.length;if(size>65536)res.destroy(Error('Resposta excedeu 64 KB'));else chunks.push(b)});res.on('error',reject);res.on('end',()=>{try{resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')))}catch{reject(Error('Sistema externo deve responder JSON'))}});
@@ -32,8 +33,8 @@ export async function callAgentConnection({query,transaction,cv,ag,action,scope}
 }
 export function mountAgentConnections(app,{ah,adm,q}){
  app.get('/api/agent-connections/runs',adm,ah(async(req,res)=>res.json((await q('select r.id,r.conversation_id,r.status,r.at,c.name connection_name from agent_tool_runs r join agent_connections c on c.id=r.connection_id order by r.id desc limit 30')).rows)));
- app.get('/api/agent-connections',adm,ah(async(req,res)=>res.json((await q('select id,name,description,url,method,parameters,active,(secret is not null) has_key from agent_connections order by id desc')).rows)));
- const save=async(req,res)=>{const b=connectionInput(req.body),keys=Object.keys(b),values=keys.map(k=>k==='parameters'?JSON.stringify(b[k]):b[k]);if(req.body.key){if(String(req.body.key).length>4000||/[\r\n]/.test(req.body.key))throw Error('Chave inválida');keys.push('secret');values.push(seal(String(req.body.key)))}if(req.params.id){const r=await q('update agent_connections set '+keys.map((k,i)=>k+'=$'+(i+2)).join(',')+' where id=$1 returning id',[req.params.id,...values]);if(!r.rows.length)throw Error('Conexão não encontrada');res.json(r.rows[0])}else res.json((await q('insert into agent_connections('+keys.join(',')+') values('+keys.map((_,i)=>'$'+(i+1)).join(',')+') returning id',values)).rows[0])};
+ app.get('/api/agent-connections',adm,ah(async(req,res)=>res.json((await q('select id,name,description,url,method,parameters,active,body_template,header_names,(request_headers_secret is not null) has_headers,(secret is not null) has_key from agent_connections order by id desc')).rows)));
+ const save=async(req,res)=>{const previous=req.params.id?(await q('select secret,request_headers_secret from agent_connections where id=$1',[req.params.id])).rows[0]:null;if(req.params.id&&!previous)throw Error('Conexão não encontrada');const effectiveHeaders=Object.hasOwn(req.body,'headers')?connectionHeaders(req.body.headers):previous?.request_headers_secret?connectionHeaders(JSON.parse(unseal(previous.request_headers_secret))):{};if(effectiveHeaders.authorization&&req.body.clear_key!==true&&(req.body.key||previous?.secret))throw Error('Remova a chave Bearer antes de usar Authorization nos headers');const b=connectionInput(req.body),keys=Object.keys(b),values=keys.map(k=>['parameters','body_template'].includes(k)&&b[k]!==null?JSON.stringify(b[k]):b[k]);if(req.body.key&&req.body.clear_key!==true){if(String(req.body.key).length>4000||/[\r\n]/.test(req.body.key))throw Error('Chave inválida');keys.push('secret');values.push(seal(String(req.body.key)))}if(Object.hasOwn(req.body,'headers')){const headers=connectionHeaders(req.body.headers);if(req.body.key&&headers.authorization)throw Error('Use Bearer ou Authorization nos headers, não ambos');keys.push('request_headers_secret','header_names');values.push(Object.keys(headers).length?seal(JSON.stringify(headers)):null,JSON.stringify(Object.keys(headers)))}if(req.body.clear_key===true){keys.push('secret');values.push(null)}if(req.params.id){const r=await q('update agent_connections set '+keys.map((k,i)=>k+'=$'+(i+2)).join(',')+' where id=$1 returning id',[req.params.id,...values]);if(!r.rows.length)throw Error('Conexão não encontrada');res.json(r.rows[0])}else res.json((await q('insert into agent_connections('+keys.join(',')+') values('+keys.map((_,i)=>'$'+(i+1)).join(',')+') returning id',values)).rows[0])};
  app.post('/api/agent-connections',adm,ah(save));app.put('/api/agent-connections/:id',adm,ah(save));
  app.delete('/api/agent-connections/:id',adm,ah(async(req,res)=>{await q('update agent_connections set active=false where id=$1',[req.params.id]);res.json({ok:true})}));
 }

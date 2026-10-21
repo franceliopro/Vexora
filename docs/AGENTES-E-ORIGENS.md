@@ -30,7 +30,7 @@ A distribuição por prioridade/transbordo continua sendo uma configuração de 
 
 ## Conexões externas
 Na página dos agentes, use **Conexões para habilidades da IA → Conectar sistema**.
-Cadastre um endpoint público HTTPS, GET ou POST, com resposta JSON; opcionalmente chave Bearer. Informe os parâmetros permitidos e descreva quando pode usar.
+Cadastre um endpoint público HTTPS, GET ou POST, com resposta JSON; opcionalmente chave Bearer ou headers personalizados criptografados. Informe os parâmetros permitidos e descreva quando pode usar. Em POST é possível configurar body JSON com variáveis autorizadas; sem modelo, os parâmetros continuam sendo enviados como JSON. Veja [Conexões externas](CONEXOES-EXTERNAS.md).
 A chave é protegida no servidor usando o cofre já existente da aplicação. Não troque JWT_SECRET sem tratar as credenciais armazenadas.
 Depois autorize a conexão no agente e marque a habilidade Consultar ou acionar API.
 
