@@ -56,7 +56,7 @@ const METHODS=['Boleto completo (link/PDF)','Código do boleto (linha digitável
 const stTxt=(x,today)=>x.status==='OVERDUE'||String(x.dueDate)<today?'⚠️ vencido':'em aberto';
 async function asaas(n,run,deps,t,enter){const d=n.data||{},V=run.vars;if(enter)delete V._a;const A=V._a??={step:'doc',tries:0};
  const today=new Date().toISOString().slice(0,10);
- const lookup=async doc=>{let r;try{r=await deps.asaasDebts(doc,{platform:d.platform||V.plataforma,verifyPhone:!!d.verifyPhone})}catch(e){await deps.send('Não consegui consultar agora. Tente novamente em instantes ou fale com um atendente.');return {out:'error'}}
+ const lookup=async doc=>{let r;try{r=await deps.asaasDebts(doc,{platform:d.platform||V.plataforma,verifyPhone:!!d.verifyPhone})}catch(e){await deps.send(['ASAAS_PHONE_MISMATCH','ASAAS_IDENTITY_REQUIRED'].includes(e.code)?'Preciso que um atendente confirme sua identidade para continuar a consulta financeira com segurança. Vou encaminhar seu atendimento.':'Não consegui consultar agora. Tente novamente em instantes ou fale com um atendente.');return {out:'error'}}
   if(r.found===false){await deps.send('Não encontrei um cadastro com este CPF ou CNPJ na base financeira da empresa. Confira os números ou fale com um atendente.');return {out:'error'}}
   A.doc=doc;if(d.var)V[d.var]=digits(doc);
   if(!r.debts.length){await deps.send(`Não encontramos débitos em aberto para ${personType(doc)} ${maskDoc(doc)}. ✅`);return {out:'none'}}
