@@ -2,6 +2,7 @@ const AGENT_ROLE_OPTIONS=[['assistant','Assistente virtual'],['supervisor','Supe
 function agentSkillsEditor(host,a){
  const config=a.skills||{},role=UX.select(host,'Papel na operação',AGENT_ROLE_OPTIONS,config.role||'assistant'),sets=Object.fromEntries(['agent_ids','bot_ids','board_ids','connection_ids'].map(k=>[k,new Set(config[k]||[])]));
  host.append(h('p',{class:'mu'},'O papel orienta o comportamento; as habilidades e os vínculos abaixo determinam o que o agente pode executar. Equipes são opcionais: o encaminhamento humano também funciona diretamente para um atendente.'));
+ const entry=UX.select(host,'Como este agente entra no atendimento',[['primary','Principal · pode iniciar atendimentos'],['specialist','Especialista · somente por encaminhamento']],config.entry||'primary');const mission=h('p',{class:'campaign-notice'});host.append(mission);const descriptions={assistant:'Responde ao cliente e executa as ações autorizadas.',supervisor:'Faz triagem e encaminha aos especialistas autorizados.',sdr:'Coleta informações e qualifica oportunidades.',partner:'Auxilia negociações com condições cadastradas.',employee:'Executa rotinas de atendimento.',coordinator:'Organiza agendas e próximos passos.'};const updateMission=()=>mission.textContent='Instrução automática do papel: '+descriptions[role.value]+' As instruções próprias e a base de conhecimento complementam esta missão. Recomendação: um principal por inbox; especialistas só quando necessários.';role.onchange=updateMission;updateMission();
  const status=h('p',{role:'status'});host.append(status);let ready=false;
  Promise.all([api('/t/agents'),api('/t/bots'),api('/crm/boards'),api('/agent-connections')]).then(([agents,bots,boards,connections])=>{
   for(const [key,label,rows]of [['agent_ids','Especialistas para encaminhamento',agents.filter(x=>x.id!==a.id)],['bot_ids','Fluxos que pode acionar',bots],['board_ids','Painéis onde pode criar oportunidades',boards],['connection_ids','Sistemas externos que pode consultar ou acionar',connections]]){
@@ -10,7 +11,7 @@ function agentSkillsEditor(host,a){
    host.append(group);
   }ready=true;status.textContent='Os destinos selecionados ainda precisam da habilidade correspondente marcada em Ações permitidas.';
  }).catch(e=>status.textContent='Não foi possível carregar os vínculos: '+e.message);
- return {role:()=>role.value,value:()=>{if(!ready)throw Error('Aguarde os vínculos de habilidades carregarem antes de salvar');return {...structuredClone(config),role:role.value,...Object.fromEntries(Object.entries(sets).map(([k,v])=>[k,[...v]]))}}};
+ return {role:()=>role.value,value:()=>{if(!ready)throw Error('Aguarde os vínculos de habilidades carregarem antes de salvar');return {...structuredClone(config),role:role.value,entry:entry.value,...Object.fromEntries(Object.entries(sets).map(([k,v])=>[k,[...v]]))}}};
 }
 async function agentConnectionsPanel(m){
  const box=h('div',{class:'card'});m.append(box);

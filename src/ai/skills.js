@@ -5,7 +5,7 @@ import {serviceEvent} from '../operations.js';
 export const AGENT_ROLES=['assistant','supervisor','sdr','partner','employee','coordinator'];
 export async function validateSkills(query,input={}){
  if(!input||typeof input!=='object'||Array.isArray(input)||!AGENT_ROLES.includes(input.role||'assistant'))throw Error('Papel de IA inválido');
- const out={role:input.role||'assistant'};
+ if(input.entry&&!['primary','specialist'].includes(input.entry))throw Error('Tipo de entrada inválido');const out={role:input.role||'assistant',entry:input.entry||'primary'};
  for(const [key,table]of [['agent_ids','agents'],['bot_ids','bots'],['board_ids','crm_boards'],['connection_ids','agent_connections']]){
   const values=input[key]||[];if(!Array.isArray(values)||values.length>50)throw Error('Escolha até 50 vínculos por habilidade');
   out[key]=[...new Set(values.map(Number))];for(const id of out[key])if(!Number.isSafeInteger(id)||id<1||!(await query('select id from '+table+' where id=$1',[id])).rows.length)throw Error('Vínculo de habilidade inválido');

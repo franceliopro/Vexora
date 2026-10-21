@@ -7,3 +7,5 @@ assert.equal(await financialDocumentIntake({...base,channel:{driver:'zernio',con
 sent.length=0;assert.equal(await financialDocumentIntake({...base,channel:{driver:'baileys'}}),true);assert.equal(lookups,1);assert.ok(sent[0].includes('https://example.test/fatura'));assert.ok(!sent[0].includes('52998224725'));
 assert.equal(await financialDocumentIntake({...base,cv:{automation_mode:'human'},channel:{driver:'baileys'}}),false);assert.equal(await financialDocumentIntake({...base,text:'52998224724',channel:{driver:'baileys'}}),true);assert.equal(lookups,1);
 console.log('OK: CPF não é telefone, Instagram não é identidade telefônica, documento inválido, consulta real delegada com verificação no WhatsApp, mascaramento e pausa humana preservada.');
+
+const bound={handle:'123@lid',data:{whatsapp_identity:{source:'baileys_sender_pn',phone:'5511999999999',handle:'123@lid',channel_id:4}}};assert.equal(financialPhone({id:4,driver:'baileys'},bound),'5511999999999');assert.equal(financialPhone({id:5,driver:'baileys'},bound),'');assert.equal(financialPhone({id:4,driver:'zernio',config:{platform:'instagram'}},bound),'');

@@ -1,0 +1,12 @@
+export const ROLE_INSTRUCTIONS={
+ assistant:'Atenda diretamente o cliente, esclareça dúvidas, colete somente os dados necessários e execute as ações autorizadas. Se faltar informação, faça uma pergunta objetiva.',
+ supervisor:'Faça uma triagem breve. Escolha um especialista autorizado apenas quando a necessidade estiver clara. Enquanto não houver encaminhamento, você é responsável por responder ao cliente. Não narre sua coordenação interna.',
+ sdr:'Qualifique a oportunidade perguntando necessidade, contexto e próximo passo. Registre somente respostas confirmadas. Não invente orçamento, interesse, cargo ou decisão de compra.',
+ partner:'Auxilie a negociação com produtos, preços e condições confirmados. Não prometa descontos ou condições fora da base e das permissões.',
+ employee:'Execute rotinas de atendimento autorizadas e informe apenas resultados confirmados. Encaminhe exceções para o responsável.',
+ coordinator:'Organize o próximo passo, agenda e encaminhamento com os destinos autorizados. Não confunda planejamento interno com resposta ao cliente.'
+};
+export function roleInstruction(role){return ROLE_INSTRUCTIONS[role]||ROLE_INSTRUCTIONS.assistant}
+// An assigned specialist is allowed; automatic entry only selects primary agents of this inbox.
+export async function selectEntryAgent(query,channel,preferred){if(preferred){const assigned=(await query('select * from agents where active and id=$1 and $2=any(channel_ids)',[preferred,channel])).rows[0];if(assigned)return assigned;return null}return (await query("select * from agents where active and $1=any(channel_ids) and coalesce(skills->>'entry','primary')='primary' order by id limit 1",[channel])).rows[0]||null}
+export function parseCustomerResponse(raw){let text=String(raw||'').trim();if(text.startsWith('```'))text=text.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');let out;try{out=JSON.parse(text)}catch{return {reply:'Não consegui preparar uma resposta confiável. Pode reformular sua dúvida ou pedir um atendente?',actions:[],invalid:true}}if(!out||typeof out!=='object'||Array.isArray(out)||typeof out.reply!=='string'||out.reply.length>12000||out.actions!=null&&!Array.isArray(out.actions))return {reply:'Não consegui preparar uma resposta confiável. Pode reformular sua dúvida ou pedir um atendente?',actions:[],invalid:true};return {reply:out.reply,options:Array.isArray(out.options)?out.options.slice(0,6):undefined,actions:(out.actions||[]).filter(a=>a&&typeof a==='object'&&typeof a.t==='string').slice(0,10)}}
