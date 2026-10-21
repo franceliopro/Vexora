@@ -9,3 +9,5 @@ console.log('OK: opções continuam no bot, texto/áudio vão para IA quando hab
 for(const text of ['x','zz','abc','  abc  ','0','99','sup'])assert.equal(shouldUseAI(choice,{body:text}),false,text);assert.equal(shouldUseAI(choice,{body:'abcd'}),true);assert.equal(shouldUseAI(choice,{body:'Suporte'}),false);assert.equal(shouldUseAI(choice,{body:'Fina'}),true);
 
 assert.equal(fallbackReady(null,{kind:'audio'}),false);assert.equal(fallbackReady({llm:[{key:'test',model:'model'}]},{kind:'text'}),true);assert.equal(fallbackReady({llm:[{key:'test',model:'model'}],stt:[]},{kind:'audio'}),false);assert.equal(fallbackReady({llm:[{key:'test',model:'model'}],stt:[{key:'test',model:'speech'}]},{kind:'audio'}),true);
+
+for(const type of ['input','asaas','choice'])assert.equal(shouldUseAI({type,data:{}},{kind:'audio'}),true);

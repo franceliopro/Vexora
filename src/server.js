@@ -1,3 +1,7 @@
+import {mountDepartmentPipelines} from './department-pipelines.js';
+import {mountRoleTemplates} from './ai/role-templates.js';
+import {effectiveModules,moduleGate,mountModuleAccess} from './module-access.js';
+import {mountContinuity,tickContinuity} from './service-continuity.js';
 import {mountSocialStudio,tickSocialStudio} from './social-studio.js';
 import {mountFinanceHub,financeWebhook} from './finance-hub.js';
 import {tickFinance} from './finance-automation.js';
@@ -44,7 +48,7 @@ app.use(express.static(path.join(path.dirname(fileURLToPath(import.meta.url)),'.
 const ah=f=>(a,b,n)=>Promise.resolve(f(a,b,n)).catch(e=>{console.error(e);b.status(e.status||400).json({error:e.message})});
 const act=new Map();const alive=async t=>{const c=act.get(t);if(c&&c.t>Date.now())return c.v;const v=!!(await q('select 1 from tenants where id=$1 and active',[t])).rowCount;act.set(t,{v,t:Date.now()+15000});return v};
 const auth=async(req,res,next)=>{try{req.u=jwt.verify((req.headers.authorization||'').slice(7),SECRET)}catch{return res.status(401).json({error:'auth'})}
- if(!req.u.tid||!await alive(req.u.tid))return res.status(401).json({error:'empresa suspensa ou inválida'});als.run({tenant:req.u.tid,actor:req.u.id},async()=>{try{const current=(await q('select id,name,role,permissions,known_by,avatar_image from users where id=$1 and active',[req.u.id])).rows[0];if(!current)return res.status(401).json({error:'Usuário desativado'});Object.assign(req.u,current);next()}catch(e){next(e)}})};
+ if(!req.u.tid||!await alive(req.u.tid))return res.status(401).json({error:'empresa suspensa ou inválida'});als.run({tenant:req.u.tid,actor:req.u.id},async()=>{try{const current=(await q('select id,name,role,permissions,known_by,avatar_image from users where id=$1 and active',[req.u.id])).rows[0];if(!current)return res.status(401).json({error:'Usuário desativado'});Object.assign(req.u,current);req.u.modules=effectiveModules(req.u,(await q('select t.module_access from teams t join team_members m on m.team_id=t.id where m.user_id=$1 and t.archived_at is null',[req.u.id])).rows);next()}catch(e){next(e)}})};
 const adm=(req,res,next)=>['owner','admin'].includes(req.u.role)?next():res.status(403).json({error:'sem permissão'});
 const tok=u=>jwt.sign({id:u.id,role:u.role,name:u.name,tid:u.tenant_id},SECRET,{expiresIn:'30d'});
 const T=['users','teams','channels','contacts','stages','agents','docs','appointments','flows','payments','catalog','posts','ads','orders','bots','subscriptions','charges','courses','students','lessons','menu_categories','menu_items','delivery_zones'];
@@ -99,7 +103,7 @@ app.get('/platform/backup',pk,(req,res)=>{const dir=fs.mkdtempSync('/tmp/bk-'),d
 mountCalendarPublic(app,{ah,tenantTransaction,credentials:googleVault.credentials});mountDrivePublic(app,{ah,tenantTransaction,credentials:googleVault.credentials});
 mountBotStrategyPublic(app,{ah,limit,tenantTransaction});
 mountLeadPublic(app,{ah,limit,tenantTransaction,bus});
-app.use('/api',auth);
+app.use('/api',auth);app.use('/api',(req,res,next)=>moduleGate({path:'/api'+req.path,method:req.method,u:req.u},res,next));
 mountBotStrategies(app,{ah,adm,q,tenantTransaction});
 mountCampaigns(app,{ah,adm,q,tenantTransaction,graph:D.meta.graph,bus});
 mountFinanceHub(app,{ah,adm,q,tenantTransaction,lock:withConversationLock,graph:D.meta.graph});
@@ -111,7 +115,7 @@ mountServiceCalendar(app,{ah,q,tenantTransaction,deliver,bus,credentials:googleV
 mountAttendanceManagement(app,{ah,q,tenantTransaction,bus});mountServiceProtocol(app,{ah,q,tenantTransaction,deliver,bus});mountServiceRouting(app,{ah,adm,q,tenantTransaction,bus});mountGoogleDrive(app,{ah,q,deliver,saveMedia,credentials:googleVault.credentials});
 mountIntegrations(app,{ah,adm,q,tenantTransaction,bus,managed:managedDenied,managedKey:()=>socialVault.key()});
 mountConversationActions(app,{ah,q,tenantTransaction,bus,deliver,createPayment});
-mountMessageReceipts(app,{ah,q});mountFinancial(app,{ah,adm,q,tenantTransaction,deliver,asaasDebts,asaasPay});mountSocialStudio(app,{ah,adm,q,lock:withConversationLock});mountAgentConnections(app,{ah,adm,q});
+mountMessageReceipts(app,{ah,q});mountFinancial(app,{ah,adm,q,tenantTransaction,deliver,asaasDebts,asaasPay});mountSocialStudio(app,{ah,adm,q,lock:withConversationLock});mountContinuity(app,{ah,adm,q});mountDepartmentPipelines(app,{ah,adm,q});mountModuleAccess(app,{ah,adm,q});mountRoleTemplates(app,{ah,adm});mountAgentConnections(app,{ah,adm,q});
 mountKnowledge(app,{ah,q,transaction:tenantTransaction,ragAdd});
 mountServiceWorkflow(app,{ah,q,deliver,bus});
 mountOperations(app,{ah,adm,q,tenantTransaction,bus});
@@ -194,3 +198,5 @@ let integrationBusy=false;setInterval(async()=>{if(integrationBusy)return;integr
 let financeBusy=false;setInterval(async()=>{if(financeBusy)return;financeBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickFinance({q,tenantTransaction,tenant:t.id,deliver,lock:withConversationLock})).catch(e=>console.error('finance worker',t.id,e.message))}catch(e){console.error('finance scheduler',e.message)}finally{financeBusy=false}},5000);
 
 let socialBusy=false;setInterval(async()=>{if(socialBusy)return;socialBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickSocialStudio({q,lock:withConversationLock})).catch(e=>console.error('social reconciliation',t.id,e.message))}catch(e){console.error('social scheduler',e.message)}finally{socialBusy=false}},30000);
+
+let continuityBusy=false;setInterval(async()=>{if(continuityBusy)return;continuityBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickContinuity({q,tenantTransaction,tenant:t.id,lock:withConversationLock,deliver,bus})).catch(e=>console.error('continuity',t.id,e.message))}catch(e){console.error('continuity scheduler',e.message)}finally{continuityBusy=false}},10000);

@@ -32,7 +32,7 @@ async function onEnter(n,run,deps,ctx){const d=n.data||{},V=run.vars;
   case 'crm_create':{const card=await deps.crmCreate({...d,title:tpl(d.title,ctx)});V[d.var||'card_id']=card.id;return {}};
   case 'crm_move':await deps.crmMove({card_id:Number(V[d.card_var||'card_id']),stage_id:Number(d.stage_id)});return {};
   case 'stage':if(d.stage)await deps.setStage(d.stage);return {};
-  case 'transfer':if(d.text)await deps.send(tpl(d.text,ctx));await deps.transfer(d);return {};
+  case 'transfer':if(d.text)await deps.send(tpl(d.text,ctx));await deps.transfer(d);return d.target==='ai'?{end:1}:{};
   case 'api':{const r=await deps.api({...d,node_id:n.id},ctx);if(d.var)V[d.var]=r.ok?r.data:null;return {out:r.ok?'ok':'error'}}
   case 'http':{const r=await deps.http(d,ctx);if(d.var)V[d.var]=r.ok?r.data:null;return {out:r.ok?'ok':'error'}}
   case 'asaas':return asaas(n,run,deps,null,true);
@@ -56,7 +56,7 @@ const METHODS=['Boleto completo (link/PDF)','Código do boleto (linha digitável
 const stTxt=(x,today)=>x.status==='OVERDUE'||String(x.dueDate)<today?'⚠️ vencido':'em aberto';
 async function asaas(n,run,deps,t,enter){const d=n.data||{},V=run.vars;if(enter)delete V._a;const A=V._a??={step:'doc',tries:0};
  const today=new Date().toISOString().slice(0,10);
- const lookup=async doc=>{let r;try{r=await deps.asaasDebts(doc,{platform:d.platform||V.plataforma,verifyPhone:!!d.verifyPhone})}catch(e){await deps.send(['ASAAS_PHONE_MISMATCH','ASAAS_IDENTITY_REQUIRED'].includes(e.code)?'Preciso que um atendente confirme sua identidade para continuar a consulta financeira com segurança. Vou encaminhar seu atendimento.':'Não consegui consultar agora. Tente novamente em instantes ou fale com um atendente.');return {out:'error'}}
+ const lookup=async doc=>{let r;try{r=await deps.asaasDebts(doc,{platform:d.platform||V.plataforma,verifyPhone:false})}catch(e){await deps.send(['ASAAS_PHONE_MISMATCH','ASAAS_IDENTITY_REQUIRED'].includes(e.code)?'Preciso que um atendente confirme sua identidade para continuar a consulta financeira com segurança. Vou encaminhar seu atendimento.':'Não consegui consultar agora. Tente novamente em instantes ou fale com um atendente.');return {out:'error'}}
   if(r.found===false){await deps.send('Não encontrei um cadastro com este CPF ou CNPJ na base financeira da empresa. Confira os números ou fale com um atendente.');return {out:'error'}}
   A.doc=doc;if(d.var)V[d.var]=digits(doc);
   if(!r.debts.length){await deps.send(`Não encontramos débitos em aberto para ${personType(doc)} ${maskDoc(doc)}. ✅`);return {out:'none'}}
@@ -123,8 +123,8 @@ async function order(run,deps,t,enter){const V=run.vars,M=await deps.menu(),cats
  async function payStep(){O.step='pay';await say(`Forma de pagamento?\n\n${lst(M.pay_methods,x=>x)}`);return stay}}
 
 
-// Only choice blocks opt into AI; input, CPF and payment selection remain deterministic.
+// Text fallback is opt-in for menus; audio hands off from any live block.
 export function choiceOption(options,text){const t=norm(String(text||'').replace('🔟','10').replace(/\uFE0F|\u20E3/g,'').trim());if(/^\d{1,2}$/.test(t)){const i=Number(t)-1;return i>=0&&i<options.length?i:-1}return options.findIndex(o=>norm(o)===t)}
-export function shouldUseAI(node,msg){if(node?.type!=='choice'||node.data?.aiFallback!=='on')return false;if(msg.kind==='audio')return true;const text=String(msg.body||'').trim();return [...text].length>3&&choiceOption(node.data.options||[],text)<0}
+export function shouldUseAI(node,msg){if(msg.kind==='audio')return !!node&&!['close','end'].includes(node.type);if(node?.type!=='choice'||node.data?.aiFallback!=='on')return false;const text=String(msg.body||'').trim();return [...text].length>3&&choiceOption(node.data.options||[],text)<0}
 
 export const fallbackReady=(agent,msg)=>!!agent&&[].concat(agent.llm||[]).some(c=>c?.key&&c.model)&&(msg.kind!=='audio'||[].concat(agent.stt||[]).some(c=>c?.key&&c.model));

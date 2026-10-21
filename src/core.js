@@ -1,3 +1,4 @@
+import {continuityReply} from './service-continuity.js';
 import {selectEntryAgent} from './ai/operation-policy.js';
 import {queueIntegrationEvent} from './integration-hub.js';
 import {recordJourneyReply} from './journeys.js';
@@ -40,6 +41,7 @@ export async function inbound(chId,m){
 export async function processInbound(saved,{scheduled=false,source={}}={}){return withConversationLock(saved.cv.id,async()=>{let {msg,fresh}=saved;let cv=(await q('select * from conversations where id=$1',[saved.cv.id])).rows[0];
  refreshContactProfile(q,saved.ch,saved.ct,D,source).then(()=>bus('conv',{id:cv.id})).catch(()=>{});
  if(!scheduled)bus('msg',{conversation_id:cv.id,message:msg});if(saved.campaign?.optout){await deliver(cv.id,{body:'Tudo certo. Você não receberá novas campanhas por este canal. O atendimento continua disponível quando precisar.',system:true});return}for(const board_id of saved.boards||[])bus('crm',{board_id});if(await deferBotEntry({q,cv,msg,fresh,channel:saved.ch,scheduled}))return;if(fresh)await notifyProtocol(q,cv.id,deliver,bus);
+ if(await continuityReply({q,cv,msg,deliver,bus}))return;
  const entry=await serviceEntry({q,cv,msg,fresh,channel:saved.ch,contact:(await q('select * from contacts where id=$1',[cv.contact_id])).rows[0],send:(body,choices)=>deliver(cv.id,{body:choices?body+'\n\n'+choices.options.map((x,i)=>(i+1)+'️⃣ '+x).join('\n'):body,choices,ai:true,epoch:cv.automation_epoch,executor:'bot'}),knownCustomer:async()=>(await import('./payments.js')).knownAsaasCustomer(saved.ch,saved.ct)});if(entry.used)return;if(entry.start)fresh=true;
  let used=false;try{used=await (await import('./bots/runtime.js')).handle(cv,msg,fresh)}catch(e){used=true;console.error('bot',e.message)}
  const fl=await import('./flows.js');if(fresh){await fl.onNew(cv.id);if(cv.stage_id)await fl.onStage(cv.id,cv.stage_id)}
@@ -61,7 +63,7 @@ export async function deliver(cid,{kind='text',body,file,filename,author_id,ai=f
  if(kind==='note')dir='int';else{const last=(await q("select ext_id,kind from messages where conversation_id=$1 and dir='in' order by at desc limit 1",[cid])).rows[0];
   ext=await D[cv.driver].send({id:cv.chid,config:cv.config},{to:cv.handle,kind,body,file,filename,choices,template,externalConversation:cv.contact_data?.external_conversation_id,replyTo:last})}
  const msg=(await q('insert into messages(conversation_id,dir,kind,body,media_url,author_id,ai,ext_id,filename,executor) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning *',[cid,dir,kind,body||null,file?'/media/'+file:null,author_id||null,ai||system,ext,filename||null,executor||(system?'system':ai?'ai':author_id?'human':null)])).rows[0];
- if(kind!=='note')await q('update conversations set last_at=now() where id=$1',[cid]);
+ if(kind!=='note')await q('update conversations set last_at=now()'+(author_id&&!ai&&!system?",human_accepted_at=now(),handoff_state='accepted'":'')+' where id=$1',[cid]);
  if(kind!=='note')await queueIntegrationEvent(q,'message.created',{conversation_id:cid,message_id:msg.id,direction:'out',kind:msg.kind}).catch(e=>console.error('integration outbox',e.message));bus('msg',{conversation_id:cid,message:msg});return msg}
 export async function startAll(){for(const c of (await adm("select * from channels where active and driver='baileys'")).rows)baileys.start(c,(id,m)=>als.run({tenant:c.tenant_id},()=>inbound(id,m))).catch(e=>console.error('baileys',e.message))}
 

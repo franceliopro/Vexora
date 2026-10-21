@@ -2,7 +2,7 @@ import {allowed} from '../governance.js';
 import {automationAllowed} from '../conversation-policy.js';
 import {crmEvent} from '../crm.js';
 import {serviceEvent} from '../operations.js';
-export const AGENT_ROLES=['assistant','supervisor','sdr','partner','employee','coordinator'];
+export const AGENT_ROLES=['assistant','supervisor','sdr','seller','partner','employee','coordinator'];
 export async function validateSkills(query,input={}){
  if(!input||typeof input!=='object'||Array.isArray(input)||!AGENT_ROLES.includes(input.role||'assistant'))throw Error('Papel de IA inválido');
  if(input.entry&&!['primary','specialist'].includes(input.entry))throw Error('Tipo de entrada inválido');const out={role:input.role||'assistant',entry:input.entry||'primary'};
