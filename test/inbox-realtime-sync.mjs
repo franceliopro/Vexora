@@ -9,6 +9,8 @@ const core=fs.readFileSync('src/core.js','utf8');
 const db=fs.readFileSync('src/db.js','utf8');
 const baileys=fs.readFileSync('src/drivers/baileys.js','utf8');
 const attendance=fs.readFileSync('web/attendance.js','utf8');
+const integrations=fs.readFileSync('web/integrations.js','utf8');
+const waha=fs.readFileSync('src/drivers/waha.js','utf8');
 const policy=fs.readFileSync('src/attendance-management.js','utf8');
 const bus=fs.readFileSync('src/bus.js','utf8');
 
@@ -36,6 +38,10 @@ assert.ok(db.includes('PROCESSING_LOCK_POOL_SIZE'),'Conversation lock pool size 
 assert.ok(baileys.includes("sock.ev.on('presence.update'"),'Baileys presence events must be listened to');
 assert.ok(bus.includes("type==='presence'"),'Presence events must be scoped to the conversation');
 assert.ok(server.includes("app.post('/api/conversations/:id/presence'"),'Agents need a secure endpoint to signal typing and recording');
+assert.ok(server.includes('const driver=D[info?.driver];if(driver?.presence)'),'Outgoing presence must use the selected connector');
+assert.ok(integrations.includes("['baileys','Baileys · sessão gerenciada pela Véxora']")&&integrations.includes("['waha','WAHA · conectar a um servidor WAHA']"),'The administrator must choose the WhatsApp engine in the inbox setup');
+assert.ok(integrations.includes('O QR aparecerá na Véxora')&&integrations.includes('não instala nem hospeda o motor WAHA'),'The WAHA QR setup must explain its service requirement');
+assert.ok(waha.includes('export async function presence('),'WAHA connector must expose outbound presence when supported');
 assert.ok(attendance.includes('Cliente digitando…')&&attendance.includes('Cliente gravando áudio…'),'Inbox must show customer presence states');
 assert.ok(attendance.includes("signalPresence('typing')")&&attendance.includes("signalPresence('recording')"),'Agent typing and recording should be signalled to the customer');
 assert.ok(policy.includes("key='attendance_policy'")&&policy.includes("release_mode!=='after_idle'"),'Each company must configure automatic idle release or manual retention');
