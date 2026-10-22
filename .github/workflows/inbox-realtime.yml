@@ -4,12 +4,16 @@ on:
     branches:
       - fix/inbox-realtime-sync
       - fix/baileys-fast-media-inbox
+      - feat/attendance-presence-release-policy
     paths:
       - 'web/index.html'
       - 'web/realtime.js'
       - 'src/server.js'
       - 'src/core.js'
       - 'src/drivers/baileys.js'
+      - 'src/attendance-management.js'
+      - 'src/bus.js'
+      - 'web/attendance.js'
       - 'test/inbox-realtime-sync.mjs'
       - '.github/workflows/inbox-realtime.yml'
   pull_request:
@@ -34,6 +38,8 @@ jobs:
           node --check src/server.js
           node --check src/core.js
           node --check src/drivers/baileys.js
+          node --check src/attendance-management.js
+          node --check web/attendance.js
           node --check web/realtime.js
       - name: Verify inbox real-time synchronization
         run: node test/inbox-realtime-sync.mjs
