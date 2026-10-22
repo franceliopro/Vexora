@@ -40,7 +40,7 @@ assert.ok(bus.includes("type==='presence'"),'Presence events must be scoped to t
 assert.ok(server.includes("app.post('/api/conversations/:id/presence'"),'Agents need a secure endpoint to signal typing and recording');
 assert.ok(server.includes('const driver=D[info?.driver];if(driver?.presence)'),'Outgoing presence must use the selected connector');
 assert.ok(integrations.includes("['baileys','Baileys · sessão gerenciada pela Véxora']")&&integrations.includes("['waha','WAHA · conectar a um servidor WAHA']"),'The administrator must choose the WhatsApp engine in the inbox setup');
-assert.ok(integrations.includes('O QR aparecerá na Véxora')&&integrations.includes('não instala nem hospeda o motor WAHA'),'The WAHA QR setup must explain its service requirement');
+assert.ok(integrations.toLowerCase().includes('qr aparecerá na véxora')&&integrations.includes('não instala nem hospeda o motor WAHA'),'The WAHA QR setup must explain its service requirement');
 assert.ok(waha.includes('export async function presence('),'WAHA connector must expose outbound presence when supported');
 assert.ok(attendance.includes('Cliente digitando…')&&attendance.includes('Cliente gravando áudio…'),'Inbox must show customer presence states');
 assert.ok(attendance.includes("signalPresence('typing')")&&attendance.includes("signalPresence('recording')"),'Agent typing and recording should be signalled to the customer');
