@@ -2,6 +2,7 @@ name: Inbox real-time regression
 on:
   push:
     branches:
+      - main
       - fix/inbox-realtime-sync
       - fix/baileys-fast-media-inbox
       - feat/attendance-presence-release-policy
