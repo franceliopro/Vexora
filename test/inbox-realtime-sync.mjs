@@ -6,6 +6,7 @@ const html=fs.readFileSync('web/index.html','utf8');
 const server=fs.readFileSync('src/server.js','utf8');
 const realtime=fs.readFileSync('web/realtime.js','utf8');
 const core=fs.readFileSync('src/core.js','utf8');
+const db=fs.readFileSync('src/db.js','utf8');
 const baileys=fs.readFileSync('src/drivers/baileys.js','utf8');
 const attendance=fs.readFileSync('web/attendance.js','utf8');
 const policy=fs.readFileSync('src/attendance-management.js','utf8');
@@ -28,6 +29,10 @@ assert.ok(baileys.includes('defer_media:true'),'Baileys media must be persisted 
 assert.ok(baileys.includes('void(async()=>{try{const file=saveMedia(await B.downloadMediaMessage'),'Media download must run asynchronously after the initial inbox event');
 assert.ok(core.includes("if(m.defer_media){bus('msg',{conversation_id:saved.cv.id,message:saved.msg});return saved}"),'Deferred media must emit an immediate placeholder event');
 assert.ok(core.includes('export async function completeInboundMedia(saved,{file,filename,body=null}={})'),'Downloaded media must update the original message');
+assert.ok(core.includes('inboundAutomationLimit=Math.max(1,Math.min(32,Number(process.env.INBOUND_AUTOMATION_CONCURRENCY)||8))'),'Inbound automation must use a bounded worker count');
+assert.ok(core.includes('inboundTenantOrder')&&core.includes('if(m.defer_automation){bus(\'msg\''),'Messages must be persisted and published before queued AI work');
+assert.ok(baileys.includes('defer_automation:true'),'Baileys text messages must not wait for AI automation to finish');
+assert.ok(db.includes('PROCESSING_LOCK_POOL_SIZE'),'Conversation lock pool size must be configurable for deployment scale');
 assert.ok(baileys.includes("sock.ev.on('presence.update'"),'Baileys presence events must be listened to');
 assert.ok(bus.includes("type==='presence'"),'Presence events must be scoped to the conversation');
 assert.ok(server.includes("app.post('/api/conversations/:id/presence'"),'Agents need a secure endpoint to signal typing and recording');
