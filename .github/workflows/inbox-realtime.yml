@@ -18,6 +18,8 @@ on:
       - 'web/attendance.js'
       - 'web/integrations.js'
       - 'src/drivers/waha.js'
+      - 'src/module-access.js'
+      - 'test/module-access.mjs'
       - 'test/inbox-realtime-sync.mjs'
       - '.github/workflows/inbox-realtime.yml'
   pull_request:
@@ -55,3 +57,5 @@ jobs:
           node --check web/realtime.js
       - name: Verify inbox real-time synchronization
         run: node test/inbox-realtime-sync.mjs
+      - name: Verify module access and tenant entitlements
+        run: node test/module-access.mjs
