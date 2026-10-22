@@ -10,6 +10,7 @@ on:
       - 'web/realtime.js'
       - 'src/server.js'
       - 'src/core.js'
+      - 'src/db.js'
       - 'src/drivers/baileys.js'
       - 'src/attendance-management.js'
       - 'src/bus.js'
@@ -37,6 +38,7 @@ jobs:
         run: |
           node --check src/server.js
           node --check src/core.js
+          node --check src/db.js
           node --check src/drivers/baileys.js
           node --check src/attendance-management.js
           node --check web/attendance.js
