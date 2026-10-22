@@ -6,7 +6,13 @@ const html=fs.readFileSync('web/index.html','utf8');
 const server=fs.readFileSync('src/server.js','utf8');
 const realtime=fs.readFileSync('web/realtime.js','utf8');
 const core=fs.readFileSync('src/core.js','utf8');
+const db=fs.readFileSync('src/db.js','utf8');
 const baileys=fs.readFileSync('src/drivers/baileys.js','utf8');
+const attendance=fs.readFileSync('web/attendance.js','utf8');
+const integrations=fs.readFileSync('web/integrations.js','utf8');
+const waha=fs.readFileSync('src/drivers/waha.js','utf8');
+const policy=fs.readFileSync('src/attendance-management.js','utf8');
+const bus=fs.readFileSync('src/bus.js','utf8');
 
 // Parse inline browser scripts without executing browser-only code.
 const scripts=[...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)]
@@ -25,4 +31,19 @@ assert.ok(baileys.includes('defer_media:true'),'Baileys media must be persisted 
 assert.ok(baileys.includes('void(async()=>{try{const file=saveMedia(await B.downloadMediaMessage'),'Media download must run asynchronously after the initial inbox event');
 assert.ok(core.includes("if(m.defer_media){bus('msg',{conversation_id:saved.cv.id,message:saved.msg});return saved}"),'Deferred media must emit an immediate placeholder event');
 assert.ok(core.includes('export async function completeInboundMedia(saved,{file,filename,body=null}={})'),'Downloaded media must update the original message');
-console.log('OK: inbox sync, WebSocket, incremental cursor and immediate Baileys media placeholders.');
+assert.ok(core.includes('inboundAutomationLimit=Math.max(1,Math.min(32,Number(process.env.INBOUND_AUTOMATION_CONCURRENCY)||8))'),'Inbound automation must use a bounded worker count');
+assert.ok(core.includes('inboundTenantOrder')&&core.includes('if(m.defer_automation){bus(\'msg\''),'Messages must be persisted and published before queued AI work');
+assert.ok(baileys.includes('defer_automation:true'),'Baileys text messages must not wait for AI automation to finish');
+assert.ok(db.includes('PROCESSING_LOCK_POOL_SIZE'),'Conversation lock pool size must be configurable for deployment scale');
+assert.ok(baileys.includes("sock.ev.on('presence.update'"),'Baileys presence events must be listened to');
+assert.ok(bus.includes("type==='presence'"),'Presence events must be scoped to the conversation');
+assert.ok(server.includes("app.post('/api/conversations/:id/presence'"),'Agents need a secure endpoint to signal typing and recording');
+assert.ok(server.includes('const driver=D[info?.driver];if(driver?.presence)'),'Outgoing presence must use the selected connector');
+assert.ok(integrations.includes("['baileys','Baileys · sessão gerenciada pela Véxora']")&&integrations.includes("['waha','WAHA · conectar a um servidor WAHA']"),'The administrator must choose the WhatsApp engine in the inbox setup');
+assert.ok(integrations.toLowerCase().includes('qr aparecerá na véxora')&&integrations.includes('não instala nem hospeda o motor WAHA'),'The WAHA QR setup must explain its service requirement');
+assert.ok(waha.includes('export async function presence('),'WAHA connector must expose outbound presence when supported');
+assert.ok(attendance.includes('Cliente digitando…')&&attendance.includes('Cliente gravando áudio…'),'Inbox must show customer presence states');
+assert.ok(attendance.includes("signalPresence('typing')")&&attendance.includes("signalPresence('recording')"),'Agent typing and recording should be signalled to the customer');
+assert.ok(policy.includes("key='attendance_policy'")&&policy.includes("release_mode!=='after_idle'"),'Each company must configure automatic idle release or manual retention');
+assert.ok(policy.includes("assignee_id=null"),'Idle release must return the conversation to the New queue');
+console.log('OK: inbox sync, media placeholders, customer/agent presence, and tenant-configurable queue release.');
