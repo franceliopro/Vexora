@@ -20,6 +20,31 @@ import {q,adm,tenantTransaction,withConversationLock} from './db.js';import {als
 import * as meta from './drivers/meta.js';
 import * as waha from './drivers/waha.js';import * as baileys from './drivers/baileys.js';import * as zernio from './drivers/zernio.js';
 export const D={waha,baileys,zernio,meta,site,email};
+
+const inboundAutomationChains=new Map(),inboundTenantQueues=new Map(),inboundTenantOrder=[];
+let activeInboundAutomation=0;
+const inboundAutomationLimit=Math.max(1,Math.min(32,Number(process.env.INBOUND_AUTOMATION_CONCURRENCY)||8));
+function drainInboundAutomation(){
+ while(activeInboundAutomation<inboundAutomationLimit&&inboundTenantOrder.length){
+  const tenant=inboundTenantOrder.shift(),queue=inboundTenantQueues.get(tenant);
+  if(!queue?.length){inboundTenantQueues.delete(tenant);continue}
+  const job=queue.shift();if(queue.length)inboundTenantOrder.push(tenant);else inboundTenantQueues.delete(tenant);
+  activeInboundAutomation++;
+  Promise.resolve().then(()=>als.run(job.context,job.run)).then(job.resolve,job.reject).finally(()=>{activeInboundAutomation--;drainInboundAutomation()});
+ }
+}
+function enqueueInboundAutomation(saved,source={}){
+ const context={...(als.getStore()||{})},tenant=context.tenant,key=tenant+':'+saved.cv.id,previous=inboundAutomationChains.get(key)||Promise.resolve();
+ const next=previous.catch(()=>{}).then(()=>new Promise((resolve,reject)=>{
+  let queue=inboundTenantQueues.get(tenant);if(!queue){queue=[];inboundTenantQueues.set(tenant,queue)}
+  queue.push({context,run:()=>processInbound(saved,{source:{...source,alreadyPublished:true}}),resolve,reject});
+  if(!inboundTenantOrder.includes(tenant))inboundTenantOrder.push(tenant);
+  drainInboundAutomation();
+ }));
+ inboundAutomationChains.set(key,next);
+ next.catch(e=>console.error('inbound automation queue',saved.cv.id,e.message)).finally(()=>{if(inboundAutomationChains.get(key)===next)inboundAutomationChains.delete(key)});
+}
+
 export async function setStage(cid,sid){await q('update conversations set stage_id=$2 where id=$1',[cid,sid]);bus('conv',{id:cid});(await import('./flows.js')).onStage(cid,sid)}
 export async function inbound(chId,m){
  const saved=await tenantTransaction(als.getStore()?.tenant,async query=>{
@@ -38,12 +63,12 @@ export async function inbound(chId,m){
   await recordNativeReferral(query,ch,ct,cv,m);
   const campaign=await recordCampaignReply(query,cv,ct,msg,fresh);await recordJourneyReply(query,cv,ct,msg);
   const boards=fresh?await routingCard(query,cv,ch):[];cv=(await query('update conversations set unread=unread+1,last_at=now(),last_in_at=now() where id=$1 returning *',[cv.id])).rows[0];return {cv,msg,fresh,boards,ch,ct,campaign};
- });if(!saved)return;bus('conv',{id:saved.cv.id});if(m.defer_media){bus('msg',{conversation_id:saved.cv.id,message:saved.msg});return saved}if(m.suppress_automation)return;return processInbound(saved,{source:m});
+ });if(!saved)return;bus('conv',{id:saved.cv.id});if(m.defer_media){bus('msg',{conversation_id:saved.cv.id,message:saved.msg});return saved}if(m.suppress_automation)return saved;if(m.defer_automation){bus('msg',{conversation_id:saved.cv.id,message:saved.msg});enqueueInboundAutomation(saved,m);return saved}return processInbound(saved,{source:m});
 }
 export async function processInbound(saved,{scheduled=false,source={}}={}){return withConversationLock(saved.cv.id,async()=>{let {msg,fresh}=saved;let cv=(await q('select * from conversations where id=$1',[saved.cv.id])).rows[0];
  if(cv.bot_restart_pending)fresh=true;
  refreshContactProfile(q,saved.ch,saved.ct,D,source).then(()=>bus('conv',{id:cv.id})).catch(()=>{});
- if(!scheduled)bus('msg',{conversation_id:cv.id,message:msg});if(saved.campaign?.optout){await deliver(cv.id,{body:'Tudo certo. Você não receberá novas campanhas por este canal. O atendimento continua disponível quando precisar.',system:true});return}for(const board_id of saved.boards||[])bus('crm',{board_id});if(await deferBotEntry({q,cv,msg,fresh,channel:saved.ch,scheduled}))return;if(fresh)await notifyProtocol(q,cv.id,deliver,bus);
+ if(!scheduled&&!source.alreadyPublished)bus('msg',{conversation_id:cv.id,message:msg});if(saved.campaign?.optout){await deliver(cv.id,{body:'Tudo certo. Você não receberá novas campanhas por este canal. O atendimento continua disponível quando precisar.',system:true});return}for(const board_id of saved.boards||[])bus('crm',{board_id});if(await deferBotEntry({q,cv,msg,fresh,channel:saved.ch,scheduled}))return;if(fresh)await notifyProtocol(q,cv.id,deliver,bus);
  if(await continuityReply({q,cv,msg,deliver,bus}))return;
  const entry=await serviceEntry({q,cv,msg,fresh,channel:saved.ch,contact:(await q('select * from contacts where id=$1',[cv.contact_id])).rows[0],send:(body,choices)=>deliver(cv.id,{body:choices?body+'\n\n'+choices.options.map((x,i)=>(i+1)+'️⃣ '+x).join('\n'):body,choices,ai:true,epoch:cv.automation_epoch,executor:'bot'}),knownCustomer:async()=>(await import('./payments.js')).knownAsaasCustomer(saved.ch,saved.ct)});if(entry.used)return;if(entry.start)fresh=true;
  let used=false;try{used=await (await import('./bots/runtime.js')).handle(cv,msg,fresh)}catch(e){used=true;console.error('bot',e.message)}
@@ -53,7 +78,7 @@ export async function processInbound(saved,{scheduled=false,source={}}={}){retur
  if(!used)await (await import('./ai/engine.js')).onInbound(cv,msg).catch(e=>console.error('ai',e.message));
 });
 }
-export async function completeInboundMedia(saved,{file,filename,body=null}={}){if(!saved?.msg?.id)return null;const updated=(await q('update messages set media_url=$2,body=$3,filename=$4 where id=$1 and conversation_id=$5 returning *',[saved.msg.id,file?'/media/'+file:null,body||null,filename||null,saved.cv.id])).rows[0];if(!updated)return null;saved.msg=updated;bus('msg',{conversation_id:saved.cv.id,message:updated});if(!file)return null;return processInbound(saved,{source:{kind:updated.kind,media_ready:true}})}
+export async function completeInboundMedia(saved,{file,filename,body=null}={}){if(!saved?.msg?.id)return null;const updated=(await q('update messages set media_url=$2,body=$3,filename=$4 where id=$1 and conversation_id=$5 returning *',[saved.msg.id,file?'/media/'+file:null,body||null,filename||null,saved.cv.id])).rows[0];if(!updated)return null;saved.msg=updated;bus('msg',{conversation_id:saved.cv.id,message:updated});if(!file)return null;return enqueueInboundAutomation(saved,{kind:updated.kind,media_ready:true})}
 export async function convFor(contactId){const cv=(await q('select * from conversations where contact_id=$1 order by id desc limit 1',[contactId])).rows[0];if(cv)return cv;const ct=(await q('select * from contacts where id=$1',[contactId])).rows[0];if(!ct?.channel_id)throw new Error('contato sem canal');const st=(await q('select id from stages order by pos limit 1')).rows[0];return (await q('insert into conversations(contact_id,channel_id,stage_id,ai_on) values($1,$2,$3,false) returning *',[ct.id,ct.channel_id,st?.id])).rows[0]}
 export async function deliver(cid,{kind='text',body,file,filename,author_id,ai=false,epoch,system=false,executor,choices,template,identify=false}){
  const cv=(await q('select c.*,ct.handle,ct.data contact_data,ch.driver,ch.config,ch.active channel_active,ch.id chid from conversations c join contacts ct on ct.id=c.contact_id join channels ch on ch.id=c.channel_id where c.id=$1',[cid])).rows[0];
