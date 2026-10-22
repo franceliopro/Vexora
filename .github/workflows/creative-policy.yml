@@ -1,0 +1,25 @@
+name: Creative policy test
+
+on:
+  push:
+    branches:
+      - fix/creative-structured-output
+  pull_request:
+    paths:
+      - 'src/creative-policy.js'
+      - 'src/creative-providers.js'
+      - 'src/social-studio.js'
+      - 'src/knowledge.js'
+      - 'test/creative-policy.mjs'
+      - '.github/workflows/creative-policy.yml'
+
+jobs:
+  creative-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run creative policy tests
+        run: node test/creative-policy.mjs
