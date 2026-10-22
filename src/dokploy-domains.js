@@ -19,7 +19,18 @@ export async function provisionDokployDomain(host) {
   }
 
   const base = process.env.DOKPLOY_API_URL.replace(/\/+$/, '');
-  const endpoint = base.endsWith('/api') ? `${base}/domain.create` : `${base}/api/domain.create`;
+  const apiBase = base.endsWith('/api') ? base : `${base}/api`;
+  const listUrl = new URL(`${apiBase}/domain.byApplicationId`);
+  listUrl.searchParams.set('applicationId', process.env.DOKPLOY_APPLICATION_ID);
+  try {
+    const list = await fetch(listUrl, { headers: { 'x-api-key': process.env.DOKPLOY_API_KEY }, signal: AbortSignal.timeout(10000) });
+    if (list.ok) {
+      const data = await list.json();
+      const containsHost = value => Array.isArray(value) ? value.some(containsHost) : value && typeof value === 'object' ? (String(value.host || '').toLowerCase() === normalized || Object.values(value).some(containsHost)) : false;
+      if (containsHost(data)) return { configured: true, provisioned: true, existing: true, host: normalized };
+    }
+  } catch { /* Try creation; the API will report any actual failure. */ }
+  const endpoint = `${apiBase}/domain.create`;
   let response;
   try {
     response = await fetch(endpoint, {
