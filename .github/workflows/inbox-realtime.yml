@@ -18,6 +18,8 @@ on:
       - 'web/attendance.js'
       - 'web/integrations.js'
       - 'src/drivers/waha.js'
+      - 'src/module-access.js'
+      - 'test/module-access.mjs'
       - 'test/inbox-realtime-sync.mjs'
       - '.github/workflows/inbox-realtime.yml'
   pull_request:
@@ -28,6 +30,14 @@ on:
       - 'src/core.js'
       - 'src/drivers/baileys.js'
       - 'src/drivers/waha.js'
+      - 'src/module-access.js'
+      - 'web/features.js'
+      - 'web/suite-groups.js'
+      - 'web/campaigns.js'
+      - 'web/outreach.js'
+      - 'web/campaigns.css'
+      - 'web/communications.css'
+      - 'test/module-access.mjs'
       - 'src/attendance-management.js'
       - 'src/bus.js'
       - 'web/attendance.js'
@@ -49,9 +59,16 @@ jobs:
           node --check src/db.js
           node --check src/drivers/baileys.js
           node --check src/drivers/waha.js
+          node --check src/module-access.js
+          node --check web/features.js
+          node --check web/suite-groups.js
+          node --check web/campaigns.js
+          node --check web/outreach.js
           node --check src/attendance-management.js
           node --check web/integrations.js
           node --check web/attendance.js
           node --check web/realtime.js
       - name: Verify inbox real-time synchronization
         run: node test/inbox-realtime-sync.mjs
+      - name: Verify module access and tenant entitlements
+        run: node test/module-access.mjs
