@@ -1,0 +1,32 @@
+name: Inbox real-time regression
+on:
+  push:
+    branches:
+      - fix/inbox-realtime-sync
+    paths:
+      - 'web/index.html'
+      - 'web/realtime.js'
+      - 'src/server.js'
+      - 'test/inbox-realtime-sync.mjs'
+      - '.github/workflows/inbox-realtime.yml'
+  pull_request:
+    paths:
+      - 'web/index.html'
+      - 'web/realtime.js'
+      - 'src/server.js'
+      - 'test/inbox-realtime-sync.mjs'
+      - '.github/workflows/inbox-realtime.yml'
+jobs:
+  inbox-realtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check server and transport syntax
+        run: |
+          node --check src/server.js
+          node --check web/realtime.js
+      - name: Verify inbox real-time synchronization
+        run: node test/inbox-realtime-sync.mjs
