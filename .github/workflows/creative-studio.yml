@@ -28,10 +28,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Install isolated PGlite test dependency
-        run: npm install --no-save @electric-sql/pglite
+      - name: Install isolated PGlite test dependencies
+        run: npm install --no-save @electric-sql/pglite @electric-sql/pglite-pgvector
       - name: Run Estúdio Criativo integration test
         env:
           PGLITE_MODULE: '@electric-sql/pglite'
-          PGLITE_VECTOR_MODULE: '@electric-sql/pglite/vector'
+          PGLITE_VECTOR_MODULE: '@electric-sql/pglite-pgvector'
         run: node test/social-creative-postgres.mjs
