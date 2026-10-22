@@ -194,7 +194,7 @@ app.post('/api/conversations/:id/presence',ah(async(req,res)=>{
  const policy=(await q("select value from settings where key='attendance_policy'")).rows[0]?.value||{presence_indicators:true};
  if(policy.presence_indicators===false)return res.json({ok:true,disabled:true});
  const info=(await q('select c.id conversation_id,c.status,c.assignee_id,ct.handle,ch.id channel_id,ch.driver,ch.config from conversations c join contacts ct on ct.id=c.contact_id join channels ch on ch.id=c.channel_id where c.id=$1',[c.id])).rows[0];
- if(info?.driver==='baileys'&&D.baileys.presence)await D.baileys.presence({id:info.channel_id,config:info.config},info.handle,state);
+ const driver=D[info?.driver];if(driver?.presence)await driver.presence({id:info.channel_id,config:info.config},info.handle,state);else res.set('X-Vexora-Presence','unsupported');
  res.json({ok:true});
 }));
 
