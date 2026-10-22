@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - fix/inbox-realtime-sync
+      - fix/baileys-fast-media-inbox
     paths:
       - 'web/index.html'
       - 'web/realtime.js'
@@ -16,6 +17,8 @@ on:
       - 'web/index.html'
       - 'web/realtime.js'
       - 'src/server.js'
+      - 'src/core.js'
+      - 'src/drivers/baileys.js'
       - 'test/inbox-realtime-sync.mjs'
       - '.github/workflows/inbox-realtime.yml'
 jobs:
