@@ -1,0 +1,37 @@
+name: Creative studio integration test
+
+on:
+  push:
+    branches:
+      - feat/creative-text-model-selector
+    paths:
+      - 'src/social-creative.js'
+      - 'src/creative-policy.js'
+      - 'test/social-creative-postgres.mjs'
+      - 'db/migrations/**'
+      - '.github/workflows/creative-studio.yml'
+  pull_request:
+    paths:
+      - 'src/social-creative.js'
+      - 'src/creative-policy.js'
+      - 'test/social-creative-postgres.mjs'
+      - 'db/migrations/**'
+      - '.github/workflows/creative-studio.yml'
+
+jobs:
+  creative-studio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install isolated PGlite test dependencies
+        run: npm install --no-save @electric-sql/pglite @electric-sql/pglite-pgvector
+      - name: Run Estúdio Criativo integration test
+        env:
+          PGLITE_MODULE: '@electric-sql/pglite'
+          PGLITE_VECTOR_MODULE: '@electric-sql/pglite-pgvector'
+        run: node test/social-creative-postgres.mjs
