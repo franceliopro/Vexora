@@ -4,7 +4,7 @@ import {als} from './ctx.js';
 import {seal,unseal} from './service-calendar.js';
 import {requestConnection} from './agent-connections.js';
 import {connectionInput} from './connection-policy.js';
-export const INTEGRATION_EVENTS=['attendance.created','message.created','crm.updated','external.query.completed','finance.overdue','finance.updated'];
+export const INTEGRATION_EVENTS=['attendance.created','message.created','crm.updated','external.query.completed','finance.overdue','finance.updated','commerce.updated'];
 export const INTEGRATION_SCOPES=['contacts:read','crm:read','conversations:read','external:query','finance:read'];
 export const tokenHash=t=>crypto.createHash('sha256').update(t).digest('hex');
 export function hookInput(b){const c=connectionInput({name:b.name,url:b.url,method:'POST'});if(!Array.isArray(b.events)||!b.events.length||b.events.some(e=>!INTEGRATION_EVENTS.includes(e)))throw Error('Selecione eventos válidos');return {name:c.name,url:c.url,events:[...new Set(b.events)]}}

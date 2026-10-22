@@ -20,7 +20,7 @@ export async function migrate(){for(let i=0;i<40;i++){try{await adm('select 1');
   const c=await admin.connect();try{await c.query('begin');await c.query(fs.readFileSync(new URL(f,dir),'utf8'));await c.query('insert into _migrations(name) values($1)',[f]);await c.query('commit')}catch(e){await c.query('rollback');throw e}finally{c.release()}}
  await adm(`grant usage on schema public to vexora_app;grant select,insert,update,delete on all tables in schema public to vexora_app;
   revoke insert,update,delete on tenants from vexora_app;revoke all on _migrations from vexora_app;grant usage,select on all sequences in schema public to vexora_app;
-  grant execute on function resolve_tenant(text,text),login_lookup(text),channel_tenant(int) to vexora_app;`);
+  grant execute on function resolve_tenant(text,text),login_lookup(text),channel_tenant(int),resolve_site_widget(text),resolve_commerce_hook(text) to vexora_app;`);
  await adm('revoke all on platform_provider_settings,managed_social_accounts from vexora_app');
  if(!(await adm('select 1 from tenants limit 1')).rowCount){const {createTenant}=await import('./tenants.js');await createTenant({name:'Principal',slug:'principal'})}}
 

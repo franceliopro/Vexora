@@ -1,3 +1,5 @@
+import * as email from './drivers/email.js';
+import * as site from './drivers/site.js';
 import {continuityReply} from './service-continuity.js';
 import {selectEntryAgent} from './ai/operation-policy.js';
 import {queueIntegrationEvent} from './integration-hub.js';
@@ -17,7 +19,7 @@ import {automationAllowed} from './conversation-policy.js';
 import {q,adm,tenantTransaction,withConversationLock} from './db.js';import {als} from './ctx.js';import {bus} from './bus.js';import {saveMedia} from './media.js';
 import * as meta from './drivers/meta.js';
 import * as waha from './drivers/waha.js';import * as baileys from './drivers/baileys.js';import * as zernio from './drivers/zernio.js';
-export const D={waha,baileys,zernio,meta};
+export const D={waha,baileys,zernio,meta,site,email};
 export async function setStage(cid,sid){await q('update conversations set stage_id=$2 where id=$1',[cid,sid]);bus('conv',{id:cid});(await import('./flows.js')).onStage(cid,sid)}
 export async function inbound(chId,m){
  const saved=await tenantTransaction(als.getStore()?.tenant,async query=>{
@@ -36,7 +38,7 @@ export async function inbound(chId,m){
   await recordNativeReferral(query,ch,ct,cv,m);
   const campaign=await recordCampaignReply(query,cv,ct,msg,fresh);await recordJourneyReply(query,cv,ct,msg);
   const boards=fresh?await routingCard(query,cv,ch):[];cv=(await query('update conversations set unread=unread+1,last_at=now(),last_in_at=now() where id=$1 returning *',[cv.id])).rows[0];return {cv,msg,fresh,boards,ch,ct,campaign};
- });if(!saved)return;bus('conv',{id:saved.cv.id});return processInbound(saved,{source:m});
+ });if(!saved)return;bus('conv',{id:saved.cv.id});if(m.suppress_automation)return;return processInbound(saved,{source:m});
 }
 export async function processInbound(saved,{scheduled=false,source={}}={}){return withConversationLock(saved.cv.id,async()=>{let {msg,fresh}=saved;let cv=(await q('select * from conversations where id=$1',[saved.cv.id])).rows[0];
  if(cv.bot_restart_pending)fresh=true;

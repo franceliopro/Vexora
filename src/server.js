@@ -1,3 +1,9 @@
+import {mountMailInboxes,tickMail} from './mail-inboxes.js';
+import {mountPlatformMonitor} from './platform-monitor.js';
+import {mountCommerce,mountCommercePublic} from './commerce.js';
+import {mountCommunications,tickCommunications} from './communications.js';
+import {communicationVault,mountCommunicationMaster,mountManagedVoice,checkManagedCredit} from './communication-master.js';
+import {mountSiteChat,mountSitePublic} from './site-chat.js';
 import {mountContacts} from './contacts-workspace.js';
 import {mountAdsHub,recoverAds} from './ads-hub.js';
 import {mountBotIdle,tickBotIdle} from './bot-idle.js';
@@ -90,9 +96,12 @@ mountPublic(app,{ah,limit});
 // ---- painel da plataforma (dono do SaaS): chave PLATFORM_KEY. Usa o superusuário, só aqui.
 const pk=(req,res,next)=>{const k=process.env.PLATFORM_KEY||'',g=String(req.headers['x-platform-key']||'');k.length>=12&&g.length===k.length&&crypto.timingSafeEqual(Buffer.from(g),Buffer.from(k))?next():res.status(403).json({error:'chave inválida (defina PLATFORM_KEY com 12+ caracteres)'})};
 mountWorkspaces(app,{pk,ah,adm:dba,tenantTransaction});
+mountPlatformMonitor(app,{pk,ah,dba});
+const commVault=communicationVault(dba);
 const googleVault=createGoogleVault(dba);mountGoogleMaster(app,{pk,ah,vault:googleVault});
 const socialVault=createSocialVault(dba),managedDenied=(req,res)=>res.status(403).json({error:'Conexão gerenciada pela administração da Véxora'}),masterSocial=express.Router({mergeParams:true});
 app.use('/platform/tenants/:company/provider',pk,ah(async(req,res,next)=>{const tid=Number(req.params.company);if(!Number.isSafeInteger(tid)||!(await dba('select id from tenants where id=$1',[tid])).rows.length)throw Error('Empresa não encontrada');const owner=(await dba("select id from users where tenant_id=$1 and role='owner' and active order by id limit 1",[tid])).rows[0];req.u={tid,id:owner?.id||0,role:'owner',permissions:{}};req.managedSocial=true;als.run({tenant:tid,actor:owner?.id},next)}),masterSocial);
+mountCommunicationMaster(app,{pk,ah,dba,tenantTransaction,managedKey:()=>socialVault.key()});
 mountIntegrations(masterSocial,{ah,adm:(req,res,next)=>next(),managed:(req,res,next)=>next(),q,tenantTransaction,bus,managedKey:()=>socialVault.key(),saveManagedKey:key=>socialVault.save(key),reserveAccount:(id,tenant)=>socialVault.reserve(id,tenant)});
 
 app.get('/platform/tenants',limit,pk,ah(async(_,res)=>res.json((await dba('select t.*,(select count(*)::int from users u where u.tenant_id=t.id) users,(select count(*)::int from conversations c where c.tenant_id=t.id) conversations,(select count(*)::int from messages m where m.tenant_id=t.id) messages from tenants t order by id')).rows)));
@@ -108,6 +117,7 @@ app.get('/platform/backup',pk,(req,res)=>{const dir=fs.mkdtempSync('/tmp/bk-'),d
 mountCalendarPublic(app,{ah,tenantTransaction,credentials:googleVault.credentials});mountDrivePublic(app,{ah,tenantTransaction,credentials:googleVault.credentials});
 mountBotStrategyPublic(app,{ah,limit,tenantTransaction});
 mountLeadPublic(app,{ah,limit,tenantTransaction,bus});
+mountSitePublic(app,{ah,q,tenantTransaction,inbound,limit});mountCommercePublic(app,{ah,q,tenantTransaction,limit});
 app.use('/api',auth);app.use('/api',(req,res,next)=>moduleGate({path:'/api'+req.path,method:req.method,u:req.u},res,next));
 mountBotStrategies(app,{ah,adm,q,tenantTransaction});
 mountCampaigns(app,{ah,adm,q,tenantTransaction,graph:D.meta.graph,bus});
@@ -123,7 +133,7 @@ mountConversationActions(app,{ah,q,tenantTransaction,bus,deliver,createPayment})
 mountMessageReceipts(app,{ah,q});mountFinancial(app,{ah,adm,q,tenantTransaction,deliver,asaasDebts,asaasPay});mountSocialStudio(app,{ah,adm,q,lock:withConversationLock});mountSocialCreative(app,{ah,adm,q});mountAdsHub(app,{ah,adm,q,tenantTransaction,lock:withConversationLock});mountContinuity(app,{ah,adm,q});mountBotIdle(app,{ah,adm,q});mountSelfProfile(app,{ah,q,limit});mountDepartmentPipelines(app,{ah,adm,q});mountModuleAccess(app,{ah,adm,q});mountRoleTemplates(app,{ah,adm});mountAgentConnections(app,{ah,adm,q});
 mountKnowledge(app,{ah,q,transaction:tenantTransaction,ragAdd});
 mountServiceWorkflow(app,{ah,q,deliver,bus});
-mountOperations(app,{ah,adm,q,tenantTransaction,bus});mountContacts(app,{ah,q,tenantTransaction,bus});
+mountOperations(app,{ah,adm,q,tenantTransaction,bus});mountContacts(app,{ah,q,tenantTransaction,bus});mountMailInboxes(app,{ah,adm,q,tenantTransaction,inbound});mountCommerce(app,{ah,adm,q,tenantTransaction});mountCommunications(app,{ah,adm,q,tenantTransaction,drivers:D,managedKey:()=>socialVault.key(),managedPhone:commVault.phone});mountManagedVoice(app,{ah,adm,q,managedKey:()=>socialVault.key(),managedPhone:commVault.phone});mountSiteChat(app,{ah,adm,q,tenantTransaction,inbound,bus,limit});
 mountCRM(app,{ah,adm,q,tenantTransaction,bus,deliver});mountInboxRouting(app,{ah,adm,q,tenantTransaction,bus});
 app.use((req,res,next)=>{if(req.path.startsWith('/api/')&&!adminRole(req.u)&&(/^\/api\/(billing|school|delivery|students|lessons|courses|posts|ads|stats|export|settings|templates)/.test(req.path)))return res.status(403).json({error:'Acesso administrativo'});next()});
 app.use('/api',ah(async(req,res,next)=>{if(/^\/settings\/zernio/i.test(req.path))return res.status(403).json({error:'Conexão gerenciada pela Véxora'});const m=req.path.match(/^\/(?:t\/channels|channels|inboxes)\/(\d+)/);if(m&&req.method!=='GET'){const c=(await q('select driver from channels where id=$1',[m[1]])).rows[0];if(c?.driver==='zernio')return res.status(403).json({error:'Solicite esta alteração à administração da Véxora'})}if(req.path==='/t/channels'&&['zernio','social'].includes(req.body?.driver))return res.status(403).json({error:'Conexão gerenciada pela Véxora'});if(m&&req.method==='GET'&&/\/(webhook|qr)$/.test(req.path)){const c=(await q('select driver from channels where id=$1',[m[1]])).rows[0];if(c?.driver==='zernio')return res.status(403).json({error:'Conexão gerenciada pela Véxora'})}next()}));
@@ -211,3 +221,7 @@ let creativeBusy=false;setInterval(async()=>{if(creativeBusy)return;creativeBusy
 let botIdleBusy=false;setInterval(async()=>{if(botIdleBusy)return;botIdleBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickBotIdle({q,tenantTransaction,tenant:t.id,lock:withConversationLock,deliver,bus})).catch(e=>console.error('bot idle',t.id,e.message))}catch(e){console.error('bot idle scheduler',e.message)}finally{botIdleBusy=false}},15000);
 
 let adsRecoveryBusy=false;setInterval(async()=>{if(adsRecoveryBusy)return;adsRecoveryBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>recoverAds(q)).catch(e=>console.error('ads recovery',t.id,e.message))}catch(e){console.error('ads recovery scheduler',e.message)}finally{adsRecoveryBusy=false}},60000);
+
+let communicationBusy=false,managedCreditAt=0;setInterval(async()=>{if(communicationBusy)return;communicationBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickCommunications({q,tenantTransaction,tenant:t.id,drivers:D,managedKey:()=>socialVault.key(),managedPhone:commVault.phone})).catch(e=>console.error('communication',t.id,e.message));if(Date.now()-managedCreditAt>900000){managedCreditAt=Date.now();await checkManagedCredit({dba,tenantTransaction,managedKey:()=>socialVault.key()}).catch(e=>console.error('platform credit',e.message))}}catch(e){console.error('communication scheduler',e.message)}finally{communicationBusy=false}},15000);
+
+let mailBusy=false;setInterval(async()=>{if(mailBusy)return;mailBusy=true;try{for(const t of (await q('select id from tenants where active')).rows)await als.run({tenant:t.id},()=>tickMail({q,inbound})).catch(e=>console.error('mail inbox',t.id,e.message))}catch(e){console.error('mail scheduler',e.message)}finally{mailBusy=false}},15000);
