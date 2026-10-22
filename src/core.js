@@ -38,7 +38,7 @@ export async function inbound(chId,m){
   await recordNativeReferral(query,ch,ct,cv,m);
   const campaign=await recordCampaignReply(query,cv,ct,msg,fresh);await recordJourneyReply(query,cv,ct,msg);
   const boards=fresh?await routingCard(query,cv,ch):[];cv=(await query('update conversations set unread=unread+1,last_at=now(),last_in_at=now() where id=$1 returning *',[cv.id])).rows[0];return {cv,msg,fresh,boards,ch,ct,campaign};
- });if(!saved)return;bus('conv',{id:saved.cv.id});if(m.suppress_automation)return;return processInbound(saved,{source:m});
+ });if(!saved)return;bus('conv',{id:saved.cv.id});if(m.defer_media){bus('msg',{conversation_id:saved.cv.id,message:saved.msg});return saved}if(m.suppress_automation)return;return processInbound(saved,{source:m});
 }
 export async function processInbound(saved,{scheduled=false,source={}}={}){return withConversationLock(saved.cv.id,async()=>{let {msg,fresh}=saved;let cv=(await q('select * from conversations where id=$1',[saved.cv.id])).rows[0];
  if(cv.bot_restart_pending)fresh=true;
@@ -53,6 +53,7 @@ export async function processInbound(saved,{scheduled=false,source={}}={}){retur
  if(!used)await (await import('./ai/engine.js')).onInbound(cv,msg).catch(e=>console.error('ai',e.message));
 });
 }
+export async function completeInboundMedia(saved,{file,filename,body=null}={}){if(!saved?.msg?.id)return null;const updated=(await q('update messages set media_url=$2,body=$3,filename=$4 where id=$1 and conversation_id=$5 returning *',[saved.msg.id,file?'/media/'+file:null,body||null,filename||null,saved.cv.id])).rows[0];if(!updated)return null;saved.msg=updated;bus('msg',{conversation_id:saved.cv.id,message:updated});if(!file)return null;return processInbound(saved,{source:{kind:updated.kind,media_ready:true}})}
 export async function convFor(contactId){const cv=(await q('select * from conversations where contact_id=$1 order by id desc limit 1',[contactId])).rows[0];if(cv)return cv;const ct=(await q('select * from contacts where id=$1',[contactId])).rows[0];if(!ct?.channel_id)throw new Error('contato sem canal');const st=(await q('select id from stages order by pos limit 1')).rows[0];return (await q('insert into conversations(contact_id,channel_id,stage_id,ai_on) values($1,$2,$3,false) returning *',[ct.id,ct.channel_id,st?.id])).rows[0]}
 export async function deliver(cid,{kind='text',body,file,filename,author_id,ai=false,epoch,system=false,executor,choices,template,identify=false}){
  const cv=(await q('select c.*,ct.handle,ct.data contact_data,ch.driver,ch.config,ch.active channel_active,ch.id chid from conversations c join contacts ct on ct.id=c.contact_id join channels ch on ch.id=c.channel_id where c.id=$1',[cid])).rows[0];
@@ -68,5 +69,5 @@ export async function deliver(cid,{kind='text',body,file,filename,author_id,ai=f
  const msg=(await q('insert into messages(conversation_id,dir,kind,body,media_url,author_id,ai,ext_id,filename,executor) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning *',[cid,dir,kind,body||null,file?'/media/'+file:null,author_id||null,ai||system,ext,filename||null,executor||(system?'system':ai?'ai':author_id?'human':null)])).rows[0];
  if(kind!=='note')await q('update conversations set last_at=now()'+(author_id&&!ai&&!system?",human_accepted_at=now(),handoff_state='accepted'":'')+' where id=$1',[cid]);
  if(kind!=='note')await queueIntegrationEvent(q,'message.created',{conversation_id:cid,message_id:msg.id,direction:'out',kind:msg.kind}).catch(e=>console.error('integration outbox',e.message));bus('msg',{conversation_id:cid,message:msg});return msg}
-export async function startAll(){for(const c of (await adm("select * from channels where active and driver='baileys'")).rows)baileys.start(c,(id,m)=>als.run({tenant:c.tenant_id},()=>inbound(id,m))).catch(e=>console.error('baileys',e.message))}
+export async function startAll(){for(const c of (await adm("select * from channels where active and driver='baileys'")).rows)baileys.start(c,(id,m)=>als.run({tenant:c.tenant_id},()=>inbound(id,m)),undefined,(id,saved,media)=>als.run({tenant:c.tenant_id},()=>completeInboundMedia(saved,media))).catch(e=>console.error('baileys',e.message))}
 

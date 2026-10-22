@@ -3,10 +3,13 @@ on:
   push:
     branches:
       - fix/inbox-realtime-sync
+      - fix/baileys-fast-media-inbox
     paths:
       - 'web/index.html'
       - 'web/realtime.js'
       - 'src/server.js'
+      - 'src/core.js'
+      - 'src/drivers/baileys.js'
       - 'test/inbox-realtime-sync.mjs'
       - '.github/workflows/inbox-realtime.yml'
   pull_request:
@@ -14,6 +17,8 @@ on:
       - 'web/index.html'
       - 'web/realtime.js'
       - 'src/server.js'
+      - 'src/core.js'
+      - 'src/drivers/baileys.js'
       - 'test/inbox-realtime-sync.mjs'
       - '.github/workflows/inbox-realtime.yml'
 jobs:
@@ -27,6 +32,8 @@ jobs:
       - name: Check server and transport syntax
         run: |
           node --check src/server.js
+          node --check src/core.js
+          node --check src/drivers/baileys.js
           node --check web/realtime.js
       - name: Verify inbox real-time synchronization
         run: node test/inbox-realtime-sync.mjs
