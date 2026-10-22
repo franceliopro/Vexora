@@ -8,7 +8,32 @@ function newMeta(){UX.dialog('Meta oficial · configuração guiada',(f,submit)=
  f.append(integrationHint('Instagram Login: conta profissional e instagram_business_manage_messages; não exige Página vinculada. Facebook Login: conta profissional vinculada à Página, instagram_manage_messages e permissões de Página. Messenger: pages_messaging. WhatsApp: whatsapp_business_messaging; gestão/configuração pode exigir whatsapp_business_management. Tokens e IDs devem corresponder ao mesmo aplicativo/conta.'));
  const name=setupField(f,'Nome da inbox',{required:true,placeholder:'Instagram · Minha empresa'}),id=setupField(f,'ID da conta',{required:true,inputmode:'numeric'},'Instagram: ID da conta profissional; Messenger: Page ID; WhatsApp: Phone Number ID (não é o número do telefone nem o WABA ID).'),token=setupField(f,'Access Token',{required:true,type:'password',autocomplete:'off'},'Token emitido pela Meta com os acessos de mensagens para a conta escolhida. Não é sua senha do Instagram.'),secret=setupField(f,'App Secret',{required:true,type:'password',autocomplete:'off'},'Segredo do aplicativo que assina os webhooks. Obrigatório para impedir mensagens falsas.'),version=setupField(f,'Versão da Graph API',{value:'v26.0',required:true},'Use uma versão suportada pelo aplicativo da Meta.');
  const teams=UX.select(f,'Equipe de entrada',[['','Sem equipe'],...(window.integrationTeams||[]).map(t=>[t.id,t.name])]);submit(async()=>{const c=await api('/integrations/meta','POST',{platform:platform.value,login:login.value,name:name.value,account_id:id.value,token:token.value,app_secret:secret.value,version:version.value,team_id:+teams.value||null});setTimeout(()=>setupResult(c),0);route()},'Validar credenciais e salvar')},true)}
-function newWhatsApp(){UX.dialog('Conectar WhatsApp por QR',(f,submit)=>{const driver=UX.select(f,'Conector',[['baileys','Baileys · sessão na Véxora'],['waha','WAHA · servidor de WhatsApp']]);const name=setupField(f,'Nome da inbox',{required:true,value:'WhatsApp · Atendimento'}),waha=h('div');f.append(waha);const url=setupField(waha,'Endereço do WAHA',{value:'http://waha:3000'},'Endereço acessível pelo servidor da Véxora. No mesmo Compose, normalmente http://waha:3000.'),key=setupField(waha,'Chave API do WAHA',{type:'password',autocomplete:'off'}),session=setupField(waha,'Nome da sessão',{value:'default'},'Use um nome de sessão diferente por número. O plano/engine WAHA define quantas sessões são permitidas.');waha.hidden=true;driver.onchange=()=>waha.hidden=driver.value!=='waha';const team=UX.select(f,'Equipe de entrada',[['','Sem equipe'],...(window.integrationTeams||[]).map(t=>[t.id,t.name])]);f.append(integrationHint('Após salvar, no celular: WhatsApp → Dispositivos conectados → Conectar dispositivo. Aponte a câmera para o QR da Véxora.'));submit(async()=>{const c=await api('/integrations/whatsapp','POST',{driver:driver.value,name:name.value,url:url.value,key:key.value,session:session.value,team_id:+team.value||null});setTimeout(()=>qrDialog(c),0);route()},'Salvar e abrir QR Code')})}
+function newWhatsApp(){UX.dialog('Conectar WhatsApp por QR',(f,submit)=>{
+ const driver=UX.select(f,'Conector / motor de WhatsApp',[
+  ['baileys','Baileys · sessão gerenciada pela Véxora'],
+  ['waha','WAHA · conectar a um servidor WAHA']
+ ]);
+ const providerInfo=h('div',{class:'card','aria-live':'polite'}),
+ name=setupField(f,'Nome da inbox',{required:true,value:'WhatsApp · Atendimento'}),
+ waha=h('div');
+ f.append(providerInfo,waha);
+ const url=setupField(waha,'Endereço do WAHA',{value:'http://waha:3000'},'Endereço de um serviço WAHA já acessível pelo servidor da Véxora. QR Code é a autenticação; ele não instala nem hospeda o motor WAHA.'),
+ key=setupField(waha,'Chave API do WAHA',{type:'password',autocomplete:'off'}),
+ session=setupField(waha,'Nome da sessão',{value:'default'},'Identificador da sessão/número no serviço WAHA. Respeite o limite de sessões do serviço e da edição contratada.');
+ function describeProvider(){
+  const selected=driver.value==='waha';
+  waha.hidden=!selected;
+  providerInfo.replaceChildren(h('h3',{},selected?'WAHA · QR via serviço conectado':'Baileys · QR gerado na Véxora'),
+   h('p',{},selected?'A Véxora solicita a sessão e exibe o QR fornecido pelo WAHA. Você não precisa instalar o aplicativo WAHA no computador nem autenticar por token do WhatsApp, mas precisa ter um endpoint WAHA operacional e acessível (próprio ou contratado).':'A Véxora cria e mantém a sessão Baileys e apresenta o QR para vincular o aparelho.'),
+   h('p',{},selected?'Recursos variam conforme a edição e a versão do WAHA. Envio de presença pode estar disponível; eventos de presença recebidos (digitando/gravação) ainda dependem de suporte no webhook/engine e serão validados no teste.':'A integração está preparada para exibir eventos de presença recebidos quando o WhatsApp/Baileys os entregar; a disponibilidade real varia por chat e versão.'),
+   h('p',{},'As mensagens entram na mesma Central de Atendimento. A escolha do motor não altera as regras de IA, CRM e fila desta inbox.')
+  );
+ }
+ describeProvider();driver.onchange=describeProvider;
+ const team=UX.select(f,'Equipe de entrada',[['','Sem equipe'],...(window.integrationTeams||[]).map(t=>[t.id,t.name])]);
+ f.append(integrationHint('Após salvar, o QR aparecerá na Véxora. No celular: WhatsApp → Dispositivos conectados → Conectar dispositivo. Aponte a câmera para o QR exibido.'));
+ submit(async()=>{const c=await api('/integrations/whatsapp','POST',{driver:driver.value,name:name.value,url:url.value,key:key.value,session:session.value,team_id:+team.value||null});setTimeout(()=>qrDialog(c),0);route()},'Salvar e abrir QR Code')
+})}
 async function guidedIntegrations(m){if(!UX.admin()){m.append(hdr('Integração e API'),h('div',{class:'pad'},'Solicite acesso ao administrador.'));return}const [configs,teams,statuses]=await Promise.all([api('/integrations/channels'),api('/t/teams'),api('/inboxes?include_archived=1')]);let channels=statuses.map(c=>({...configs.find(x=>x.id===c.id),...c}));window.integrationTeams=teams;const p=h('div',{class:'pad'});m.append(hdr('Integração e API',UX.button('+ Adicionar inbox',addManagedInbox)),p);
  p.append(h('div',{class:'card'},h('h3',{},'Conecte os canais da sua empresa'),integrationHint('Escolha o provedor. As mensagens recebidas entram na mesma Central de Atendimento e seguem os bots, a IA e as permissões configurados para o canal.'),UX.button('WhatsApp · QR Code',newWhatsApp), ' ',UX.button('Meta oficial',newMeta)));
  p.append(h('div',{class:'card'},h('h3',{},'Redes conectadas pela Véxora'),h('p',{},'Solicite à nossa equipe as redes que deseja utilizar. As inboxes contratadas aparecem abaixo com o perfil conectado e o estado da conexão.')));
