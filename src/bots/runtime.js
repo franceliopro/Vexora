@@ -1,3 +1,4 @@
+import {enrollOutreach} from '../outreach.js';
 import {selectEntryAgent} from '../ai/operation-policy.js';
 import {createAgentCard,skillGuard} from '../ai/skills.js';
 import {moveCRMFromConversation} from '../crm.js';
@@ -20,7 +21,7 @@ import {q,tenantTransaction} from '../db.js';import {als} from '../ctx.js';impor
 
 async function safeFetch(d,ctx){try{const url=tpl(d.url,ctx),method=(d.method||'GET').toUpperCase();if(new URL(url).protocol!=='https:'||!['GET','POST'].includes(method))return {ok:false,error:'Use API pública HTTPS com GET ou POST'};const parameters=method==='POST'?JSON.parse(tpl(d.body||'{}',ctx)):{};if(!parameters||typeof parameters!=='object'||Array.isArray(parameters)||JSON.stringify(parameters).length>16000)return {ok:false,error:'Corpo JSON inválido'};return {ok:true,data:await requestConnection({url,method},parameters)}}catch{return {ok:false,error:'Consulta externa não confirmada'}}}
 const mkDeps=cv=>({
- contactAction:(type,d)=>contactAction(q,cv,type,d),crmCreate:async d=>{const card=await tenantTransaction(cv.tenant_id,query=>createAgentCard(query,cv,{id:null,executor:'bot',skills:{board_ids:[Number(d.board_id)]}},d));bus('crm',{board_id:card.board_id});return card},crmMove:async d=>{const board_id=await tenantTransaction(cv.tenant_id,async query=>{await skillGuard(query,cv);return moveCRMFromConversation(query,cv,d)});bus('crm',{board_id})},note:body=>deliver(cv.id,{kind:'note',body,ai:true,executor:'bot'}),
+ outreach:id=>enrollOutreach(q,cv,id),contactAction:(type,d)=>contactAction(q,cv,type,d),crmCreate:async d=>{const card=await tenantTransaction(cv.tenant_id,query=>createAgentCard(query,cv,{id:null,executor:'bot',skills:{board_ids:[Number(d.board_id)]}},d));bus('crm',{board_id:card.board_id});return card},crmMove:async d=>{const board_id=await tenantTransaction(cv.tenant_id,async query=>{await skillGuard(query,cv);return moveCRMFromConversation(query,cv,d)});bus('crm',{board_id})},note:body=>deliver(cv.id,{kind:'note',body,ai:true,executor:'bot'}),
  send:(t,choices)=>deliver(cv.id,{body:String(t),choices,ai:true,executor:'bot',epoch:cv.automation_epoch}),
  close:async d=>{if(d.text)await deliver(cv.id,{body:d.text,ai:true,executor:'bot',epoch:cv.automation_epoch});const closed=await tenantTransaction(als.getStore()?.tenant,query=>closeAutomated(query,cv,{...d,executor:'bot'}));if(closed)bus('conv',{id:cv.id});return closed},
  setStage:id=>setStage(cv.id,+id),

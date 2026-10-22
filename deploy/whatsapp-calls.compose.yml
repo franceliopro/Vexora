@@ -1,0 +1,35 @@
+# Serviço separado. Não substitui a stack/banco da Véxora.
+# Dokploy: criar projeto Compose, definir variáveis e domínio HTTPS para calls:8080.
+# Portainer Swarm: usar a variante whatsapp-calls.swarm.yml.
+services:
+  calls:
+    image: astraonline/astracalls:v1.1.2
+    restart: unless-stopped
+    environment:
+      WACALLS_PG_URL: postgres://vexora_calls:${CALLS_DB_PASSWORD:?defina CALLS_DB_PASSWORD}@calls-db:5432/postgres?sslmode=disable
+      WACALLS_PG_NAMESPACE: vexora_calls
+      WACALLS_API_KEY: ${ASTRA_CALLS_API_KEY:?defina ASTRA_CALLS_API_KEY}
+      WACALLS_PUBLIC_BASE_URL: ${ASTRA_CALLS_URL:?defina ASTRA_CALLS_URL}
+      WACALLS_PUBLIC_IP: ${CALLS_PUBLIC_IP:-auto}
+      WACALLS_UDP_PORT: '50000'
+      WACALLS_DEFAULT_TRANSPORT: webrtc
+    ports:
+      - '50000:50000/udp'
+      - '50000:50000/tcp'
+    depends_on:
+      calls-db:
+        condition: service_healthy
+  calls-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vexora_calls
+      POSTGRES_PASSWORD: ${CALLS_DB_PASSWORD:?defina CALLS_DB_PASSWORD}
+    volumes:
+      - calls-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vexora_calls -d postgres']
+      interval: 10s
+      retries: 10
+volumes:
+  calls-db:

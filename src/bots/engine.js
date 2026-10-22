@@ -30,6 +30,7 @@ async function onEnter(n,run,deps,ctx){const d=n.data||{},V=run.vars;
   case 'note':await deps.note(tpl(d.text,ctx));return {};
   case 'cycle':{const key='_cycle_'+n.id,count=Number(V[key]||0),limit=Math.max(1,Math.min(20,Number(d.limit)||1));if(count<limit){V[key]=count+1;return {out:'repeat'}}return {out:'done'}};
   case 'crm_create':{const card=await deps.crmCreate({...d,title:tpl(d.title,ctx)});V[d.var||'card_id']=card.id;return {}};
+  case 'outreach':{try{await deps.outreach(Number(d.campaign_id));return {out:'ok'}}catch{return {out:'error'}}};
   case 'crm_move':await deps.crmMove({card_id:Number(V[d.card_var||'card_id']),stage_id:Number(d.stage_id)});return {};
   case 'stage':if(d.stage)await deps.setStage(d.stage);return {};
   case 'transfer':if(d.text)await deps.send(tpl(d.text,ctx));await deps.transfer(d);return d.target==='ai'?{end:1}:{};

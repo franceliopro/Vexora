@@ -1,0 +1,45 @@
+# Serviço separado. Não substitui a stack/banco da Véxora.
+# Dokploy: criar projeto Compose, definir variáveis e domínio HTTPS para calls:8080.
+# Configure Traefik/HTTPS para o serviço calls, porta 8080, na rede do proxy.
+# Ajuste placement para o mesmo nó persistente e inclua a rede externa do seu proxy.
+services:
+  calls:
+    image: astraonline/astracalls:v1.1.2
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+    environment:
+      WACALLS_PG_URL: postgres://vexora_calls:${CALLS_DB_PASSWORD:?defina CALLS_DB_PASSWORD}@calls-db:5432/postgres?sslmode=disable
+      WACALLS_PG_NAMESPACE: vexora_calls
+      WACALLS_API_KEY: ${ASTRA_CALLS_API_KEY:?defina ASTRA_CALLS_API_KEY}
+      WACALLS_PUBLIC_BASE_URL: ${ASTRA_CALLS_URL:?defina ASTRA_CALLS_URL}
+      WACALLS_PUBLIC_IP: ${CALLS_PUBLIC_IP:-auto}
+      WACALLS_UDP_PORT: '50000'
+      WACALLS_DEFAULT_TRANSPORT: webrtc
+    ports:
+      - target: 50000
+        published: 50000
+        protocol: udp
+        mode: host
+      - target: 50000
+        published: 50000
+        protocol: tcp
+        mode: host
+  calls-db:
+    image: postgres:16-alpine
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+    environment:
+      POSTGRES_USER: vexora_calls
+      POSTGRES_PASSWORD: ${CALLS_DB_PASSWORD:?defina CALLS_DB_PASSWORD}
+    volumes:
+      - calls-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vexora_calls -d postgres']
+      interval: 10s
+      retries: 10
+volumes:
+  calls-db:
