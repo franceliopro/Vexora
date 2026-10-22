@@ -31,6 +31,8 @@ Você precisa de: **um servidor** (VPS Linux, Ubuntu 22/24, 2 GB de RAM ou mais)
 
 *(Os nomes dos botões do Dokploy podem variar um pouco entre versões.)*
 
+**Automatizar domínios dos clientes:** a integração opcional com a API do Dokploy cria a rota e solicita SSL quando um domínio é salvo no painel master, sem cadastrar cada cliente manualmente. Configure `DOKPLOY_API_URL`, `DOKPLOY_API_KEY` e `DOKPLOY_APPLICATION_ID` na Application da Véxora. Guia completo e limitações: [Domínios e SSL automáticos](docs/DOMINIOS-DOKPLOY.md). O DNS de cada domínio ainda precisa apontar para o servidor.
+
 ### Opção B — Portainer
 1. No servidor, instale o Docker (`curl -fsSL https://get.docker.com | sh`) e o Portainer:
    `docker volume create portainer_data && docker run -d -p 9443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:lts`
