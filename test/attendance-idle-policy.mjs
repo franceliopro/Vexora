@@ -19,6 +19,10 @@ assert.doesNotMatch(idleRuntime,/delete from conversation_team_participants wher
 assert.match(idleRuntime,/responsável e equipe preservados/,'the idle note must explain that ownership remains');
 
 const inbox=fs.readFileSync(new URL('../web/attendance.js',import.meta.url),'utf8');
-assert.match(inbox,/Sinalizar atraso sem mudar a fila/,'the UI must describe idle as an alert, not a release');
+assert.match(inbox,/Defina quando destacar atendimentos parados/,'the UI must describe idle as an alert, not a release');
+assert.doesNotMatch(inbox,/policyMode/,'queue settings must not offer automatic reassignment as an idle option');
+const server=fs.readFileSync(new URL('../src/server.js',import.meta.url),'utf8');
+assert.match(server,/as idle_overdue/,'the API must expose the overdue flag');
+assert.doesNotMatch(server,/release_mode[^\n]{0,120}as idle_overdue/,'legacy release settings must not suppress overdue alerts');
 assert.match(inbox,/c\.idle_overdue&&h\('span',\{class:'badge'/,'overdue conversations must be visibly flagged');
 console.log('OK: inatividade preserva responsável/equipe, não libera para Novos e sinaliza atraso na caixa de entrada.');
