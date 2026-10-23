@@ -21,6 +21,9 @@ on:
       - 'src/module-access.js'
       - 'test/module-access.mjs'
       - 'test/inbox-realtime-sync.mjs'
+      - 'test/waha-noweb-migration.mjs'
+      - 'docker-compose.yml'
+      - 'README.md'
       - '.github/workflows/inbox-realtime.yml'
   pull_request:
     paths:
@@ -43,6 +46,9 @@ on:
       - 'web/attendance.js'
       - 'web/integrations.js'
       - 'test/inbox-realtime-sync.mjs'
+      - 'test/waha-noweb-migration.mjs'
+      - 'docker-compose.yml'
+      - 'README.md'
       - '.github/workflows/inbox-realtime.yml'
 jobs:
   inbox-realtime:
@@ -70,5 +76,7 @@ jobs:
           node --check web/realtime.js
       - name: Verify inbox real-time synchronization
         run: node test/inbox-realtime-sync.mjs
+      - name: Verify isolated WAHA NOWEB migration
+        run: node test/waha-noweb-migration.mjs
       - name: Verify module access and tenant entitlements
         run: node test/module-access.mjs
