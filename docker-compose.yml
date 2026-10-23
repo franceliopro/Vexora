@@ -10,6 +10,8 @@ services:
       APP_DB_PASSWORD: ${APP_DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       PLATFORM_KEY: ${PLATFORM_KEY}
+      # Shared with the managed WAHA service; the app uses it when a channel key is left blank.
+      WAHA_KEY: "${WAHA_KEY:?Defina WAHA_KEY nos secrets do Dokploy}"
       NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
       NOTIFICATION_WEBHOOK_SECRET: ${NOTIFICATION_WEBHOOK_SECRET:-}
       ASTRA_CALLS_URL: ${ASTRA_CALLS_URL:-}
@@ -28,11 +30,30 @@ services:
     environment: {POSTGRES_USER: "${POSTGRES_USER:-nexora}", POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}", POSTGRES_DB: "${POSTGRES_DB:-nexora}"}
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck: {test: ["CMD-SHELL","pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"], interval: 10s, retries: 10}
+  # WhatsApp gerenciado pela própria stack: não exige instalação manual do WAHA.
+  # O padrão NOWEB evita depender de um navegador; a imagem pode ser fixada no
+  # Dokploy definindo WAHA_IMAGE, sem alterar o código da aplicação.
   waha:
-    image: devlikeapro/waha:latest
+    image: ${WAHA_IMAGE:-devlikeapro/waha:noweb}
     restart: unless-stopped
-    environment: {WAHA_API_KEY: "${WAHA_KEY}", WHATSAPP_API_KEY: "${WAHA_KEY}"}
+    environment:
+      WAHA_API_KEY: "${WAHA_KEY:?Defina WAHA_KEY nos secrets do Dokploy}"
+      WHATSAPP_API_KEY: "${WAHA_KEY}"
+      WHATSAPP_DEFAULT_ENGINE: ${WHATSAPP_DEFAULT_ENGINE:-NOWEB}
+      # Keep API credentials shared while isolating managed sessions in NOWEB.
+      # Existing WEBJS sessions remain in the old namespace and must be paired again by QR.
+      WAHA_NAMESPACE: all
+      WAHA_SESSION_NAMESPACE: noweb
+      WAHA_NOWEB_WA_VERSION: ${WAHA_NOWEB_WA_VERSION:-auto-web}
+      WHATSAPP_RESTART_ALL_SESSIONS: "${WHATSAPP_RESTART_ALL_SESSIONS:-True}"
     volumes: [wahadata:/app/.sessions]
+    # Sem ports: o WAHA só é acessível pela rede interna do Compose.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
   pgadmin:   # interface gráfica do banco. Por padrão só acessível no próprio servidor (127.0.0.1) — veja o README.
     image: dpage/pgadmin4:latest
     restart: unless-stopped

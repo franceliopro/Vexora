@@ -44,8 +44,10 @@ Você precisa de: **um servidor** (VPS Linux, Ubuntu 22/24, 2 GB de RAM ou mais)
 ### Primeiro acesso
 1. Abra `PUBLIC_URL`. Na primeira vez, crie a conta do dono da empresa "Principal".
 2. **Várias empresas**: abra `PUBLIC_URL/platform.html`, informe o `PLATFORM_KEY`, clique em **Criar empresa** (nome, código, responsável, template opcional). Cada empresa pode ter **domínio próprio** (campo domínio, apontando para o mesmo servidor) ou acessar por `PUBLIC_URL/?t=codigo` uma vez. O login é só e-mail e senha.
-3. **Integração e API → Canais**: crie o canal (`waha`: `{"url":"http://waha:3000","key":"<WAHA_KEY>","session":"default"}`; `baileys`: `{}`; `zernio`: `{"key":"…","platform":"instagram"}`), anote o ID, **Conectar / QR**.
-4. **Agentes de IA**: crie o agente, ligue ao ID do canal, configure LLM/STT/TTS e adicione conhecimento.
+3. **Integração e API → Canais**: crie o canal (`waha`: `{"url":"http://waha:3000","key":"<WAHA_KEY>","session":"default"}`; `baileys`: `{}`; `zernio`: `{"key":"…","platform":"instagram"}`), anote o ID, **Conectar / QR**. O WAHA já sobe como serviço interno da stack Docker; não precisa instalá-lo separadamente. O Compose usa `NOWEB` por padrão, mantém a sessão no volume `wahadata` e verifica a saúde do serviço. Para fixar outra imagem, defina `WAHA_IMAGE` no ambiente do Dokploy.
+4. **Agentes de IA**: crie o agente, ligue ao ID do canal, configure LLM/STT/TTS e adicione conhecimento. Para usar Gemini no texto, selecione `gemini` em **LLM**, informe uma chave da API Gemini obtida no [Google AI Studio](https://aistudio.google.com/apikey) e o ID de um modelo compatível (por exemplo, `gemini-3.8-flash`). O endpoint OpenAI-compatible já é configurado pelo sistema; não é preciso informar `base_url` manualmente.  A autenticação por chave usa a API Gemini, não a assinatura do aplicativo Gemini.
+
+**ChatGPT por assinatura:** não roteamos as mensagens de clientes da inbox por uma assinatura pessoal. Os termos do Sign in with ChatGPT exigem armazenamento local sob controle do usuário e proíbem que a atividade de outra pessoa acione solicitações na assinatura conectada. Para os agentes que atendem clientes, use a chave da OpenAI API ou outro provedor configurado. Referência: [termos do Sign in with ChatGPT](https://openai.com/policies/sign-in-with-chatgpt-terms/).
 
 ---
 ## Organização atual: 11 módulos funcionais

@@ -11,6 +11,7 @@ const baileys=fs.readFileSync('src/drivers/baileys.js','utf8');
 const attendance=fs.readFileSync('web/attendance.js','utf8');
 const integrations=fs.readFileSync('web/integrations.js','utf8');
 const waha=fs.readFileSync('src/drivers/waha.js','utf8');
+const compose=fs.readFileSync('docker-compose.yml','utf8');
 const policy=fs.readFileSync('src/attendance-management.js','utf8');
 const bus=fs.readFileSync('src/bus.js','utf8');
 
@@ -41,9 +42,16 @@ assert.ok(server.includes("app.post('/api/conversations/:id/presence'"),'Agents 
 assert.ok(server.includes('const driver=D[info?.driver];if(driver?.presence)'),'Outgoing presence must use the selected connector');
 assert.ok(integrations.includes("['baileys','Baileys · sessão gerenciada pela Véxora']")&&integrations.includes("['waha','WAHA · conectar a um servidor WAHA']"),'The administrator must choose the WhatsApp engine in the inbox setup');
 assert.ok(integrations.toLowerCase().includes('qr aparecerá na véxora')&&integrations.includes('não instala nem hospeda o motor WAHA'),'The WAHA QR setup must explain its service requirement');
+assert.ok(integrations.includes('setInterval(async()=>{if(!m.isConnected){clearInterval(statusTimer);return}try{await refreshStatuses()}catch{}},15000)'),'Connection status should refresh automatically without a page reload');
+assert.ok(integrations.includes('deixe em branco para usar a WAHA_KEY configurada no Dokploy'),'Managed WAHA should not require copying the same key into every inbox');
+assert.ok(waha.includes('chave API inválida ou ausente'),'WAHA 401 should have a clear diagnostic');
+assert.ok(waha.includes('async function resolveRecipient(c,to)')&&waha.includes('/lids/'),'WAHA must resolve LID recipients to phone-number chat IDs before sending when a mapping exists');
+assert.ok(compose.includes('WAHA_SESSION_NAMESPACE: noweb')&&compose.includes('WAHA_NAMESPACE: all')&&compose.includes('WHATSAPP_DEFAULT_ENGINE: ${WHATSAPP_DEFAULT_ENGINE:-NOWEB}'),'Managed WAHA must create new sessions in the NOWEB namespace while preserving shared API credentials');
+assert.ok(waha.includes('j.engine?.engine'),'WAHA status must expose the actual session engine for diagnosis');
+assert.ok(core.includes('Array.isArray(m.identity_aliases)?[...new Set([m.handle,...m.identity_aliases].filter(Boolean))]'),'Inbound WAHA LID aliases must match existing contacts');
 assert.ok(waha.includes('export async function presence('),'WAHA connector must expose outbound presence when supported');
 assert.ok(attendance.includes('Cliente digitando…')&&attendance.includes('Cliente gravando áudio…'),'Inbox must show customer presence states');
 assert.ok(attendance.includes("signalPresence('typing')")&&attendance.includes("signalPresence('recording')"),'Agent typing and recording should be signalled to the customer');
 assert.ok(policy.includes("DEFAULT_ATTENDANCE_POLICY={release_mode:'after_idle'")&&policy.includes('export async function tickAttendancePolicy(){return 0}'),'Idle defaults to overdue alerts rather than automatic queue release');
-assert.ok(!policy.includes('assignee_id=null')&&server.includes('as idle_overdue')&&server.includes('order by idle_overdue desc'),'Idle conversations stay in their queue and overdue items are prioritized');
+assert.ok(!policy.includes('assignee_id=null')&&server.includes('as idle_overdue')&&server.includes("c.last_at>now()-interval '5 minutes'")&&server.includes('idle_overdue desc'),'Recent activity moves a conversation to the top while overdue items remain prioritized afterward');
 console.log('OK: inbox sync, media placeholders, customer/agent presence, and idle overdue alerts without queue release.');
