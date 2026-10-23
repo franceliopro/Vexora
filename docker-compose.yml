@@ -29,10 +29,25 @@ services:
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck: {test: ["CMD-SHELL","pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"], interval: 10s, retries: 10}
   waha:
-    image: devlikeapro/waha:latest
+    # NOWEB avoids the WEBJS/Puppeteer runtime implicated in LID send failures.
+    # Existing WAHA session files stay in wahadata; the new namespace needs QR pairing.
+    image: devlikeapro/waha:noweb
     restart: unless-stopped
-    environment: {WAHA_API_KEY: "${WAHA_KEY}", WHATSAPP_API_KEY: "${WAHA_KEY}"}
+    environment:
+      WAHA_API_KEY: "${WAHA_KEY}"
+      WHATSAPP_API_KEY: "${WAHA_KEY}"
+      WHATSAPP_DEFAULT_ENGINE: NOWEB
+      WAHA_NAMESPACE: all
+      WAHA_SESSION_NAMESPACE: noweb
+      WAHA_NOWEB_WA_VERSION: ${WAHA_NOWEB_WA_VERSION:-auto-web}
     volumes: [wahadata:/app/.sessions]
+    # Internal-only; no published host port.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
   pgadmin:   # interface gráfica do banco. Por padrão só acessível no próprio servidor (127.0.0.1) — veja o README.
     image: dpage/pgadmin4:latest
     restart: unless-stopped
@@ -44,11 +59,10 @@ services:
     ports: ["${PGADMIN_BIND:-127.0.0.1}:${PGADMIN_PORT:-5050}:80"]
     volumes: ["./pgadmin/servers.json:/pgadmin4/servers.json:ro", "pgadmindata:/var/lib/pgadmin"]
     depends_on: [db]
-  backup:    # dump automático do banco todo dia (guarda 7 diários, 4 semanais, 3 mensais) no volume "backups"
+  backup:    # dump automático do banco todo dia (guarda 7 diários, 4 semanais, 3 mensais)
     image: prodrigestivill/postgres-backup-local:16
     restart: unless-stopped
     environment: {POSTGRES_HOST: db, POSTGRES_DB: "${POSTGRES_DB:-nexora}", POSTGRES_USER: "${POSTGRES_USER:-nexora}", POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}", SCHEDULE: "@daily", BACKUP_KEEP_DAYS: "7", BACKUP_KEEP_WEEKS: "4", BACKUP_KEEP_MONTHS: "3"}
     volumes: ["backups:/backups"]
     depends_on: [db]
 volumes: {appdata: {}, pgdata: {}, wahadata: {}, pgadmindata: {}, backups: {}}
-
