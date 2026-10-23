@@ -35,4 +35,25 @@ export function mountAttendanceManagement(app,{ah,q,tenantTransaction,bus}){
  app.get('/api/attendance/alerts',ah(async(req,res)=>{res.json((await q(`select c.id,c.protocol,c.unread,coalesce((select max(m.id) from messages m where m.conversation_id=c.id and m.dir='in'),0) as incoming_id from conversations c where ${accessPredicate('c','$1')} and ${queuePredicate('c','$1',"'mine'")}`,[req.u.id])).rows)}));
  app.get('/api/attendance/counts',ah(async(req,res)=>{const channel=req.query.channel_id||'',search=String(req.query.q||'').slice(0,200);if(channel&&!/^\\d+$/.test(channel))throw Error('Inbox inválida');const extra=parseQueueFilters(req.query);const rows=(await q(`select s.scope,count(c.id)::int total from unnest(array['new','mine','others','closed','archived','deleted']) s(scope) left join (conversations c join contacts ct on ct.id=c.contact_id) on ${accessPredicate('c','$1')} and ${queuePredicate('c','$1','s.scope')} and ($2::int is null or c.channel_id=$2) and ($3='' or ct.name ilike '%'||$3||'%' or ct.handle ilike '%'||$3||'%' or c.protocol ilike '%'||regexp_replace($3,'^NX-','VX-','i')||'%' or c.id::text=ltrim(ltrim($3,'#'),'0') or exists(select 1 from messages fm where fm.conversation_id=c.id and fm.dir<>'int' and fm.body ilike '%'||$3||'%')) and ${extraQueueFilters('c','$4','$5','$6','$7','$8')} group by s.scope`,[req.u.id,channel||null,search,...extra])).rows;res.json(Object.fromEntries(rows.map(r=>[r.scope,r.total])))}));
  app.post('/api/conversations/:id/filing',ah(async(req,res)=>{requireAction(req.u,'close');const state=req.body.state;if(!['active','archived','deleted'].includes(state))throw Error('Destino inválido');await tenantTransaction(req.u.tid,async query=>{const c=await conversationFor(query,positiveId(req.params.id),req.u.id,{control:true,lock:true});if((state==='deleted'||c.filing==='deleted')&&!adminRole(req.u))throw Error('Somente administradores removem ou restauram conversas da lixeira');if(state!=='active'&&c.status!=='closed')throw Error('Finalize o atendimento antes de arquivar ou mover à lixeira');if(state==='deleted'&&String(req.body.confirm)!==String(c.id))throw Error('Digite o número do ticket para confirmar');const reason=text(req.body.reason,'Motivo',500);await query('update conversations set filing=$2,filed_at=now(),filed_by=$3,filing_reason=$4 where id=$1',[c.id,state,req.u.id,reason]);await serviceEvent(query,c.id,req.u.id,'conversation_filed',{from:c.filing,destination:state,reason})});bus('conv',{id:+req.params.id});res.json({ok:true})}));
+ app.post('/api/conversations/:id/purge',ah(async(req,res)=>{
+  if(!adminRole(req.u))throw Error('Somente administradores podem excluir definitivamente conversas');
+  requireAction(req.u,'close');
+  const id=positiveId(req.params.id);
+  await tenantTransaction(req.u.tid,async query=>{
+   const c=await conversationFor(query,id,req.u.id,{control:true,lock:true});
+   if(c.filing!=='deleted')throw Error('Mova a conversa para a Lixeira antes de excluí-la definitivamente');
+   if(c.status!=='closed')throw Error('Finalize o atendimento antes de excluir a conversa');
+   if(String(req.body.confirm||'').trim()!==String(c.id))throw Error('Digite o número do ticket para confirmar a exclusão definitiva');
+   const refs=(await query("select c.table_name from information_schema.columns c join information_schema.tables t on t.table_schema=c.table_schema and t.table_name=c.table_name where c.table_schema='public' and t.table_type='BASE TABLE' and c.column_name='conversation_id' order by case c.table_name when 'service_events' then 0 when 'jobs' then 1 when 'bot_runs' then 2 when 'messages' then 3 else 4 end,c.table_name")).rows;
+   await query("delete from message_receipts where channel_id=$2 and external_id in (select ext_id from messages where conversation_id=$1 and ext_id is not null)",[id,c.channel_id]);
+   for(const ref of refs){
+    const table=String(ref.table_name).replace(/"/g,'""');
+    if(['contact_notes','crm_cards'].includes(ref.table_name))await query('update "'+table+'" set conversation_id=null where conversation_id=$1',[id]);
+    else await query('delete from "'+table+'" where conversation_id=$1',[id]);
+   }
+   await query('delete from conversations where id=$1',[id]);
+  });
+  bus('conv',{id,deleted:true});
+  res.json({ok:true});
+ }));
 }
