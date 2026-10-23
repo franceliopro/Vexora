@@ -1,3 +1,86 @@
-export const DEPARTMENT_PRESETS={sales:{name:'Comercial',kind:'sales',code:'COM',stages:['Novo lead','Qualificação','Diagnóstico / proposta','Negociação','Contratação pendente','Conclusão'],description:'A oportunidade começa quando há interesse comercial. Ganho somente após confirmação de contratação; contato de suporte não é novo lead comercial.'},support:{name:'Suporte técnico',kind:'support',code:'SUP',stages:['Novo chamado','Triagem','Em diagnóstico','Aguardando cliente','Aguardando terceiro','Em resolução','Conclusão'],description:'Ticket é obrigatório; Kanban é opcional para chamados com várias etapas. Aguardar cliente é diferente de aguardar fornecedor/equipe externa.'},finance:{name:'Financeiro · negociação',kind:'finance',code:'FIN',stages:['Nova solicitação','Conferência do cadastro','Análise da cobrança','Em negociação','Aguardando pagamento','Conciliação','Conclusão'],description:'Painel opcional para pendências e negociação. Fonte de pagamento é Asaas/Stripe: mover um card nunca quita fatura.'},administrative:{name:'Administrativo',kind:'management',code:'ADM',stages:['Entrada','Análise','Em execução','Aguardando retorno','Conclusão'],description:'Use somente quando houver trabalho com etapas e responsáveis; solicitações simples podem ficar apenas no ticket.'}};
-export async function departmentCard(query,cv,boardId){const locked=(await query('select * from conversations where id=$1 for update',[cv.id])).rows[0];if(!locked||locked.status!=='open')return null;if((await query("select id from crm_cards where board_id=$1 and conversation_id=$2 limit 1",[boardId,cv.id])).rows.length)return null;const board=(await query('select * from crm_boards where id=$1',[boardId])).rows[0];if(!board||board.team_ids?.length&&!board.team_ids.includes(locked.team_id))return null;const stage=(await query('select id from crm_stages where board_id=$1 and not final order by pos,id limit 1',[board.id])).rows[0];if(!stage)return null;const ct=(await query('select name,labels from contacts where id=$1',[locked.contact_id])).rows[0];if(!ct)return null;let labels=[...new Set([...(ct.labels||[]),...(board.labels||[])])];if(board.kind==='sales'){const label=(await query("insert into labels(name,color) values('Novo Lead','#6d5ce7') on conflict(tenant_id,name) do update set active=true returning id")).rows[0];labels=[...new Set([...labels,label.id])];await query('update contacts set labels=$2 where id=$1',[locked.contact_id,labels])}const c=(await query('insert into crm_cards(board_id,stage_id,contact_id,conversation_id,title,owner_id,labels) values($1,$2,$3,$4,$5,$6,$7) returning *',[board.id,stage.id,locked.contact_id,locked.id,ct.name,locked.assignee_id,labels])).rows[0];await query("insert into crm_events(board_id,card_id,type,data) values($1,$2,'created',$3)",[board.id,c.id,JSON.stringify({source:'department',team_id:locked.team_id})]);return c}
-export function mountDepartmentPipelines(app,{q,adm,ah}){app.get('/api/attendance/department-boards',adm,ah(async(req,res)=>res.json({teams:(await q('select id,name,routing from teams where archived_at is null order by name')).rows,boards:(await q('select id,name,kind,team_ids from crm_boards order by id desc')).rows,presets:DEPARTMENT_PRESETS})));app.put('/api/attendance/department-boards/:id',adm,ah(async(req,res)=>{const team=Number(req.params.id),id=req.body.board_id?Number(req.body.board_id):null;if(id){const b=(await q('select id,team_ids from crm_boards where id=$1',[id])).rows[0];if(!b||b.team_ids?.length&&!b.team_ids.includes(team))throw Error('Escolha um painel acessível a esta equipe')}const r=await q("update teams set routing=routing||jsonb_build_object('department_board_id',$2::int) where id=$1 and archived_at is null returning id",[team,id]);if(!r.rows.length)throw Error('Equipe inexistente');res.json({ok:true})}))}
+const colors=['#8273e8','#4c9bd8','#e5b85a','#b080dc','#47b493','#d88b63','#64748b'];
+export const DEPARTMENT_PRESETS={
+ sales:{name:'Comercial',kind:'sales',code:'COM',teamAliases:['comercial','vendas'],stages:['Novo lead','Qualificação','Diagnóstico','Proposta enviada','Negociação','Contratação pendente','Conclusão'],description:'Oportunidades comerciais. Um contato que já é cliente não volta a ser Novo Lead só por abrir uma conversa.',reasons:['Sem interesse','Preço / condições','Sem retorno','Concorrência','Sem adequação'],fields:[
+  {name:'Origem do lead',kind:'select',options:['WhatsApp','Site','Indicação','Campanha','Carteira existente','Outro']},
+  {name:'Produto / interesse',kind:'text',options:[]},{name:'Necessidade confirmada',kind:'text',options:[]},
+  {name:'Valor estimado',kind:'decimal',options:[]},{name:'Próxima ação',kind:'text',options:[]},
+  {name:'Data de retorno',kind:'date',options:[]},{name:'Motivo de perda',kind:'select',options:['Sem interesse','Preço / condições','Sem retorno','Concorrência','Sem adequação']}
+ ]},
+ support:{name:'Suporte',kind:'support',code:'SUP',teamAliases:['suporte','atendimento técnico','suporte técnico'],stages:['Novo chamado','Triagem','Em diagnóstico','Aguardando cliente','Aguardando equipe / terceiro','Em resolução','Conclusão'],description:'Chamados e resolução. Aguardar cliente é diferente de aguardar a equipe ou um terceiro. O histórico fica vinculado ao contato único.',reasons:['Resolvido','Orientação fornecida','Duplicado','Sem retorno','Encaminhado'],fields:[
+  {name:'Categoria do chamado',kind:'select',options:['Dúvida','Falha técnica','Solicitação','Reclamação','Acesso','Outro']},
+  {name:'Prioridade',kind:'select',options:['Baixa','Normal','Alta','Crítica']},
+  {name:'Protocolo externo',kind:'text',options:[]},{name:'Impacto',kind:'select',options:['Uma pessoa','Várias pessoas','Operação parada']},
+  {name:'Serviço / produto',kind:'text',options:[]},{name:'Prazo / SLA',kind:'datetime',options:[]},
+  {name:'Motivo da espera',kind:'select',options:['Aguardando cliente','Aguardando equipe','Aguardando terceiro','Aguardando sistema']},
+  {name:'Resumo da resolução',kind:'text',options:[]}
+ ]},
+ finance:{name:'Financeiro',kind:'finance',code:'FIN',teamAliases:['financeiro','finance','cobrança','cobranca'],stages:['Nova solicitação','Conferência cadastral','Análise','Aguardando cliente','Aguardando pagamento / retorno externo','Conciliação','Conclusão'],description:'Solicitações financeiras e acompanhamento de pendências. O status de pagamento só muda após confirmação do provedor financeiro, nunca ao mover o cartão.',reasons:['Resolvido','Pagamento confirmado pelo provedor','Orientação fornecida','Cancelado com autorização','Sem retorno'],fields:[
+  {name:'Tipo de solicitação',kind:'select',options:['Segunda via','Dúvida de cobrança','Contestação','Negociação','Comprovante','Reembolso','Outro']},
+  {name:'Referência da cobrança',kind:'text',options:[]},{name:'Vencimento',kind:'date',options:[]},
+  {name:'Valor da cobrança',kind:'decimal',options:[]},
+  {name:'Status do provedor',kind:'select',options:['Não consultado','Pendente','Vencido','Recebido','Confirmado','Cancelado','Em análise']},
+  {name:'Próxima ação financeira',kind:'text',options:[]}
+ ]}
+};
+const STANDARD_KEYS=Object.keys(DEPARTMENT_PRESETS);
+const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();
+async function departmentTeam(query,preset){
+ const teams=(await query('select id,name,routing from teams where archived_at is null order by id')).rows;
+ const exact=teams.find(t=>preset.teamAliases.some(a=>norm(t.name)===norm(a)));
+ const match=exact||teams.find(t=>preset.teamAliases.some(a=>norm(t.name).includes(norm(a))));
+ if(match)return match;
+ return (await query('insert into teams(name) values($1) returning id,name,routing',[preset.name])).rows[0];
+}
+async function ensureFields(query,board,preset){
+ for(const field of preset.fields){
+  const existing=(await query("select id from field_definitions where board_id=$1 and scope='opportunity' and name=$2 order by id limit 1",[board.id,field.name])).rows[0];
+  if(existing)await query('update field_definitions set kind=$2,options=$3,active=true where id=$1',[existing.id,field.kind,JSON.stringify(field.options)]);
+  else await query("insert into field_definitions(name,kind,scope,options,board_id) values($1,$2,'opportunity',$3,$4)",[field.name,field.kind,JSON.stringify(field.options),board.id]);
+ }
+}
+async function ensureReasons(query,board,preset){
+ for(const name of preset.reasons)if(!(await query('select id from crm_loss_reasons where board_id=$1 and name=$2',[board.id,name])).rows.length)await query('insert into crm_loss_reasons(board_id,name,system) values($1,$2,$3)',[board.id,name,false]);
+}
+async function provisionBoard(query,actor,key,preset,team){
+ let board=(await query('select * from crm_boards where system_key=$1 for update',[key])).rows[0];
+ if(!board){
+  board=(await query("insert into crm_boards(name,code,description,kind,visibility,team_ids,manager_ids,allow_restricted,inactivity_days,celebrate,sound,labels,fields,created_by,system_key) values($1,$2,$3,$4,'team',$5,$6,false,null,false,false,'{}','[]',$7,$8) returning *",[preset.name,preset.code,preset.description,preset.kind,[team.id],[actor.id],actor.id,key])).rows[0];
+  for(const [pos,name] of preset.stages.entries())await query('insert into crm_stages(board_id,name,color,pos,final) values($1,$2,$3,$4,$5)',[board.id,name,colors[pos%colors.length],pos,pos===preset.stages.length-1]);
+ }else{
+  board=(await query("update crm_boards set name=$2,code=$3,description=$4,kind=$5,visibility='team',team_ids=$6,manager_ids=case when cardinality(manager_ids)=0 then $7 else manager_ids end,archived_at=null where id=$1 returning *",[board.id,preset.name,preset.code,preset.description,preset.kind,[team.id],[actor.id]])).rows[0];
+  if(!(await query('select id from crm_stages where board_id=$1 limit 1',[board.id])).rows.length)for(const [pos,name] of preset.stages.entries())await query('insert into crm_stages(board_id,name,color,pos,final) values($1,$2,$3,$4,$5)',[board.id,name,colors[pos%colors.length],pos,pos===preset.stages.length-1]);
+ }
+ await ensureFields(query,board,preset);await ensureReasons(query,board,preset);
+ await query("update teams set routing=coalesce(routing,'{}'::jsonb)||jsonb_build_object('department_board_id',$2::int,'department_key',$3) where id=$1",[team.id,board.id,key]);
+ return {id:board.id,key,name:board.name,team_id:team.id,team_name:team.name,stages:preset.stages.length,fields:preset.fields.length};
+}
+export async function departmentBoardPreview(query){
+ const boards=(await query("select b.id,b.name,b.kind,b.system_key,b.archived_at,(select count(*)::int from crm_cards c where c.board_id=b.id) cards from crm_boards b order by b.id")).rows;
+ const teams=(await query("select id,name,routing from teams where archived_at is null order by name")).rows;
+ return {standard:STANDARD_KEYS.map(key=>({key,name:DEPARTMENT_PRESETS[key].name,stages:DEPARTMENT_PRESETS[key].stages,fields:DEPARTMENT_PRESETS[key].fields.map(f=>({name:f.name,kind:f.kind}))})),boards,teams,legacy_active:boards.filter(b=>!b.archived_at&&!STANDARD_KEYS.includes(b.system_key)).length,legacy_cards:boards.filter(b=>!b.archived_at&&!STANDARD_KEYS.includes(b.system_key)).reduce((n,b)=>n+Number(b.cards||0),0)};
+}
+export function mountDepartmentPipelines(app,{q,adm,ah,tenantTransaction,bus}){
+ app.get('/api/attendance/department-boards',adm,ah(async(req,res)=>res.json({teams:(await q('select id,name,routing from teams where archived_at is null order by name')).rows,boards:(await q('select id,name,kind,team_ids,system_key,archived_at from crm_boards order by id desc')).rows,presets:DEPARTMENT_PRESETS})));
+ app.get('/api/attendance/department-boards/preview',adm,ah(async(req,res)=>res.json(await departmentBoardPreview(q))));
+ app.post('/api/attendance/department-boards/setup',adm,ah(async(req,res)=>{
+  if(req.body?.confirm!=='CONFIGURAR_PAINÉIS_PADRÃO')throw Object.assign(Error('Confirme a configuração dos painéis padrão.'),{status:400});
+  const result=await tenantTransaction(req.u.tid,async query=>{
+   const provisioned={};
+   for(const key of STANDARD_KEYS){const preset=DEPARTMENT_PRESETS[key],team=await departmentTeam(query,preset);provisioned[key]=await provisionBoard(query,req.u,key,preset,team)}
+   let archived=0;
+   if(req.body.archive_existing===true){
+    const r=await query("update crm_boards set archived_at=now() where archived_at is null and (system_key is null or system_key<>all($1::text[])) returning id",[STANDARD_KEYS]);
+    archived=r.rowCount;
+   }
+   return {ok:true,boards:Object.values(provisioned),archived_legacy_boards:archived};
+  });
+  bus?.('crm',{department_setup:true});bus?.('invalidate',{});
+  res.json(result);
+ }));
+ app.post('/api/attendance/department-boards/archived/:id/restore',adm,ah(async(req,res)=>{
+  const result=await tenantTransaction(req.u.tid,async query=>{
+   const b=(await query('update crm_boards set archived_at=null where id=$1 and archived_at is not null returning id,name',[Number(req.params.id)])).rows[0];
+   if(!b)throw Error('Painel arquivado não encontrado');return b;
+  });bus?.('crm',{board_id:result.id});res.json({ok:true,...result});
+ }));
+}
