@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import {DEPARTMENT_PRESETS,departmentBoardPreview} from '../src/department-pipelines.js';
+import {TRACKING_TEMPLATE} from '../src/tracking-template.js';
 assert.deepEqual(Object.keys(DEPARTMENT_PRESETS).sort(),['finance','sales','support']);
 assert.deepEqual(DEPARTMENT_PRESETS.support.stages,['Novo chamado','Triagem','Em diagnóstico','Aguardando cliente','Aguardando equipe / terceiro','Em resolução','Conclusão']);
 assert.deepEqual(DEPARTMENT_PRESETS.sales.stages,['Novo lead','Qualificação','Diagnóstico','Proposta enviada','Negociação','Contratação pendente','Conclusão']);
 assert.ok(DEPARTMENT_PRESETS.finance.fields.some(f=>f.name==='Status do provedor'));
 assert.ok(DEPARTMENT_PRESETS.support.fields.some(f=>f.name==='Prioridade'));
 assert.ok(DEPARTMENT_PRESETS.sales.fields.some(f=>f.name==='Data de retorno'));
+assert.match(TRACKING_TEMPLATE.prompt,/Não trate uma mensagem nova, reabertura ou demora como se a pessoa fosse um cliente novo/);
+assert.match(TRACKING_TEMPLATE.rules,/A inatividade nunca transforma um cliente em lead novo/);
+assert.match(TRACKING_TEMPLATE.rules,/não continue respondendo em paralelo após o handoff/);
 for(const p of Object.values(DEPARTMENT_PRESETS)){
  assert.equal(p.stages.at(-1),'Conclusão',p.name+' must have a final stage');
  assert.ok(p.fields.length>=5,p.name+' must have department-specific fields');
