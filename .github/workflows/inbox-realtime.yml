@@ -11,6 +11,8 @@ on:
       - 'web/realtime.js'
       - 'src/server.js'
       - 'src/core.js'
+      - 'src/financial.js'
+      - 'test/financial-action-receipts.mjs'
       - 'src/db.js'
       - 'src/drivers/baileys.js'
       - 'src/attendance-management.js'
@@ -28,6 +30,8 @@ on:
       - 'web/realtime.js'
       - 'src/server.js'
       - 'src/core.js'
+      - 'src/financial.js'
+      - 'test/financial-action-receipts.mjs'
       - 'src/drivers/baileys.js'
       - 'src/drivers/waha.js'
       - 'src/module-access.js'
@@ -56,6 +60,7 @@ jobs:
         run: |
           node --check src/server.js
           node --check src/core.js
+          node --check src/financial.js
           node --check src/db.js
           node --check src/drivers/baileys.js
           node --check src/drivers/waha.js
@@ -70,5 +75,7 @@ jobs:
           node --check web/realtime.js
       - name: Verify inbox real-time synchronization
         run: node test/inbox-realtime-sync.mjs
+      - name: Verify visible financial action receipts
+        run: node test/financial-action-receipts.mjs
       - name: Verify module access and tenant entitlements
         run: node test/module-access.mjs
