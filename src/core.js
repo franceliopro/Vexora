@@ -52,7 +52,7 @@ export async function inbound(chId,m){
   const ch=(await query('select * from channels where id=$1',[chId])).rows[0];if(!ch||!ch.active)return null;
   if(m.ext_id&&(await query('select id from messages where ext_id=$1 and conversation_id in(select id from conversations where channel_id=$2)',[m.ext_id,chId])).rows[0])return null;
   const aliases=Array.isArray(m.identity_aliases)?[...new Set([m.handle,...m.identity_aliases].filter(Boolean))]:[m.handle];
-  let ct=(await query('select * from contacts where channel_id=$1 and handle=any($2::text[]) order by (handle=$3) desc,id limit 1',[chId,ch.driver==='baileys'&&Array.isArray(m.identity_aliases)?aliases:aliases,m.handle])).rows[0];
+  let ct=(await query('select * from contacts where channel_id=$1 and handle=any($2::text[]) order by (handle=$3) desc,id limit 1',[chId,aliases,m.handle])).rows[0];
   if(!ct)ct=(await query('insert into contacts(name,handle,channel_id) values($1,$2,$3) returning *',[m.name||m.handle,m.handle,chId])).rows[0];
   else if(ch.driver==='waha'&&m.handle&&m.handle!==ct.handle&&!/@lid$/i.test(m.handle)&&/^\\d{8,16}$/.test(m.handle)&&aliases.includes(ct.handle)){ct=(await query("update contacts set handle=$2 where id=$1 returning *",[ct.id,m.handle])).rows[0]}
   if(ch.driver==='baileys'&&/^\d{10,15}$/.test(m.verified_phone||'')){const identity={phone:m.verified_phone,source:'baileys_sender_pn',handle:ct.handle,channel_id:ch.id};ct=(await query("update contacts set data=coalesce(data,'{}'::jsonb)||$2 where id=$1 returning *",[ct.id,JSON.stringify({whatsapp_identity:identity})])).rows[0]}
