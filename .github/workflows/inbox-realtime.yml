@@ -21,6 +21,7 @@ on:
       - 'src/module-access.js'
       - 'test/module-access.mjs'
       - 'test/inbox-realtime-sync.mjs'
+      - 'test/ai-provider-config.mjs'
       - '.github/workflows/inbox-realtime.yml'
   pull_request:
     paths:
@@ -72,3 +73,5 @@ jobs:
         run: node test/inbox-realtime-sync.mjs
       - name: Verify module access and tenant entitlements
         run: node test/module-access.mjs
+      - name: Verify WAHA and Gemini provider configuration
+        run: node test/ai-provider-config.mjs
