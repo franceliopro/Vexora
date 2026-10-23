@@ -40,6 +40,11 @@ services:
       WAHA_API_KEY: "${WAHA_KEY:?Defina WAHA_KEY nos secrets do Dokploy}"
       WHATSAPP_API_KEY: "${WAHA_KEY}"
       WHATSAPP_DEFAULT_ENGINE: ${WHATSAPP_DEFAULT_ENGINE:-NOWEB}
+      # Keep API credentials shared while isolating managed sessions in NOWEB.
+      # Existing WEBJS sessions remain in the old namespace and must be paired again by QR.
+      WAHA_NAMESPACE: all
+      WAHA_SESSION_NAMESPACE: noweb
+      WAHA_NOWEB_WA_VERSION: ${WAHA_NOWEB_WA_VERSION:-auto-web}
       WHATSAPP_RESTART_ALL_SESSIONS: "${WHATSAPP_RESTART_ALL_SESSIONS:-True}"
     volumes: [wahadata:/app/.sessions]
     # Sem ports: o WAHA só é acessível pela rede interna do Compose.
