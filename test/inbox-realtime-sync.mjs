@@ -11,6 +11,7 @@ const baileys=fs.readFileSync('src/drivers/baileys.js','utf8');
 const attendance=fs.readFileSync('web/attendance.js','utf8');
 const integrations=fs.readFileSync('web/integrations.js','utf8');
 const waha=fs.readFileSync('src/drivers/waha.js','utf8');
+const compose=fs.readFileSync('docker-compose.yml','utf8');
 const policy=fs.readFileSync('src/attendance-management.js','utf8');
 const bus=fs.readFileSync('src/bus.js','utf8');
 
@@ -45,6 +46,7 @@ assert.ok(integrations.includes('setInterval(async()=>{if(!m.isConnected){clearI
 assert.ok(integrations.includes('deixe em branco para usar a WAHA_KEY configurada no Dokploy'),'Managed WAHA should not require copying the same key into every inbox');
 assert.ok(waha.includes('chave API inválida ou ausente'),'WAHA 401 should have a clear diagnostic');
 assert.ok(waha.includes('async function resolveRecipient(c,to)')&&waha.includes('/lids/'),'WAHA must resolve LID recipients to phone-number chat IDs before sending when a mapping exists');
+assert.ok(compose.includes('WAHA_SESSION_NAMESPACE: noweb')&&compose.includes('WAHA_NAMESPACE: all')&&compose.includes('WHATSAPP_DEFAULT_ENGINE: ${WHATSAPP_DEFAULT_ENGINE:-NOWEB}'),'Managed WAHA must create new sessions in the NOWEB namespace while preserving shared API credentials');
 assert.ok(waha.includes('j.engine?.engine'),'WAHA status must expose the actual session engine for diagnosis');
 assert.ok(core.includes('Array.isArray(m.identity_aliases)?[...new Set([m.handle,...m.identity_aliases].filter(Boolean))]'),'Inbound WAHA LID aliases must match existing contacts');
 assert.ok(waha.includes('export async function presence('),'WAHA connector must expose outbound presence when supported');
