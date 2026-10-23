@@ -45,7 +45,7 @@ export function mountAttendanceManagement(app,{ah,q,tenantTransaction,bus}){
    if(c.status!=='closed')throw Error('Finalize o atendimento antes de excluir a conversa');
    if(String(req.body.confirm||'').trim()!==String(c.id))throw Error('Digite o número do ticket para confirmar a exclusão definitiva');
    const refs=(await query("select c.table_name from information_schema.columns c join information_schema.tables t on t.table_schema=c.table_schema and t.table_name=c.table_name where c.table_schema='public' and t.table_type='BASE TABLE' and c.column_name='conversation_id' order by case c.table_name when 'service_events' then 0 when 'jobs' then 1 when 'bot_runs' then 2 when 'messages' then 3 else 4 end,c.table_name")).rows;
-   await query("delete from message_receipts where channel_id=$2 and external_id in (select ext_id from messages where conversation_id=$1 and ext_id is not null)",[id,c.channel_id]).catch(()=>{});
+   await query("delete from message_receipts where channel_id=$2 and external_id in (select ext_id from messages where conversation_id=$1 and ext_id is not null)",[id,c.channel_id]);
    for(const ref of refs){
     const table=String(ref.table_name).replace(/"/g,'""');
     if(['contact_notes','crm_cards'].includes(ref.table_name))await query('update "'+table+'" set conversation_id=null where conversation_id=$1',[id]);
