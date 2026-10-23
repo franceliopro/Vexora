@@ -44,6 +44,6 @@ assert.ok(integrations.toLowerCase().includes('qr aparecerá na véxora')&&integ
 assert.ok(waha.includes('export async function presence('),'WAHA connector must expose outbound presence when supported');
 assert.ok(attendance.includes('Cliente digitando…')&&attendance.includes('Cliente gravando áudio…'),'Inbox must show customer presence states');
 assert.ok(attendance.includes("signalPresence('typing')")&&attendance.includes("signalPresence('recording')"),'Agent typing and recording should be signalled to the customer');
-assert.ok(policy.includes("key='attendance_policy'")&&policy.includes("release_mode!=='after_idle'"),'Each company must configure automatic idle release or manual retention');
-assert.ok(policy.includes("assignee_id=null"),'Idle release must return the conversation to the New queue');
-console.log('OK: inbox sync, media placeholders, customer/agent presence, and tenant-configurable queue release.');
+assert.ok(policy.includes("DEFAULT_ATTENDANCE_POLICY={release_mode:'after_idle'")&&policy.includes('export async function tickAttendancePolicy(){return 0}'),'Idle defaults to overdue alerts rather than automatic queue release');
+assert.ok(!policy.includes('assignee_id=null')&&server.includes('as idle_overdue')&&server.includes('order by idle_overdue desc'),'Idle conversations stay in their queue and overdue items are prioritized');
+console.log('OK: inbox sync, media placeholders, customer/agent presence, and idle overdue alerts without queue release.');
