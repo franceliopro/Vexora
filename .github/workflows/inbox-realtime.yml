@@ -44,6 +44,7 @@ on:
       - 'web/attendance.js'
       - 'web/integrations.js'
       - 'test/inbox-realtime-sync.mjs'
+      - 'test/ai-provider-config.mjs'
       - '.github/workflows/inbox-realtime.yml'
 jobs:
   inbox-realtime:
