@@ -24,12 +24,12 @@ export const DEPARTMENT_PRESETS={
 };
 const STANDARD_KEYS=Object.keys(DEPARTMENT_PRESETS);
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();
-async function departmentTeam(query,preset){
+async function departmentTeams(query,preset){
  const teams=(await query('select id,name,routing from teams where archived_at is null order by id')).rows;
  const exact=teams.find(t=>preset.teamAliases.some(a=>norm(t.name)===norm(a)));
- const match=exact||teams.find(t=>preset.teamAliases.some(a=>norm(t.name).includes(norm(a))));
- if(match)return match;
- return (await query('insert into teams(name) values($1) returning id,name,routing',[preset.name])).rows[0];
+ const matched=exact?[exact]:teams.filter(t=>preset.teamAliases.some(a=>norm(t.name).startsWith(norm(a)+' ')||norm(t.name).startsWith(norm(a)+'·')||norm(t.name).startsWith(norm(a)+'-')));
+ if(matched.length)return matched;
+ return [(await query('insert into teams(name) values($1) returning id,name,routing',[preset.name])).rows[0]];
 }
 async function ensureFields(query,board,preset){
  for(const field of preset.fields){
@@ -41,18 +41,19 @@ async function ensureFields(query,board,preset){
 async function ensureReasons(query,board,preset){
  for(const name of preset.reasons)if(!(await query('select id from crm_loss_reasons where board_id=$1 and name=$2',[board.id,name])).rows.length)await query('insert into crm_loss_reasons(board_id,name,system) values($1,$2,$3)',[board.id,name,false]);
 }
-async function provisionBoard(query,actor,key,preset,team){
+async function provisionBoard(query,actor,key,preset,teams){
+ const teamIds=teams.map(t=>t.id);
  let board=(await query('select * from crm_boards where system_key=$1 for update',[key])).rows[0];
  if(!board){
-  board=(await query("insert into crm_boards(name,code,description,kind,visibility,team_ids,manager_ids,allow_restricted,inactivity_days,celebrate,sound,labels,fields,created_by,system_key) values($1,$2,$3,$4,'team',$5,$6,false,null,false,false,'{}','[]',$7,$8) returning *",[preset.name,preset.code,preset.description,preset.kind,[team.id],[actor.id],actor.id,key])).rows[0];
+  board=(await query("insert into crm_boards(name,code,description,kind,visibility,team_ids,manager_ids,allow_restricted,inactivity_days,celebrate,sound,labels,fields,created_by,system_key) values($1,$2,$3,$4,'team',$5,$6,false,null,false,false,'{}','[]',$7,$8) returning *",[preset.name,preset.code,preset.description,preset.kind,teamIds,[actor.id],actor.id,key])).rows[0];
   for(const [pos,name] of preset.stages.entries())await query('insert into crm_stages(board_id,name,color,pos,final) values($1,$2,$3,$4,$5)',[board.id,name,colors[pos%colors.length],pos,pos===preset.stages.length-1]);
  }else{
-  board=(await query("update crm_boards set name=$2,code=$3,description=$4,kind=$5,visibility='team',team_ids=$6,manager_ids=case when cardinality(manager_ids)=0 then $7 else manager_ids end,archived_at=null where id=$1 returning *",[board.id,preset.name,preset.code,preset.description,preset.kind,[team.id],[actor.id]])).rows[0];
+  board=(await query("update crm_boards set name=$2,code=$3,description=$4,kind=$5,visibility='team',team_ids=$6,manager_ids=case when cardinality(manager_ids)=0 then $7 else manager_ids end,archived_at=null where id=$1 returning *",[board.id,preset.name,preset.code,preset.description,preset.kind,teamIds,[actor.id]])).rows[0];
   if(!(await query('select id from crm_stages where board_id=$1 limit 1',[board.id])).rows.length)for(const [pos,name] of preset.stages.entries())await query('insert into crm_stages(board_id,name,color,pos,final) values($1,$2,$3,$4,$5)',[board.id,name,colors[pos%colors.length],pos,pos===preset.stages.length-1]);
  }
  await ensureFields(query,board,preset);await ensureReasons(query,board,preset);
- await query("update teams set routing=coalesce(routing,'{}'::jsonb)||jsonb_build_object('department_board_id',$2::int,'department_key',$3) where id=$1",[team.id,board.id,key]);
- return {id:board.id,key,name:board.name,team_id:team.id,team_name:team.name,stages:preset.stages.length,fields:preset.fields.length};
+ for(const team of teams)await query("update teams set routing=coalesce(routing,'{}'::jsonb)||jsonb_build_object('department_board_id',$2::int,'department_key',$3) where id=$1",[team.id,board.id,key]);
+ return {id:board.id,key,name:board.name,team_ids:teamIds,team_name:teams.map(t=>t.name).join(', '),stages:preset.stages.length,fields:preset.fields.length};
 }
 export async function departmentBoardPreview(query){
  const boards=(await query("select b.id,b.name,b.kind,b.system_key,b.archived_at,(select count(*)::int from crm_cards c where c.board_id=b.id) cards from crm_boards b order by b.id")).rows;
@@ -66,7 +67,7 @@ export function mountDepartmentPipelines(app,{q,adm,ah,tenantTransaction,bus}){
   if(req.body?.confirm!=='CONFIGURAR_PAINÉIS_PADRÃO')throw Object.assign(Error('Confirme a configuração dos painéis padrão.'),{status:400});
   const result=await tenantTransaction(req.u.tid,async query=>{
    const provisioned={};
-   for(const key of STANDARD_KEYS){const preset=DEPARTMENT_PRESETS[key],team=await departmentTeam(query,preset);provisioned[key]=await provisionBoard(query,req.u,key,preset,team)}
+   for(const key of STANDARD_KEYS){const preset=DEPARTMENT_PRESETS[key],teams=await departmentTeams(query,preset);provisioned[key]=await provisionBoard(query,req.u,key,preset,teams)}
    let archived=0;
    if(req.body.archive_existing===true){
     const r=await query("update crm_boards set archived_at=now() where archived_at is null and (system_key is null or system_key<>all($1::text[])) returning id",[STANDARD_KEYS]);
