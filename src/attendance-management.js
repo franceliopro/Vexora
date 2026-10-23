@@ -6,17 +6,10 @@ export function queuePredicate(c='c',user='$1',scope='$2'){return `((${scope}='a
 export function extraQueueFilters(c='c',team='$5',owner='$6',kind='$7',label='$8',unread='$9'){return `(${team}::int is null or ${c}.team_id=${team}) and (${owner}::int is null or ${c}.assignee_id=${owner}) and (${label}::int is null or exists(select 1 from contacts fct where fct.id=${c}.contact_id and ${label}=any(fct.labels))) and (${unread}='' or (${unread}='unread' and ${c}.unread>0) or (${unread}='read' and ${c}.unread=0)) and (${kind}='' or (select m.kind from messages m where m.conversation_id=${c}.id and m.dir<>'int' order by m.at desc,m.id desc limit 1)=${kind})`}
 export function parseQueueFilters(input){const ids=['team_id','owner_id'].map(k=>input[k]?positiveId(input[k]):null),kind=String(input.kind||'');if(!['','text','audio','image','video','file'].includes(kind))throw Error('Tipo inválido');const label=input.label_id?positiveId(input.label_id):null,read=String(input.read||'');if(!['','read','unread'].includes(read))throw Error('Leitura inválida');return [...ids,kind,label,read]}
 
-const DEFAULT_ATTENDANCE_POLICY={release_mode:'manual',idle_minutes:30,presence_indicators:true};
-export async function tickAttendancePolicy({q,tenantTransaction,bus}){
- const policy=(await q("select value from settings where key='attendance_policy'")).rows[0]?.value||DEFAULT_ATTENDANCE_POLICY;
- if(policy.release_mode!=='after_idle')return 0;
- const minutes=Math.max(5,Math.min(10080,Number(policy.idle_minutes)||30));
- const released=await tenantTransaction((await q("select current_setting('app.tenant')::int tenant")).rows[0]?.tenant,async query=>(await query(
-  "with stale as (select id from conversations where status='open' and filing='active' and assignee_id is not null and last_at < now()-($1::int*interval '1 minute') order by last_at asc for update skip locked limit 100) update conversations c set assignee_id=null from stale where c.id=stale.id returning c.id",
-  [minutes])).rows);
- for(const c of released)bus('conv',{id:c.id});
- return released.length;
-}
+const DEFAULT_ATTENDANCE_POLICY={release_mode:'after_idle',idle_minutes:30,presence_indicators:true};
+// Inactivity is a priority signal, never a reason to remove ownership or move an open conversation to Novos.
+// The idle threshold is evaluated when conversations are listed; this legacy scheduler intentionally performs no releases.
+export async function tickAttendancePolicy(){return 0}
 export function mountAttendanceManagement(app,{ah,q,tenantTransaction,bus}){
  app.get('/api/attendance/policy',ah(async(req,res)=>{
   const value=(await q("select value from settings where key='attendance_policy'")).rows[0]?.value||DEFAULT_ATTENDANCE_POLICY;
