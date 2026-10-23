@@ -23,6 +23,22 @@ export const DEPARTMENT_PRESETS={
  ]}
 };
 const STANDARD_KEYS=Object.keys(DEPARTMENT_PRESETS);
+export async function departmentCard(query,cv,boardId){
+ const locked=(await query("select * from conversations where id=$1 for update",[cv.id])).rows[0];
+ if(!locked||locked.status!=='open'||locked.filing!=='active')return null;
+ if((await query("select id from crm_cards where board_id=$1 and conversation_id=$2 limit 1",[boardId,cv.id])).rows.length)return null;
+ const board=(await query('select * from crm_boards where id=$1',[boardId])).rows[0];
+ if(!board||board.archived_at||board.team_ids?.length&&!board.team_ids.includes(locked.team_id))return null;
+ const stage=(await query('select id from crm_stages where board_id=$1 and not final order by pos,id limit 1',[board.id])).rows[0];
+ if(!stage)return null;
+ const ct=(await query('select name,labels from contacts where id=$1',[locked.contact_id])).rows[0];
+ if(!ct)return null;
+ // New Lead is assigned when the contact is genuinely created (DB trigger). Entering a commercial queue must not relabel an existing customer.
+ const labels=[...new Set([...(ct.labels||[]),...(board.labels||[])])];
+ const card=(await query('insert into crm_cards(board_id,stage_id,contact_id,conversation_id,title,owner_id,labels) values($1,$2,$3,$4,$5,$6,$7) returning *',[board.id,stage.id,locked.contact_id,locked.id,ct.name,locked.assignee_id,labels])).rows[0];
+ await query("insert into crm_events(board_id,card_id,type,data) values($1,$2,'created',$3)",[board.id,card.id,JSON.stringify({source:'department',team_id:locked.team_id})]);
+ return card;
+}
 const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR').trim();
 async function departmentTeams(query,preset){
  const teams=(await query('select id,name,routing from teams where archived_at is null order by id')).rows;
