@@ -18,7 +18,7 @@ function newWhatsApp(){UX.dialog('Conectar WhatsApp por QR',(f,submit)=>{
  waha=h('div');
  f.append(providerInfo,waha);
  const url=setupField(waha,'Endereço do WAHA',{value:'http://waha:3000'},'Endereço de um serviço WAHA já acessível pelo servidor da Véxora. QR Code é a autenticação; ele não instala nem hospeda o motor WAHA.'),
- key=setupField(waha,'Chave API do WAHA',{type:'password',autocomplete:'off'},'Na stack WAHA gerenciada pela Véxora, deixe em branco para usar a WAHA_KEY configurada no Dokploy. Se usar um WAHA externo, informe aqui a chave correspondente.')),
+ key=setupField(waha,'Chave API do WAHA',{type:'password',autocomplete:'off'},'Na stack WAHA gerenciada pela Véxora, deixe em branco para usar a WAHA_KEY configurada no Dokploy. Se usar um WAHA externo, informe aqui a chave correspondente.'),
  session=setupField(waha,'Nome da sessão',{value:'default'},'Identificador da sessão/número no serviço WAHA. Respeite o limite de sessões do serviço e da edição contratada.');
  function describeProvider(){
   const selected=driver.value==='waha';
