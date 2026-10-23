@@ -8,13 +8,13 @@ export async function validateSkills(query,input={}){
  if(input.entry&&!['primary','specialist'].includes(input.entry))throw Error('Tipo de entrada inválido');const out={role:input.role||'assistant',entry:input.entry||'primary'};
  for(const [key,table]of [['agent_ids','agents'],['bot_ids','bots'],['board_ids','crm_boards'],['connection_ids','agent_connections']]){
   const values=input[key]||[];if(!Array.isArray(values)||values.length>50)throw Error('Escolha até 50 vínculos por habilidade');
-  out[key]=[...new Set(values.map(Number))];for(const id of out[key])if(!Number.isSafeInteger(id)||id<1||!(await query('select id from '+table+' where id=$1',[id])).rows.length)throw Error('Vínculo de habilidade inválido');
+  out[key]=[...new Set(values.map(Number))];for(const id of out[key])if(!Number.isSafeInteger(id)||id<1||!(await query(table==='crm_boards'?'select id from crm_boards where id=$1 and archived_at is null':'select id from '+table+' where id=$1',[id])).rows.length)throw Error('Vínculo de habilidade inválido');
  }return out;
 }
 export async function skillGuard(query,cv){const current=(await query('select * from conversations where id=$1 for update',[cv.id])).rows[0];if(!automationAllowed(current)||current.automation_epoch!==cv.automation_epoch)throw Error('Controle da automação mudou');return current}
 export async function createAgentCard(query,cv,ag,a){
  await skillGuard(query,cv);if(!(ag.skills?.board_ids||[]).includes(Number(a.board_id)))throw Error('Painel não autorizado para este agente');
- const board=(await query('select * from crm_boards where id=$1',[a.board_id])).rows[0];if(!board)throw Error('Painel indisponível');
+ const board=(await query('select * from crm_boards where id=$1',[a.board_id])).rows[0];if(!board||board.archived_at)throw Error('Painel indisponível ou arquivado');
  const existing=(await query("select * from crm_cards where conversation_id=$1 and board_id=$2 and status='open' order by id desc limit 1",[cv.id,board.id])).rows[0];if(existing)return existing;
  const stage=(await query('select * from crm_stages where board_id=$1 and not final and ($2::int is null or id=$2) order by pos,id limit 1',[board.id,a.stage_id?Number(a.stage_id):null])).rows[0];if(!stage)throw Error('Etapa intermediária inválida');
  const ct=(await query('select name,labels from contacts where id=$1',[cv.contact_id])).rows[0],amount=Number(a.amount||0);if(!Number.isFinite(amount)||amount<0||amount>1e12)throw Error('Valor inválido');
