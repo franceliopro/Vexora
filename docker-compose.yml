@@ -10,6 +10,8 @@ services:
       APP_DB_PASSWORD: ${APP_DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       PLATFORM_KEY: ${PLATFORM_KEY}
+      # Shared with the managed WAHA service; the app uses it when a channel key is left blank.
+      WAHA_KEY: "${WAHA_KEY:?Defina WAHA_KEY nos secrets do Dokploy}"
       NOTIFICATION_WEBHOOK_URL: ${NOTIFICATION_WEBHOOK_URL:-}
       NOTIFICATION_WEBHOOK_SECRET: ${NOTIFICATION_WEBHOOK_SECRET:-}
       ASTRA_CALLS_URL: ${ASTRA_CALLS_URL:-}
@@ -35,7 +37,7 @@ services:
     image: ${WAHA_IMAGE:-devlikeapro/waha:noweb}
     restart: unless-stopped
     environment:
-      WAHA_API_KEY: "${WAHA_KEY}"
+      WAHA_API_KEY: "${WAHA_KEY:?Defina WAHA_KEY nos secrets do Dokploy}"
       WHATSAPP_API_KEY: "${WAHA_KEY}"
       WHATSAPP_DEFAULT_ENGINE: ${WHATSAPP_DEFAULT_ENGINE:-NOWEB}
       WHATSAPP_RESTART_ALL_SESSIONS: "${WHATSAPP_RESTART_ALL_SESSIONS:-True}"
